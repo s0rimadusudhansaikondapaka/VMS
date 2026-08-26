@@ -14,7 +14,8 @@ export default function GuardGateTerminal({ user }) {
   // Editable Accompanying Breakdown fields allowed for Security Guard
   const [adultMen, setAdultMen] = useState(1);
   const [adultWomen, setAdultWomen] = useState(0);
-  const [children, setChildren] = useState(0);
+  const [boysCount, setBoysCount] = useState(0);
+  const [girlsCount, setGirlsCount] = useState(0);
   const [selectedVehicle, setSelectedVehicle] = useState('');
   const [remarks, setRemarks] = useState('');
 
@@ -36,7 +37,8 @@ export default function GuardGateTerminal({ user }) {
         setPassData(res.pass);
         setAdultMen(res.pass.adult_men_count || 1);
         setAdultWomen(res.pass.adult_women_count || 0);
-        setChildren(res.pass.children_count || 0);
+        setBoysCount(res.pass.boys_count || 0);
+        setGirlsCount(res.pass.girls_count || 0);
         setSelectedVehicle(res.pass.vehicles && res.pass.vehicles.length > 0 ? res.pass.vehicles[0].plate_number : res.pass.registered_vehicle_no || '');
       } else {
         setError(res.message);
@@ -61,7 +63,9 @@ export default function GuardGateTerminal({ user }) {
         direction,
         adult_men_count: adultMen,
         adult_women_count: adultWomen,
-        children_count: children,
+        boys_count: boysCount,
+        girls_count: girlsCount,
+        children_count: (parseInt(boysCount) || 0) + (parseInt(girlsCount) || 0),
         vehicle_no: selectedVehicle,
         remarks,
       });
@@ -282,23 +286,27 @@ export default function GuardGateTerminal({ user }) {
                 Accompanying Breakdown & Gate Modifications
               </h4>
 
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '0.5rem', marginTop: '0.5rem' }}>
-                <label>
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr 1fr', gap: '0.4rem', marginTop: '0.5rem' }}>
+                <label style={{ fontSize: '0.8rem' }}>
                   Adult Men (👨)
                   <input type="number" min="0" value={adultMen} onChange={(e) => setAdultMen(e.target.value)} />
                 </label>
-                <label>
+                <label style={{ fontSize: '0.8rem' }}>
                   Adult Women (👩)
                   <input type="number" min="0" value={adultWomen} onChange={(e) => setAdultWomen(e.target.value)} />
                 </label>
-                <label>
-                  Children (👶)
-                  <input type="number" min="0" value={children} onChange={(e) => setChildren(e.target.value)} />
+                <label style={{ fontSize: '0.8rem' }}>
+                  Boys (👦)
+                  <input type="number" min="0" value={boysCount} onChange={(e) => setBoysCount(e.target.value)} />
+                </label>
+                <label style={{ fontSize: '0.8rem' }}>
+                  Girls (👧)
+                  <input type="number" min="0" value={girlsCount} onChange={(e) => setGirlsCount(e.target.value)} />
                 </label>
               </div>
 
-              <div style={{ background: '#e2e8f0', padding: '0.4rem 0.8rem', borderRadius: '4px', textAlign: 'center', fontWeight: 'bold', margin: '0.5rem 0' }}>
-                Total People Entering: {parseInt(adultMen) + parseInt(adultWomen) + parseInt(children)}
+              <div style={{ background: '#e2e8f0', padding: '0.4rem 0.8rem', borderRadius: '4px', textAlign: 'center', fontWeight: 'bold', margin: '0.5rem 0', fontSize: '0.85rem' }}>
+                Total People Entering: {(parseInt(adultMen) || 0) + (parseInt(adultWomen) || 0) + (parseInt(boysCount) || 0) + (parseInt(girlsCount) || 0)} (Children: {(parseInt(boysCount) || 0) + (parseInt(girlsCount) || 0)})
               </div>
 
               <h4 style={{ fontSize: '0.9rem', color: '#1e293b', marginTop: '1rem' }}>

@@ -45,7 +45,8 @@ export default function HostDashboard({ user }) {
   // Accompanying Breakdown
   const [adultMen, setAdultMen] = useState(1);
   const [adultWomen, setAdultWomen] = useState(0);
-  const [children, setChildren] = useState(0);
+  const [boysCount, setBoysCount] = useState(0);
+  const [girlsCount, setGirlsCount] = useState(0);
 
   // Multiple Vehicles Array
   const [vehicles, setVehicles] = useState([
@@ -152,7 +153,8 @@ export default function HostDashboard({ user }) {
     if (reg.valid_until) setValidUntil(new Date(reg.valid_until).toISOString().slice(0, 16));
     setAdultMen(reg.adult_men_count || 1);
     setAdultWomen(reg.adult_women_count || 0);
-    setChildren(reg.children_count || 0);
+    setBoysCount(reg.boys_count || 0);
+    setGirlsCount(reg.girls_count || 0);
     setVehicles(reg.vehicles && reg.vehicles.length > 0 ? reg.vehicles : [{ plate_number: '', vehicle_type: 'Car', driver_name: '', driver_phone: '' }]);
     setShowModal(true);
   };
@@ -185,7 +187,9 @@ export default function HostDashboard({ user }) {
         valid_until: validUntil,
         adult_men_count: adultMen,
         adult_women_count: adultWomen,
-        children_count: children,
+        boys_count: boysCount,
+        girls_count: girlsCount,
+        children_count: (parseInt(boysCount) || 0) + (parseInt(girlsCount) || 0),
         vehicles: vehicles.filter((v) => v.plate_number.trim() !== ''),
         host_id: user.id,
       };
@@ -235,7 +239,8 @@ export default function HostDashboard({ user }) {
     setPurpose('');
     setAdultMen(1);
     setAdultWomen(0);
-    setChildren(0);
+    setBoysCount(0);
+    setGirlsCount(0);
     setRegistrationMode('Single');
     setRegistrationType('PRE_APPROVAL');
     setIsPermanentPass(false);
@@ -510,7 +515,7 @@ export default function HostDashboard({ user }) {
 
             <div style={{ background: '#f8fafc', padding: '0.75rem', borderRadius: '6px', border: '1px solid #cbd5e1', marginTop: '0.5rem' }}>
               <strong style={{ fontSize: '0.85rem', color: '#334155' }}>Accompanying Breakdown ({registrationMode}):</strong>
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '0.8rem', marginTop: '0.4rem' }}>
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr 1fr', gap: '0.8rem', marginTop: '0.4rem' }}>
                 <label>
                   Adult Men (👨)
                   <input type="number" min="0" value={adultMen} onChange={(e) => setAdultMen(e.target.value)} />
@@ -520,9 +525,16 @@ export default function HostDashboard({ user }) {
                   <input type="number" min="0" value={adultWomen} onChange={(e) => setAdultWomen(e.target.value)} />
                 </label>
                 <label>
-                  Children (👶)
-                  <input type="number" min="0" value={children} onChange={(e) => setChildren(e.target.value)} />
+                  Boys (👦)
+                  <input type="number" min="0" value={boysCount} onChange={(e) => setBoysCount(e.target.value)} />
                 </label>
+                <label>
+                  Girls (👧)
+                  <input type="number" min="0" value={girlsCount} onChange={(e) => setGirlsCount(e.target.value)} />
+                </label>
+              </div>
+              <div style={{ fontSize: '0.8rem', color: '#475569', marginTop: '0.4rem', fontWeight: 'bold' }}>
+                Total People: {(parseInt(adultMen) || 0) + (parseInt(adultWomen) || 0) + (parseInt(boysCount) || 0) + (parseInt(girlsCount) || 0)} (Children: {(parseInt(boysCount) || 0) + (parseInt(girlsCount) || 0)})
               </div>
             </div>
 
@@ -631,7 +643,7 @@ export default function HostDashboard({ user }) {
                     Until: {new Date(reg.valid_until).toLocaleString()}
                   </td>
                   <td style={{ fontSize: '0.8rem' }}>
-                    👨 {reg.adult_men_count || 1} | 👩 {reg.adult_women_count || 0} | 👶 {reg.children_count || 0}
+                    👨 {reg.adult_men_count || 1} | 👩 {reg.adult_women_count || 0} | 👦 {reg.boys_count || 0} | 👧 {reg.girls_count || 0}
                   </td>
                   <td style={{ fontSize: '0.75rem' }}>
                     {reg.vehicles && reg.vehicles.length > 0 ? (
