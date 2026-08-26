@@ -60,3 +60,136 @@ body {
   color: white !important;
   font-weight: bold;
 }
+
+/* ========================================================= */
+/* Comprehensive Mobile Responsive Styles (< 768px & < 480px) */
+/* ========================================================= */
+html, body {
+  overflow-x: hidden;
+  max-width: 100vw;
+}
+
+body {
+  -webkit-tap-highlight-color: transparent;
+}
+
+/* Prevent auto zoom on iOS / mobile inputs */
+input, select, textarea {
+  font-size: 16px !important;
+  box-sizing: border-box;
+}
+
+/* Container Adjustments */
+.container, .container-fluid {
+  width: 100%;
+  max-width: 1200px;
+  margin-left: auto;
+  margin-right: auto;
+  padding-left: 1rem;
+  padding-right: 1rem;
+  box-sizing: border-box;
+}
+
+/* Scrollable Table Card Container */
+.card {
+  overflow-x: auto;
+  max-width: 100%;
+}
+
+/* Responsive Table Rules */
+table[role="grid"], table {
+  width: 100%;
+  border-collapse: collapse;
+  min-width: 600px;
+}
+
+/* Universal Mobile Responsive Breakpoints (< 768px) */
+@media (max-width: 768px) {
+  .container, .container-fluid {
+    padding-left: 0.5rem !important;
+    padding-right: 0.5rem !important;
+  }
+
+  .card {
+    padding: 1rem !important;
+    border-radius: 8px !important;
+    margin-bottom: 1rem !important;
+  }
+
+  /* Automatically convert multi-column grid layouts to single-column on mobile */
+  div[style*="display: grid"],
+  div[style*="display:grid"] {
+    grid-template-columns: 1fr !important;
+    gap: 0.65rem !important;
+  }
+
+  div[style*="grid-column"],
+  div[style*="gridColumn"] {
+    grid-column: span 1 !important;
+  }
+
+  /* Flexbox responsive wrapping */
+  div[style*="display: flex"],
+  div[style*="display:flex"] {
+    flex-wrap: wrap !important;
+  }
+
+  /* Touch-friendly button sizes on mobile */
+  button {
+    min-height: 44px;
+  }
+
+  /* Navigation Bar Mobile Layout */
+  nav.container-fluid {
+    padding: 0.75rem 1rem !important;
+    display: flex !important;
+    flex-direction: column !important;
+    align-items: stretch !important;
+    gap: 0.75rem !important;
+  }
+
+  nav.container-fluid ul {
+    display: flex !important;
+    flex-direction: row !important;
+    justify-content: space-between !important;
+    align-items: center !important;
+    width: 100% !important;
+    padding: 0 !important;
+    margin: 0 !important;
+  }
+
+  /* Mobile Modal Responsiveness */
+  div[style*="position: fixed"],
+  div[style*="position:fixed"] {
+    padding: 0.5rem !important;
+  }
+
+  div[style*="position: fixed"] > div,
+  div[style*="position:fixed"] > div {
+    width: 96% !important;
+    max-width: 100% !important;
+    max-height: 94vh !important;
+    overflow-y: auto !important;
+    padding: 1rem !important;
+  }
+}
+
+/* Small Phone Screens (< 480px) */
+@media (max-width: 480px) {
+  h2 {
+    font-size: 1.25rem !important;
+  }
+
+  h3 {
+    font-size: 1.1rem !important;
+  }
+
+  .metric-value {
+    font-size: 1.5rem !important;
+  }
+
+  .gate-btn-in, .gate-btn-out {
+    width: 100% !important;
+    margin-bottom: 0.5rem !important;
+  }
+}
