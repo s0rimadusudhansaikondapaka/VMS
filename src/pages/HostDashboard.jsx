@@ -20,6 +20,7 @@ export default function HostDashboard({ user }) {
   const [email, setEmail] = useState('');
   const [gender, setGender] = useState('Male');
   const [photoUrl, setPhotoUrl] = useState('');
+  const [idType, setIdType] = useState('Aadhaar');
   const [idCardNumber, setIdCardNumber] = useState('');
   const [idCardImageUrl, setIdCardImageUrl] = useState('');
   const [category, setCategory] = useState('GENERAL');
@@ -27,6 +28,7 @@ export default function HostDashboard({ user }) {
   const [purpose, setPurpose] = useState('');
   const [stayRequired, setStayRequired] = useState(false);
   const [isVvip, setIsVvip] = useState(false);
+  const [cameraTarget, setCameraTarget] = useState('photo'); // 'photo' or 'idCard'
 
   // PPTX Requirements: Registration Mode (Single/Group), Type & Permanent Pass
   const [registrationMode, setRegistrationMode] = useState('Single');
@@ -102,7 +104,29 @@ export default function HostDashboard({ user }) {
   };
 
   const handlePhotoCaptured = (dataUrl) => {
-    setPhotoUrl(dataUrl);
+    if (cameraTarget === 'idCard') {
+      setIdCardImageUrl(dataUrl);
+    } else {
+      setPhotoUrl(dataUrl);
+    }
+  };
+
+  const handlePhotoFileUpload = (e) => {
+    const file = e.target.files[0];
+    if (file) {
+      const reader = new FileReader();
+      reader.onloadend = () => setPhotoUrl(reader.result);
+      reader.readAsDataURL(file);
+    }
+  };
+
+  const handleIdFileUpload = (e) => {
+    const file = e.target.files[0];
+    if (file) {
+      const reader = new FileReader();
+      reader.onloadend = () => setIdCardImageUrl(reader.result);
+      reader.readAsDataURL(file);
+    }
   };
 
   const handleStartEdit = (reg) => {
@@ -112,6 +136,7 @@ export default function HostDashboard({ user }) {
     setEmail(reg.visitor_email || '');
     setGender(reg.visitor_gender || 'Male');
     setPhotoUrl(reg.photo_url || '');
+    setIdType(reg.id_type || 'Aadhaar');
     setIdCardNumber(reg.id_card_number || '');
     setIdCardImageUrl(reg.id_card_image_url || '');
     setCategory(reg.visitor_category || 'GENERAL');
@@ -143,7 +168,7 @@ export default function HostDashboard({ user }) {
         email,
         gender,
         photo_url: photoUrl,
-        id_type: 'Aadhaar',
+        id_type: idType,
         id_number: idCardNumber,
         id_card_number: idCardNumber,
         id_card_image_url: idCardImageUrl,
@@ -204,6 +229,7 @@ export default function HostDashboard({ user }) {
     setPhone('');
     setEmail('');
     setPhotoUrl('');
+    setIdType('Aadhaar');
     setIdCardNumber('');
     setIdCardImageUrl('');
     setPurpose('');
@@ -310,24 +336,39 @@ export default function HostDashboard({ user }) {
                 </select>
               </label>
 
-              {/* Photo Input with Live Camera Capture */}
+              {/* Photo Input with Live Camera Capture & File Upload */}
               <div style={{ gridColumn: 'span 2' }}>
-                <label>Visitor Photo (Upload URL or Capture Live from Camera)</label>
-                <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
-                  <input
-                    type="text"
-                    placeholder="https://.../photo.jpg or capture via camera"
-                    value={photoUrl}
-                    onChange={(e) => setPhotoUrl(e.target.value)}
-                    style={{ margin: 0, flex: 1 }}
-                  />
-                  <button
-                    type="button"
-                    onClick={() => setShowCameraModal(true)}
-                    style={{ margin: 0, background: '#2563eb', borderColor: '#2563eb', color: 'white', display: 'flex', alignItems: 'center', gap: '0.4rem', whiteSpace: 'nowrap' }}
-                  >
-                    <Camera size={16} /> Capture from Camera
-                  </button>
+                <label>Visitor Photo (Upload File, Capture Live, or URL)</label>
+                <div style={{ display: 'grid', gridTemplateColumns: '1.2fr 1fr 1fr', gap: '0.5rem', alignItems: 'center' }}>
+                  <div>
+                    <span style={{ fontSize: '0.75rem', color: '#64748b', display: 'block' }}>📁 Upload Image File:</span>
+                    <input
+                      type="file"
+                      accept="image/*"
+                      onChange={handlePhotoFileUpload}
+                      style={{ margin: 0, fontSize: '0.8rem', padding: '0.25rem' }}
+                    />
+                  </div>
+                  <div>
+                    <span style={{ fontSize: '0.75rem', color: '#64748b', display: 'block' }}>📷 Camera Capture:</span>
+                    <button
+                      type="button"
+                      onClick={() => { setCameraTarget('photo'); setShowCameraModal(true); }}
+                      style={{ width: '100%', margin: 0, background: '#2563eb', borderColor: '#2563eb', color: 'white', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.4rem', fontSize: '0.8rem', padding: '0.45rem' }}
+                    >
+                      <Camera size={14} /> Snap Photo
+                    </button>
+                  </div>
+                  <div>
+                    <span style={{ fontSize: '0.75rem', color: '#64748b', display: 'block' }}>🔗 Image URL:</span>
+                    <input
+                      type="text"
+                      placeholder="https://.../photo.jpg"
+                      value={photoUrl}
+                      onChange={(e) => setPhotoUrl(e.target.value)}
+                      style={{ margin: 0, fontSize: '0.8rem' }}
+                    />
+                  </div>
                 </div>
                 {photoUrl && (
                   <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginTop: '0.4rem' }}>
@@ -342,7 +383,16 @@ export default function HostDashboard({ user }) {
 
               <label>
                 Category
-                <select value={category} onChange={(e) => setCategory(e.target.value)}>
+                <select
+                  value={category}
+                  onChange={(e) => {
+                    const val = e.target.value;
+                    setCategory(val);
+                    if (val === 'FOREIGN_NATIONAL' && idType === 'Aadhaar') {
+                      setIdType('Foreign Passport');
+                    }
+                  }}
+                >
                   <option value="GENERAL">General Guest</option>
                   <option value="VIP">VIP</option>
                   <option value="VVIP">VVIP</option>
@@ -355,17 +405,94 @@ export default function HostDashboard({ user }) {
               </label>
             </div>
 
-            {/* Section 2: Address Proof (Aadhaar) */}
-            <h4 style={{ fontSize: '0.9rem', color: '#2563eb', marginTop: '1rem' }}>2. Address Proof (Aadhaar Card)</h4>
+            {/* Section 2: Address Proof & Identification */}
+            <h4 style={{ fontSize: '0.9rem', color: '#2563eb', marginTop: '1rem' }}>2. Address Proof & Identification</h4>
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.8rem' }}>
               <label>
-                Aadhaar Card Number (`idCardNumber`)
-                <input type="text" placeholder="1234-5678-9012" value={idCardNumber} onChange={(e) => setIdCardNumber(e.target.value)} />
+                ID / Address Proof Type *
+                <select value={idType} onChange={(e) => setIdType(e.target.value)}>
+                  <optgroup label="Domestic / Indian National Documents">
+                    <option value="Aadhaar">Aadhaar Card</option>
+                    <option value="Passport">Passport (Indian)</option>
+                    <option value="Driving License">Driving License</option>
+                    <option value="Voter ID">Voter ID</option>
+                    <option value="PAN Card">PAN Card</option>
+                    <option value="Govt ID">Government / Employee ID</option>
+                  </optgroup>
+                  <optgroup label="Foreign National & International Documents">
+                    <option value="Foreign Passport">Foreign Passport</option>
+                    <option value="OCI Card">OCI Card (Overseas Citizen of India)</option>
+                    <option value="PIO Card">PIO Card (Person of Indian Origin)</option>
+                    <option value="Tourist Visa">Tourist / E-Visa Document</option>
+                    <option value="Work Student Visa">Work / Student / Business Visa</option>
+                    <option value="FRRO Permit">FRRO / FRO Registration Permit</option>
+                    <option value="Diplomatic ID">Diplomatic Passport / Identity Card</option>
+                    <option value="International Driving Permit">International Driving Permit (IDP)</option>
+                  </optgroup>
+                  <optgroup label="Other">
+                    <option value="Other">Other Official ID</option>
+                  </optgroup>
+                </select>
               </label>
               <label>
-                Aadhaar Card Image URL (`idCardImageUrl`)
-                <input type="url" placeholder="https://.../aadhaar_card.jpg" value={idCardImageUrl} onChange={(e) => setIdCardImageUrl(e.target.value)} />
+                {idType} Number (`idCardNumber`)
+                <input
+                  type="text"
+                  placeholder={`Enter ${idType} Number`}
+                  value={idCardNumber}
+                  onChange={(e) => setIdCardNumber(e.target.value)}
+                />
               </label>
+            </div>
+
+            <div style={{ marginTop: '0.8rem', background: '#f8fafc', padding: '0.75rem', borderRadius: '8px', border: '1px solid #cbd5e1' }}>
+              <label style={{ fontWeight: 'bold', fontSize: '0.85rem', color: '#334155', display: 'block', marginBottom: '0.4rem' }}>
+                {idType} Document Image (`idCardImageUrl`) — Select File or Capture from Camera
+              </label>
+              <div style={{ display: 'grid', gridTemplateColumns: '1.2fr 1fr 1fr', gap: '0.5rem', alignItems: 'center' }}>
+                <div>
+                  <span style={{ fontSize: '0.75rem', color: '#64748b', display: 'block', marginBottom: '0.2rem' }}>📁 Choose File:</span>
+                  <input
+                    type="file"
+                    accept="image/*"
+                    onChange={handleIdFileUpload}
+                    style={{ margin: 0, fontSize: '0.8rem', padding: '0.25rem' }}
+                  />
+                </div>
+                <div>
+                  <span style={{ fontSize: '0.75rem', color: '#64748b', display: 'block', marginBottom: '0.2rem' }}>📷 Camera Capture:</span>
+                  <button
+                    type="button"
+                    onClick={() => { setCameraTarget('idCard'); setShowCameraModal(true); }}
+                    style={{ width: '100%', margin: 0, background: '#7c3aed', borderColor: '#7c3aed', color: 'white', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.4rem', fontSize: '0.8rem', padding: '0.45rem' }}
+                  >
+                    <Camera size={14} /> Snap ID Document
+                  </button>
+                </div>
+                <div>
+                  <span style={{ fontSize: '0.75rem', color: '#64748b', display: 'block', marginBottom: '0.2rem' }}>🔗 Direct Image URL:</span>
+                  <input
+                    type="text"
+                    placeholder="https://.../id_card.jpg"
+                    value={idCardImageUrl}
+                    onChange={(e) => setIdCardImageUrl(e.target.value)}
+                    style={{ margin: 0, fontSize: '0.8rem' }}
+                  />
+                </div>
+              </div>
+
+              {idCardImageUrl && (
+                <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', marginTop: '0.75rem', padding: '0.6rem', background: '#ffffff', borderRadius: '6px', border: '1px solid #cbd5e1' }}>
+                  <img src={idCardImageUrl} alt="Address Proof Preview" style={{ maxWidth: '120px', maxHeight: '80px', objectFit: 'contain', borderRadius: '4px', border: '1px solid #94a3b8' }} />
+                  <div style={{ flex: 1 }}>
+                    <span style={{ fontSize: '0.85rem', color: '#057a55', fontWeight: 'bold' }}>✓ {idType} Document Attached</span>
+                    <p style={{ margin: 0, fontSize: '0.75rem', color: '#64748b' }}>Ready for security verification.</p>
+                  </div>
+                  <button type="button" onClick={() => setIdCardImageUrl('')} className="secondary outline" style={{ fontSize: '0.75rem', padding: '0.2rem 0.5rem' }}>
+                    Remove Document
+                  </button>
+                </div>
+              )}
             </div>
 
             {/* Section 3: Visit Window & Accompanying Breakdown */}
