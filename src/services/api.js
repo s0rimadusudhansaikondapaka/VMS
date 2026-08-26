@@ -1,6 +1,10 @@
 import axios from 'axios';
 
-const API_BASE = '/api';
+const API_BASE =
+  import.meta.env.VITE_API_BASE_URL ||
+  (typeof window !== 'undefined' && window.location.hostname.includes('onrender.com')
+    ? 'https://smsavmsserver.onrender.com/api'
+    : '/api');
 
 const api = axios.create({
   baseURL: API_BASE,
