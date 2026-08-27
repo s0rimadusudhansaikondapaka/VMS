@@ -21,8 +21,16 @@ export default function SecurityHeadDashboard({ user }) {
   useEffect(() => {
     fetchMetrics();
     fetchSettings();
-    fetchReport('DAILY_ENTRY_EXIT');
-  }, []);
+    fetchReport(reportType);
+
+    const handleRealtimeSync = () => {
+      fetchMetrics();
+      fetchReport(reportType);
+    };
+
+    window.addEventListener('vms_realtime_sync', handleRealtimeSync);
+    return () => window.removeEventListener('vms_realtime_sync', handleRealtimeSync);
+  }, [reportType]);
 
   const fetchMetrics = async () => {
     try {

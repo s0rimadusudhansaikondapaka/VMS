@@ -157,6 +157,14 @@ export default function HostDashboard({ user }) {
 
   useEffect(() => {
     fetchRegistrations();
+
+    const handleRealtimeSync = (e) => {
+      console.log('[HostDashboard] Realtime Sync Event received:', e.detail);
+      fetchRegistrations();
+    };
+
+    window.addEventListener('vms_realtime_sync', handleRealtimeSync);
+    return () => window.removeEventListener('vms_realtime_sync', handleRealtimeSync);
   }, []);
 
   const fetchRegistrations = async () => {
@@ -164,7 +172,7 @@ export default function HostDashboard({ user }) {
       const res = await getHostRegistrations();
       if (res.success) setRegistrations(res.registrations);
     } catch (err) {
-      console.error(err);
+      console.error('Failed to fetch host registrations:', err);
     }
   };
 

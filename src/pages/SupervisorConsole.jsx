@@ -12,6 +12,13 @@ export default function SupervisorConsole({ user }) {
 
   useEffect(() => {
     fetchData();
+
+    const handleRealtimeSync = () => {
+      fetchData();
+    };
+
+    window.addEventListener('vms_realtime_sync', handleRealtimeSync);
+    return () => window.removeEventListener('vms_realtime_sync', handleRealtimeSync);
   }, []);
 
   const fetchData = async () => {

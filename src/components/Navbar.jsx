@@ -1,6 +1,7 @@
 import React from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { Shield, LogOut, User } from 'lucide-react';
+import NotificationBell from './NotificationBell';
 
 export default function Navbar({ user, onLogout }) {
   const navigate = useNavigate();
@@ -39,7 +40,8 @@ export default function Navbar({ user, onLogout }) {
       </ul>
       {user && (
         <ul>
-          <li>
+          <li style={{ display: 'flex', alignItems: 'center', gap: '0.8rem' }}>
+            <NotificationBell user={user} />
             <span style={{ fontSize: '0.9rem', color: '#cbd5e1', display: 'flex', alignItems: 'center', gap: '0.4rem', background: 'rgba(255,255,255,0.08)', padding: '0.3rem 0.8rem', borderRadius: '20px' }}>
               <User size={16} color="#38bdf8" /> <strong>{user.name}</strong> <span style={{ opacity: 0.7 }}>({user.role})</span>
             </span>
