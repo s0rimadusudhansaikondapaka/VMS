@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { createRegistration, updateRegistration, getHostRegistrations, updateApproval, getVisitHistory, generateQrCode } from '../services/api';
 import CameraCaptureModal from '../components/CameraCaptureModal';
 import DashboardHeader from '../components/DashboardHeader';
-import { UserPlus, CheckCircle, XCircle, Clock, Plus, Trash2, Camera, CreditCard, Users, Car, Calendar, ShieldCheck, KeyRound, Pencil, History, QrCode, Share2, Copy } from 'lucide-react';
+import { UserPlus, CheckCircle, XCircle, Clock, Plus, Trash2, Camera, CreditCard, Users, Car, Calendar, ShieldCheck, KeyRound, Pencil, History, QrCode, Share2, Copy, Upload } from 'lucide-react';
 
 export default function HostDashboard({ user }) {
   const [registrations, setRegistrations] = useState([]);
@@ -56,11 +56,31 @@ export default function HostDashboard({ user }) {
   const [isPermanentPass, setIsPermanentPass] = useState(false);
   const [hasSmartphone, setHasSmartphone] = useState(true);
 
-  // Visit Window (Arrival & Departure)
-  const defaultFrom = new Date().toISOString().slice(0, 16);
-  const defaultUntil = new Date(Date.now() + 12 * 60 * 60 * 1000).toISOString().slice(0, 16);
-  const [validFrom, setValidFrom] = useState(defaultFrom);
-  const [validUntil, setValidUntil] = useState(defaultUntil);
+  // Visit Window (Arrival: Now, Departure: Tomorrow 9:00 PM)
+  const getDefaultFrom = () => {
+    const now = new Date();
+    const year = now.getFullYear();
+    const month = String(now.getMonth() + 1).padStart(2, '0');
+    const day = String(now.getDate()).padStart(2, '0');
+    const hours = String(now.getHours()).padStart(2, '0');
+    const minutes = String(now.getMinutes()).padStart(2, '0');
+    return `${year}-${month}-${day}T${hours}:${minutes}`;
+  };
+
+  const getDefaultUntil = () => {
+    const tomorrow = new Date();
+    tomorrow.setDate(tomorrow.getDate() + 1);
+    tomorrow.setHours(21, 0, 0, 0); // Tomorrow 9:00 PM
+    const year = tomorrow.getFullYear();
+    const month = String(tomorrow.getMonth() + 1).padStart(2, '0');
+    const day = String(tomorrow.getDate()).padStart(2, '0');
+    const hours = String(tomorrow.getHours()).padStart(2, '0');
+    const minutes = String(tomorrow.getMinutes()).padStart(2, '0');
+    return `${year}-${month}-${day}T${hours}:${minutes}`;
+  };
+
+  const [validFrom, setValidFrom] = useState(getDefaultFrom());
+  const [validUntil, setValidUntil] = useState(getDefaultUntil());
 
   // Accompanying Breakdown
   const [adultMen, setAdultMen] = useState(1);
@@ -187,6 +207,12 @@ export default function HostDashboard({ user }) {
     setError('');
     setMsg('');
     try {
+      const isSingle = registrationMode === 'Single';
+      const computedMen = isSingle ? (gender === 'Female' ? 0 : 1) : (parseInt(adultMen) || 0);
+      const computedWomen = isSingle ? (gender === 'Female' ? 1 : 0) : (parseInt(adultWomen) || 0);
+      const computedBoys = isSingle ? 0 : (parseInt(boysCount) || 0);
+      const computedGirls = isSingle ? 0 : (parseInt(girlsCount) || 0);
+
       const payload = {
         full_name: fullName,
         phone,
@@ -208,11 +234,11 @@ export default function HostDashboard({ user }) {
         has_smartphone: hasSmartphone,
         valid_from: validFrom,
         valid_until: validUntil,
-        adult_men_count: adultMen,
-        adult_women_count: adultWomen,
-        boys_count: boysCount,
-        girls_count: girlsCount,
-        children_count: (parseInt(boysCount) || 0) + (parseInt(girlsCount) || 0),
+        adult_men_count: computedMen,
+        adult_women_count: computedWomen,
+        boys_count: computedBoys,
+        girls_count: computedGirls,
+        children_count: computedBoys + computedGirls,
         vehicles: vehicles.filter((v) => v.plate_number.trim() !== ''),
         host_id: user.id,
       };
@@ -269,6 +295,8 @@ export default function HostDashboard({ user }) {
     setIsPermanentPass(false);
     setVehicles([{ plate_number: '', vehicle_type: 'Car', driver_name: '', driver_phone: '' }]);
     setIsVvip(false);
+    setValidFrom(getDefaultFrom());
+    setValidUntil(getDefaultUntil());
   };
 
   return (
@@ -466,73 +494,39 @@ export default function HostDashboard({ user }) {
               </label>
             </div>
 
-            {/* Section 2: Address Proof & Identification */}
-            <h4 style={{ fontSize: '0.9rem', color: '#2563eb', marginTop: '1rem' }}>2. Address Proof & Identification</h4>
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.8rem' }}>
-              <label>
-                ID / Address Proof Type *
-                <select value={idType} onChange={(e) => setIdType(e.target.value)}>
-                  <optgroup label="Domestic / Indian National Documents">
-                    <option value="Aadhaar">Aadhaar Card</option>
-                    <option value="Passport">Passport (Indian)</option>
-                    <option value="Driving License">Driving License</option>
-                    <option value="Voter ID">Voter ID</option>
-                    <option value="PAN Card">PAN Card</option>
-                    <option value="Govt ID">Government / Employee ID</option>
-                  </optgroup>
-                  <optgroup label="Foreign National & International Documents">
-                    <option value="Foreign Passport">Foreign Passport</option>
-                    <option value="OCI Card">OCI Card (Overseas Citizen of India)</option>
-                    <option value="PIO Card">PIO Card (Person of Indian Origin)</option>
-                    <option value="Tourist Visa">Tourist / E-Visa Document</option>
-                    <option value="Work Student Visa">Work / Student / Business Visa</option>
-                    <option value="FRRO Permit">FRRO / FRO Registration Permit</option>
-                    <option value="Diplomatic ID">Diplomatic Passport / Identity Card</option>
-                    <option value="International Driving Permit">International Driving Permit (IDP)</option>
-                  </optgroup>
-                  <optgroup label="Other">
-                    <option value="Other">Other Official ID</option>
-                  </optgroup>
-                </select>
-              </label>
-              <label>
-                {idType} Number (`idCardNumber`)
-                <input
-                  type="text"
-                  placeholder={`Enter ${idType} Number`}
-                  value={idCardNumber}
-                  onChange={(e) => setIdCardNumber(e.target.value)}
-                />
-              </label>
-            </div>
-
-            <div style={{ marginTop: '0.8rem', background: '#f8fafc', padding: '0.75rem', borderRadius: '8px', border: '1px solid #cbd5e1' }}>
+            {/* Section 2: Identity & Document Proof Attachment */}
+            <h4 style={{ fontSize: '0.9rem', color: '#2563eb', marginTop: '1rem' }}>2. Identity & Document Proof Attachment</h4>
+            <div style={{ marginTop: '0.5rem', background: '#f8fafc', padding: '0.75rem', borderRadius: '8px', border: '1px solid #cbd5e1' }}>
               <label style={{ fontWeight: 'bold', fontSize: '0.85rem', color: '#334155', display: 'block', marginBottom: '0.4rem' }}>
-                📄 {idType} Document Image Attachment
+                📄 Upload Document or Snap Photo
               </label>
               <div style={{ display: 'flex', gap: '0.6rem', alignItems: 'center', flexWrap: 'wrap' }}>
                 <label className="button" style={{ margin: 0, padding: '0.45rem 1rem', fontSize: '0.82rem', background: '#2563eb', borderColor: '#2563eb', color: 'white', cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: '0.4rem', fontWeight: 'bold' }}>
-                  <Upload size={15} /> Select ID Document File
-                  <input type="file" accept="image/*" onChange={handleIdFileUpload} style={{ display: 'none' }} />
+                  <Upload size={15} /> Select Document / Photo File
+                  <input type="file" accept="image/*,.pdf,.doc,.docx,.png,.jpg,.jpeg" onChange={handleIdFileUpload} style={{ display: 'none' }} />
                 </label>
                 <button
                   type="button"
                   onClick={() => { setCameraTarget('idCard'); setShowCameraModal(true); }}
                   style={{ margin: 0, padding: '0.45rem 1rem', fontSize: '0.82rem', background: '#7c3aed', borderColor: '#7c3aed', color: 'white', display: 'inline-flex', alignItems: 'center', gap: '0.4rem', fontWeight: 'bold' }}
                 >
-                  <Camera size={15} /> Snap ID Document Camera
+                  <Camera size={15} /> Snap Photo / Document
                 </button>
               </div>
 
               {idCardImageUrl && (
                 <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', marginTop: '0.6rem', padding: '0.5rem', background: '#ffffff', borderRadius: '6px', border: '1px solid #cbd5e1' }}>
-                  <img src={idCardImageUrl} alt="Address Proof Preview" style={{ maxWidth: '100px', maxHeight: '60px', objectFit: 'contain', borderRadius: '4px', border: '1px solid #cbd5e1' }} />
+                  {idCardImageUrl.startsWith('data:image') || idCardImageUrl.match(/\.(jpg|jpeg|png|gif|webp)$/i) || idCardImageUrl.startsWith('http') ? (
+                    <img src={idCardImageUrl} alt="Document Preview" style={{ maxWidth: '100px', maxHeight: '60px', objectFit: 'contain', borderRadius: '4px', border: '1px solid #cbd5e1' }} />
+                  ) : (
+                    <div style={{ padding: '0.5rem 0.8rem', background: '#eff6ff', borderRadius: '4px', fontSize: '0.8rem', color: '#1e40af', fontWeight: 'bold' }}>📄 Document File</div>
+                  )}
                   <div style={{ flex: 1 }}>
-                    <span style={{ fontSize: '0.85rem', color: '#057a55', fontWeight: 'bold' }}>✓ {idType} Document Attached</span>
+                    <span style={{ fontSize: '0.85rem', color: '#057a55', fontWeight: 'bold' }}>✓ Document / Proof Attached</span>
                     <p style={{ margin: 0, fontSize: '0.75rem', color: '#64748b' }}>Ready for security verification.</p>
                   </div>
                   <button type="button" onClick={() => setIdCardImageUrl('')} className="secondary outline" style={{ fontSize: '0.75rem', padding: '0.2rem 0.5rem' }}>
-                    Remove Document
+                    Remove Attachment
                   </button>
                 </div>
               )}
@@ -551,30 +545,36 @@ export default function HostDashboard({ user }) {
               </label>
             </div>
 
-            <div style={{ background: '#f8fafc', padding: '0.75rem', borderRadius: '6px', border: '1px solid #cbd5e1', marginTop: '0.5rem' }}>
-              <strong style={{ fontSize: '0.85rem', color: '#334155' }}>Accompanying Breakdown ({registrationMode}):</strong>
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr 1fr', gap: '0.8rem', marginTop: '0.4rem' }}>
-                <label>
-                  Adult Men (👨)
-                  <input type="number" min="0" value={adultMen} onChange={(e) => setAdultMen(e.target.value)} />
-                </label>
-                <label>
-                  Adult Women (👩)
-                  <input type="number" min="0" value={adultWomen} onChange={(e) => setAdultWomen(e.target.value)} />
-                </label>
-                <label>
-                  Boys (👦)
-                  <input type="number" min="0" value={boysCount} onChange={(e) => setBoysCount(e.target.value)} />
-                </label>
-                <label>
-                  Girls (👧)
-                  <input type="number" min="0" value={girlsCount} onChange={(e) => setGirlsCount(e.target.value)} />
-                </label>
+            {registrationMode === 'Group' ? (
+              <div style={{ background: '#f8fafc', padding: '0.75rem', borderRadius: '6px', border: '1px solid #cbd5e1', marginTop: '0.5rem' }}>
+                <strong style={{ fontSize: '0.85rem', color: '#334155' }}>Group Accompanying Breakdown:</strong>
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr 1fr', gap: '0.8rem', marginTop: '0.4rem' }}>
+                  <label>
+                    Adult Men (👨)
+                    <input type="number" min="0" value={adultMen} onChange={(e) => setAdultMen(e.target.value)} />
+                  </label>
+                  <label>
+                    Adult Women (👩)
+                    <input type="number" min="0" value={adultWomen} onChange={(e) => setAdultWomen(e.target.value)} />
+                  </label>
+                  <label>
+                    Boys (👦)
+                    <input type="number" min="0" value={boysCount} onChange={(e) => setBoysCount(e.target.value)} />
+                  </label>
+                  <label>
+                    Girls (👧)
+                    <input type="number" min="0" value={girlsCount} onChange={(e) => setGirlsCount(e.target.value)} />
+                  </label>
+                </div>
+                <div style={{ fontSize: '0.8rem', color: '#475569', marginTop: '0.4rem', fontWeight: 'bold' }}>
+                  Total People: {(parseInt(adultMen) || 0) + (parseInt(adultWomen) || 0) + (parseInt(boysCount) || 0) + (parseInt(girlsCount) || 0)} (Children: {(parseInt(boysCount) || 0) + (parseInt(girlsCount) || 0)})
+                </div>
               </div>
-              <div style={{ fontSize: '0.8rem', color: '#475569', marginTop: '0.4rem', fontWeight: 'bold' }}>
-                Total People: {(parseInt(adultMen) || 0) + (parseInt(adultWomen) || 0) + (parseInt(boysCount) || 0) + (parseInt(girlsCount) || 0)} (Children: {(parseInt(boysCount) || 0) + (parseInt(girlsCount) || 0)})
+            ) : (
+              <div style={{ background: '#eff6ff', padding: '0.6rem 0.8rem', borderRadius: '6px', border: '1px solid #bfdbfe', marginTop: '0.5rem', fontSize: '0.82rem', color: '#1e40af', fontWeight: 'bold' }}>
+                ⚡ Single Visitor Mode: Auto-calculated breakdown for 1 Visitor ({gender === 'Female' ? '1 Adult Woman' : '1 Adult Man'}).
               </div>
-            </div>
+            )}
 
             {/* Section 4: Multiple Registered Vehicles */}
             <div style={{ marginTop: '1rem' }}>
