@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { verifyGatePass, processGateMovement, createRegistration, getSpotRegistrationsQueue, assignSpotHost, getAdminUsers } from '../services/api';
 import DashboardHeader from '../components/DashboardHeader';
+import QrScannerModal from '../components/QrScannerModal';
 import { ShieldCheck, LogIn, LogOut, Search, UserCheck, AlertTriangle, Car, Users, Calendar, Camera, Phone, KeyRound, UserPlus, QrCode, Share2, CheckCircle, XCircle, Clock } from 'lucide-react';
 
 export default function GuardGateTerminal({ user }) {
@@ -10,6 +11,7 @@ export default function GuardGateTerminal({ user }) {
   const [error, setError] = useState('');
   const [msg, setMsg] = useState('');
   const [loading, setLoading] = useState(false);
+  const [showCameraScanner, setShowCameraScanner] = useState(false);
 
   // Gate Spot Registration Queue & QR Modal State
   const [showGateSpotQrModal, setShowGateSpotQrModal] = useState(false);
@@ -71,14 +73,13 @@ export default function GuardGateTerminal({ user }) {
   const [assistedPurpose, setAssistedPurpose] = useState('');
   const [assistedHostName, setAssistedHostName] = useState('');
 
-  const handleSearch = async (e) => {
-    e.preventDefault();
-    if (!searchQuery.trim()) return;
+  const executePassVerification = async (queryToVerify) => {
+    if (!queryToVerify || !queryToVerify.trim()) return;
     setError('');
     setMsg('');
     setLoading(true);
     try {
-      const res = await verifyGatePass(searchQuery.trim());
+      const res = await verifyGatePass(queryToVerify.trim());
       if (res.success) {
         setPassData(res.pass);
         setAdultMen(res.pass.adult_men_count || 1);
@@ -91,11 +92,45 @@ export default function GuardGateTerminal({ user }) {
         setPassData(null);
       }
     } catch (err) {
-      setError(err.response?.data?.message || 'Pass not found for query: ' + searchQuery);
+      setError(err.response?.data?.message || 'Pass not found for query: ' + queryToVerify);
       setPassData(null);
     } finally {
       setLoading(false);
     }
+  };
+
+  const parsePassCodeFromInput = (rawText) => {
+    if (!rawText) return '';
+    let clean = rawText.trim();
+    if (clean.startsWith('{') && clean.endsWith('}')) {
+      try {
+        const parsed = JSON.parse(clean);
+        if (parsed.passCode || parsed.pass_code) {
+          return (parsed.passCode || parsed.pass_code).trim();
+        }
+      } catch (e) {}
+    }
+    if (clean.includes('pass=')) {
+      const match = clean.match(/pass=([A-Za-z0-9_-]+)/);
+      if (match) return match[1];
+    } else if (clean.includes('/pass/')) {
+      const match = clean.match(/\/pass\/([A-Za-z0-9_-]+)/);
+      if (match) return match[1];
+    }
+    return clean;
+  };
+
+  const handleSearch = (e) => {
+    e.preventDefault();
+    const cleanCode = parsePassCodeFromInput(searchQuery);
+    setSearchQuery(cleanCode);
+    executePassVerification(cleanCode);
+  };
+
+  const handleQrScanSuccess = (scannedCode) => {
+    const cleanCode = parsePassCodeFromInput(scannedCode);
+    setSearchQuery(cleanCode);
+    executePassVerification(cleanCode);
   };
 
   const handleMovement = async (direction) => {
@@ -199,27 +234,42 @@ export default function GuardGateTerminal({ user }) {
           Search by <strong>Passcode (e.g. PASS-1001, MAID-PERM-5001)</strong>, <strong>Delivery Boy Phone Number (+91 9933445566)</strong>, <strong>Vehicle Plate No</strong>, or <strong>QR Code scan</strong>.
         </p>
 
-        <form onSubmit={handleSearch} style={{ display: 'flex', gap: '1rem' }}>
-          <input
-            type="text"
-            placeholder="Scan QR Code or enter Pass Code / Phone Number / Vehicle No"
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-            style={{ flex: 1, margin: 0 }}
-          />
-          <button type="submit" disabled={loading} style={{ margin: 0, minWidth: '140px' }}>
-            <Search size={16} /> Verify Pass
+        <form onSubmit={handleSearch} style={{ display: 'flex', gap: '0.8rem', width: '100%', flexWrap: 'wrap', margin: '1rem 0' }}>
+          <div style={{ flex: '1 1 320px', minWidth: '280px' }}>
+            <input
+              type="text"
+              placeholder="Scan QR Code / Pass Code / Mobile No / Vehicle No / Maid / Delivery"
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              style={{ width: '100%', margin: 0, fontSize: '0.95rem', height: '48px', background: '#ffffff', color: '#0f172a', border: '2px solid #2563eb', borderRadius: '8px', padding: '0 1rem' }}
+            />
+          </div>
+          <button type="submit" disabled={loading} style={{ margin: 0, minWidth: '150px', height: '48px', background: '#2563eb', borderColor: '#2563eb', color: 'white', fontWeight: 'bold', fontSize: '0.95rem', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.4rem', borderRadius: '8px' }}>
+            <Search size={18} /> Verify Pass
+          </button>
+          <button
+            type="button"
+            onClick={() => setShowCameraScanner(true)}
+            style={{ margin: 0, minWidth: '160px', height: '48px', background: '#7c3aed', borderColor: '#7c3aed', color: 'white', fontWeight: 'bold', fontSize: '0.95rem', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.4rem', borderRadius: '8px' }}
+          >
+            <Camera size={18} /> 📷 Scan QR Code
           </button>
         </form>
 
-        {/* PPTX Shortcuts */}
-        <div style={{ display: 'flex', gap: '0.5rem', marginTop: '0.8rem', alignItems: 'center' }}>
-          <span style={{ fontSize: '0.75rem', color: '#475569', fontWeight: 'bold' }}>PPTX Quick Demo Lookups:</span>
-          <button type="button" className="secondary outline" onClick={() => quickSearchPhone('MAID-PERM-5001')} style={{ fontSize: '0.7rem', padding: '0.2rem 0.5rem' }}>
-            <KeyRound size={12} /> Maid Permanent Pass (MAID-PERM-5001)
+        {/* Verification Category Shortcuts */}
+        <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap', alignItems: 'center', marginTop: '0.5rem', background: '#f8fafc', padding: '0.8rem', borderRadius: '8px', border: '1px solid #e2e8f0' }}>
+          <span style={{ fontSize: '0.78rem', color: '#334155', fontWeight: 'bold', width: '100%', marginBottom: '0.2rem' }}>Quick Gate Verification Lookups:</span>
+          <button type="button" className="secondary outline" onClick={() => quickSearchPhone('PASS-1001')} style={{ fontSize: '0.75rem', padding: '0.35rem 0.6rem', background: '#white' }}>
+            <KeyRound size={14} /> Single Visitor Pass (PASS-1001)
           </button>
-          <button type="button" className="secondary outline" onClick={() => quickSearchPhone('+91 9933445566')} style={{ fontSize: '0.7rem', padding: '0.2rem 0.5rem' }}>
-            <Phone size={12} /> Delivery Boy Phone (+91 9933445566)
+          <button type="button" className="secondary outline" onClick={() => quickSearchPhone('MAID-PERM-5001')} style={{ fontSize: '0.75rem', padding: '0.35rem 0.6rem' }}>
+            <UserCheck size={14} /> Maid Permanent Pass (MAID-PERM-5001)
+          </button>
+          <button type="button" className="secondary outline" onClick={() => quickSearchPhone('+91 9933445566')} style={{ fontSize: '0.75rem', padding: '0.35rem 0.6rem' }}>
+            <Phone size={14} /> Delivery Boy Lookup (+91 9933445566)
+          </button>
+          <button type="button" className="secondary outline" onClick={() => quickSearchPhone('KA-01-MJ-9999')} style={{ fontSize: '0.75rem', padding: '0.35rem 0.6rem' }}>
+            <Car size={14} /> Vehicle Plate Lookup (KA-01-MJ-9999)
           </button>
         </div>
 
@@ -406,17 +456,41 @@ export default function GuardGateTerminal({ user }) {
           <div style={{ display: 'flex', gap: '1rem', marginTop: '1.5rem' }}>
             <button
               onClick={() => handleMovement('IN')}
+              disabled={passData.status === 'INSIDE_CAMPUS'}
               className="gate-btn-in"
-              style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.5rem' }}
+              style={{
+                flex: 1,
+                display: 'flex',
+                alignItems: 'center',
+                justify: 'center',
+                gap: '0.5rem',
+                opacity: passData.status === 'INSIDE_CAMPUS' ? 0.55 : 1,
+                cursor: passData.status === 'INSIDE_CAMPUS' ? 'not-allowed' : 'pointer',
+                background: passData.status === 'INSIDE_CAMPUS' ? '#475569' : undefined,
+                borderColor: passData.status === 'INSIDE_CAMPUS' ? '#475569' : undefined,
+              }}
             >
-              <LogIn size={20} /> Record Ingress (IN)
+              <LogIn size={20} />
+              {passData.status === 'INSIDE_CAMPUS' ? '✓ Already Inside Campus (IN)' : 'Record Ingress (IN)'}
             </button>
             <button
               onClick={() => handleMovement('OUT')}
+              disabled={passData.status === 'CHECKED_OUT'}
               className="gate-btn-out"
-              style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.5rem' }}
+              style={{
+                flex: 1,
+                display: 'flex',
+                alignItems: 'center',
+                justify: 'center',
+                gap: '0.5rem',
+                opacity: passData.status === 'CHECKED_OUT' ? 0.55 : 1,
+                cursor: passData.status === 'CHECKED_OUT' ? 'not-allowed' : 'pointer',
+                background: passData.status === 'CHECKED_OUT' ? '#475569' : undefined,
+                borderColor: passData.status === 'CHECKED_OUT' ? '#475569' : undefined,
+              }}
             >
-              <LogOut size={20} /> Record Egress (OUT)
+              <LogOut size={20} />
+              {passData.status === 'CHECKED_OUT' ? '✓ Already Checked Out (OUT)' : 'Record Egress (OUT)'}
             </button>
           </div>
         </div>
@@ -574,6 +648,13 @@ export default function GuardGateTerminal({ user }) {
           </div>
         </div>
       )}
+
+      {/* Live Camera QR Code Scanner Modal */}
+      <QrScannerModal
+        isOpen={showCameraScanner}
+        onClose={() => setShowCameraScanner(false)}
+        onScanSuccess={handleQrScanSuccess}
+      />
     </div>
   );
 }

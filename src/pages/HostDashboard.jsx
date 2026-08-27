@@ -995,25 +995,64 @@ export default function HostDashboard({ user }) {
             </div>
 
             <div style={{ display: 'flex', gap: '0.4rem', flexWrap: 'wrap' }}>
-              <a
-                href={`https://wa.me/?text=${encodeURIComponent(`Jay Sai Ram! Here is your entry Passcode and QR Code for Sathya Sai Grama:\nPasscode: ${qrModalData.pass_code}\nStatus: Approved (Valid Only Once)`)}`}
-                target="_blank"
-                rel="noreferrer"
-                style={{ flex: 1, textDecoration: 'none', minWidth: '120px' }}
+              <button
+                type="button"
+                onClick={async () => {
+                  const directImageUrl = `${window.location.origin}/api/registrations/qr-image/${qrModalData.pass_code}.png`;
+                  const fullPassUrl = `${window.location.origin}/?pass=${qrModalData.pass_code}`;
+                  const shareText = `Jay Sai Ram! Here is your entry Passcode and official QR Code Pass for Sathya Sai Grama:\n\nGuest: ${qrModalData.visitor_name || 'Guest'}\nPasscode: ${qrModalData.pass_code}\nStatus: Approved\n\nDirect QR Image:\n${directImageUrl}\n\nFull Gate Pass Link:\n${fullPassUrl}`;
+
+                  try {
+                    if (qrModalData.qr_code_url && navigator.canShare) {
+                      const response = await fetch(qrModalData.qr_code_url);
+                      const blob = await response.blob();
+                      const file = new File([blob], `GatePass_${qrModalData.pass_code}.png`, { type: 'image/png' });
+
+                      if (navigator.canShare({ files: [file] })) {
+                        await navigator.share({
+                          title: `Sathya Sai Grama Pass - ${qrModalData.pass_code}`,
+                          text: shareText,
+                          files: [file],
+                        });
+                        return;
+                      }
+                    }
+                  } catch (err) {
+                    console.log('Native file share fallback:', err);
+                  }
+
+                  window.open(`https://wa.me/?text=${encodeURIComponent(shareText)}`, '_blank');
+                }}
+                style={{ flex: 1, background: '#25d366', borderColor: '#25d366', color: 'white', fontWeight: 'bold', fontSize: '0.8rem', padding: '0.5rem', minWidth: '110px' }}
               >
-                <button type="button" style={{ width: '100%', background: '#25d366', borderColor: '#25d366', color: 'white', fontWeight: 'bold', fontSize: '0.8rem', padding: '0.5rem' }}>
-                  📲 WhatsApp
-                </button>
-              </a>
+                📲 WhatsApp
+              </button>
 
               <a
-                href={`mailto:?subject=${encodeURIComponent('Sathya Sai Grama - Entry Gate Passcode & QR Code')}&body=${encodeURIComponent(`Jay Sai Ram!\n\nHere is your entry Passcode and QR Code for Sathya Sai Grama:\nPasscode: ${qrModalData.pass_code}\nStatus: Approved (Valid Only Once)\n\nThank you!`)}`}
-                style={{ flex: 1, textDecoration: 'none', minWidth: '120px' }}
+                href={`mailto:?subject=${encodeURIComponent('Sathya Sai Grama - Entry Gate Passcode & QR Code')}&body=${encodeURIComponent(`Jay Sai Ram!\n\nHere is your entry Passcode and official QR Code Pass for Sathya Sai Grama:\nGuest: ${qrModalData.visitor_name}\nPasscode: ${qrModalData.pass_code}\nStatus: Approved\n\nYou can view, save, or print your official QR Code Pass Image using this link:\n${window.location.origin}/?pass=${qrModalData.pass_code}\n\nThank you!`)}`}
+                style={{ flex: 1, textDecoration: 'none', minWidth: '110px' }}
               >
                 <button type="button" style={{ width: '100%', background: '#2563eb', borderColor: '#2563eb', color: 'white', fontWeight: 'bold', fontSize: '0.8rem', padding: '0.5rem' }}>
                   ✉️ Email Pass
                 </button>
               </a>
+
+              {qrModalData.qr_code_url && (
+                <button
+                  type="button"
+                  onClick={() => {
+                    const link = document.createElement('a');
+                    link.href = qrModalData.qr_code_url;
+                    link.download = `GatePass_${qrModalData.pass_code}.png`;
+                    document.body.appendChild(link);
+                    link.click();
+                    document.body.removeChild(link);
+                  }}
+                  style={{ flex: 1, background: '#7c3aed', borderColor: '#7c3aed', color: 'white', fontWeight: 'bold', fontSize: '0.8rem', padding: '0.5rem', minWidth: '110px' }}
+                >
+                  ⬇️ Download QR
+                </button>
+              )}
 
               <button type="button" className="secondary outline" onClick={() => setQrModalData(null)} style={{ fontSize: '0.8rem', padding: '0.5rem 0.8rem' }}>
                 Close

@@ -48,6 +48,11 @@ export const generateInviteToken = async () => {
   return res.data;
 };
 
+export const getPublicPassDetails = async (passCode) => {
+  const res = await api.get(`/registrations/public-pass/${encodeURIComponent(passCode)}`);
+  return res.data;
+};
+
 export const getHostRegistrations = async () => {
   const res = await api.get('/registrations/host');
   return res.data;

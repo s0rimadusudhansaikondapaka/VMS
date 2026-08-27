@@ -5,7 +5,7 @@ import { Shield, User, Camera, Upload, CheckCircle, Calendar, Users, Car, AlertT
 
 export default function GuestInviteForm() {
   const params = new URLSearchParams(window.location.search);
-  const hostId = params.get('guid') || params.get('host_guid') || params.get('host_id') || '1';
+  const hostId = params.get('token') || params.get('guid') || params.get('host_guid') || params.get('host_id') || '1';
   const initialMode = params.get('mode') || 'Single';
 
   const [hostInfo, setHostInfo] = useState(null);
