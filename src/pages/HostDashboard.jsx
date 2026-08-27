@@ -411,49 +411,35 @@ export default function HostDashboard({ user }) {
                 </select>
               </label>
 
-              {/* Photo Input with Live Camera Capture & File Upload */}
+              {/* Simplified Visitor Photo Attachment Control */}
               <div style={{ gridColumn: 'span 2' }}>
-                <label>Visitor Photo (Upload File, Capture Live, or URL)</label>
-                <div style={{ display: 'grid', gridTemplateColumns: '1.2fr 1fr 1fr', gap: '0.5rem', alignItems: 'center' }}>
-                  <div>
-                    <span style={{ fontSize: '0.75rem', color: '#64748b', display: 'block' }}>📁 Upload Image File:</span>
-                    <input
-                      type="file"
-                      accept="image/*"
-                      onChange={handlePhotoFileUpload}
-                      style={{ margin: 0, fontSize: '0.8rem', padding: '0.25rem' }}
-                    />
-                  </div>
-                  <div>
-                    <span style={{ fontSize: '0.75rem', color: '#64748b', display: 'block' }}>📷 Camera Capture:</span>
+                <div style={{ background: '#f8fafc', padding: '0.75rem', borderRadius: '8px', border: '1px solid #cbd5e1' }}>
+                  <label style={{ fontWeight: 'bold', fontSize: '0.85rem', color: '#334155', display: 'block', marginBottom: '0.4rem' }}>
+                    📷 Visitor Photo Attachment
+                  </label>
+                  <div style={{ display: 'flex', gap: '0.6rem', alignItems: 'center', flexWrap: 'wrap' }}>
+                    <label className="button" style={{ margin: 0, padding: '0.45rem 1rem', fontSize: '0.82rem', background: '#2563eb', borderColor: '#2563eb', color: 'white', cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: '0.4rem', fontWeight: 'bold' }}>
+                      <Upload size={15} /> Select Photo File
+                      <input type="file" accept="image/*" onChange={handlePhotoFileUpload} style={{ display: 'none' }} />
+                    </label>
                     <button
                       type="button"
                       onClick={() => { setCameraTarget('photo'); setShowCameraModal(true); }}
-                      style={{ width: '100%', margin: 0, background: '#2563eb', borderColor: '#2563eb', color: 'white', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.4rem', fontSize: '0.8rem', padding: '0.45rem' }}
+                      style={{ margin: 0, padding: '0.45rem 1rem', fontSize: '0.82rem', background: '#7c3aed', borderColor: '#7c3aed', color: 'white', display: 'inline-flex', alignItems: 'center', gap: '0.4rem', fontWeight: 'bold' }}
                     >
-                      <Camera size={14} /> Snap Photo
+                      <Camera size={15} /> Snap Live Camera
                     </button>
                   </div>
-                  <div>
-                    <span style={{ fontSize: '0.75rem', color: '#64748b', display: 'block' }}>🔗 Image URL:</span>
-                    <input
-                      type="text"
-                      placeholder="https://.../photo.jpg"
-                      value={photoUrl}
-                      onChange={(e) => setPhotoUrl(e.target.value)}
-                      style={{ margin: 0, fontSize: '0.8rem' }}
-                    />
-                  </div>
+                  {photoUrl && (
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem', marginTop: '0.6rem', padding: '0.5rem', background: '#ffffff', borderRadius: '6px', border: '1px solid #bbf7d0' }}>
+                      <img src={photoUrl} alt="Photo Preview" style={{ width: '45px', height: '45px', borderRadius: '50%', objectFit: 'cover', border: '2px solid #057a55' }} />
+                      <span style={{ fontSize: '0.8rem', color: '#057a55', fontWeight: 'bold' }}>✓ Visitor Photo Attached</span>
+                      <button type="button" onClick={() => setPhotoUrl('')} className="secondary outline" style={{ fontSize: '0.72rem', padding: '0.2rem 0.5rem', marginLeft: 'auto' }}>
+                        Remove
+                      </button>
+                    </div>
+                  )}
                 </div>
-                {photoUrl && (
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginTop: '0.4rem' }}>
-                    <img src={photoUrl} alt="Captured Preview" style={{ width: '45px', height: '45px', borderRadius: '50%', objectFit: 'cover', border: '2px solid #2563eb' }} />
-                    <span style={{ fontSize: '0.75rem', color: '#057a55', fontWeight: 'bold' }}>✓ Photo Attached</span>
-                    <button type="button" onClick={() => setPhotoUrl('')} className="secondary outline" style={{ fontSize: '0.7rem', padding: '0.1rem 0.4rem' }}>
-                      Remove
-                    </button>
-                  </div>
-                )}
               </div>
 
               <label>
@@ -522,43 +508,25 @@ export default function HostDashboard({ user }) {
 
             <div style={{ marginTop: '0.8rem', background: '#f8fafc', padding: '0.75rem', borderRadius: '8px', border: '1px solid #cbd5e1' }}>
               <label style={{ fontWeight: 'bold', fontSize: '0.85rem', color: '#334155', display: 'block', marginBottom: '0.4rem' }}>
-                {idType} Document Image (`idCardImageUrl`) — Select File or Capture from Camera
+                📄 {idType} Document Image Attachment
               </label>
-              <div style={{ display: 'grid', gridTemplateColumns: '1.2fr 1fr 1fr', gap: '0.5rem', alignItems: 'center' }}>
-                <div>
-                  <span style={{ fontSize: '0.75rem', color: '#64748b', display: 'block', marginBottom: '0.2rem' }}>📁 Choose File:</span>
-                  <input
-                    type="file"
-                    accept="image/*"
-                    onChange={handleIdFileUpload}
-                    style={{ margin: 0, fontSize: '0.8rem', padding: '0.25rem' }}
-                  />
-                </div>
-                <div>
-                  <span style={{ fontSize: '0.75rem', color: '#64748b', display: 'block', marginBottom: '0.2rem' }}>📷 Camera Capture:</span>
-                  <button
-                    type="button"
-                    onClick={() => { setCameraTarget('idCard'); setShowCameraModal(true); }}
-                    style={{ width: '100%', margin: 0, background: '#7c3aed', borderColor: '#7c3aed', color: 'white', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.4rem', fontSize: '0.8rem', padding: '0.45rem' }}
-                  >
-                    <Camera size={14} /> Snap ID Document
-                  </button>
-                </div>
-                <div>
-                  <span style={{ fontSize: '0.75rem', color: '#64748b', display: 'block', marginBottom: '0.2rem' }}>🔗 Direct Image URL:</span>
-                  <input
-                    type="text"
-                    placeholder="https://.../id_card.jpg"
-                    value={idCardImageUrl}
-                    onChange={(e) => setIdCardImageUrl(e.target.value)}
-                    style={{ margin: 0, fontSize: '0.8rem' }}
-                  />
-                </div>
+              <div style={{ display: 'flex', gap: '0.6rem', alignItems: 'center', flexWrap: 'wrap' }}>
+                <label className="button" style={{ margin: 0, padding: '0.45rem 1rem', fontSize: '0.82rem', background: '#2563eb', borderColor: '#2563eb', color: 'white', cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: '0.4rem', fontWeight: 'bold' }}>
+                  <Upload size={15} /> Select ID Document File
+                  <input type="file" accept="image/*" onChange={handleIdFileUpload} style={{ display: 'none' }} />
+                </label>
+                <button
+                  type="button"
+                  onClick={() => { setCameraTarget('idCard'); setShowCameraModal(true); }}
+                  style={{ margin: 0, padding: '0.45rem 1rem', fontSize: '0.82rem', background: '#7c3aed', borderColor: '#7c3aed', color: 'white', display: 'inline-flex', alignItems: 'center', gap: '0.4rem', fontWeight: 'bold' }}
+                >
+                  <Camera size={15} /> Snap ID Document Camera
+                </button>
               </div>
 
               {idCardImageUrl && (
-                <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', marginTop: '0.75rem', padding: '0.6rem', background: '#ffffff', borderRadius: '6px', border: '1px solid #cbd5e1' }}>
-                  <img src={idCardImageUrl} alt="Address Proof Preview" style={{ maxWidth: '120px', maxHeight: '80px', objectFit: 'contain', borderRadius: '4px', border: '1px solid #94a3b8' }} />
+                <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', marginTop: '0.6rem', padding: '0.5rem', background: '#ffffff', borderRadius: '6px', border: '1px solid #cbd5e1' }}>
+                  <img src={idCardImageUrl} alt="Address Proof Preview" style={{ maxWidth: '100px', maxHeight: '60px', objectFit: 'contain', borderRadius: '4px', border: '1px solid #cbd5e1' }} />
                   <div style={{ flex: 1 }}>
                     <span style={{ fontSize: '0.85rem', color: '#057a55', fontWeight: 'bold' }}>✓ {idType} Document Attached</span>
                     <p style={{ margin: 0, fontSize: '0.75rem', color: '#64748b' }}>Ready for security verification.</p>

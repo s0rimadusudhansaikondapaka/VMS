@@ -1,7 +1,7 @@
-import React, { useState } from 'react';
-import { verifyGatePass, processGateMovement, createRegistration } from '../services/api';
+import React, { useState, useEffect } from 'react';
+import { verifyGatePass, processGateMovement, createRegistration, getSpotRegistrationsQueue, assignSpotHost, getAdminUsers } from '../services/api';
 import DashboardHeader from '../components/DashboardHeader';
-import { ShieldCheck, LogIn, LogOut, Search, UserCheck, AlertTriangle, Car, Users, Calendar, Camera, Phone, KeyRound, UserPlus } from 'lucide-react';
+import { ShieldCheck, LogIn, LogOut, Search, UserCheck, AlertTriangle, Car, Users, Calendar, Camera, Phone, KeyRound, UserPlus, QrCode, Share2, CheckCircle, XCircle, Clock } from 'lucide-react';
 
 export default function GuardGateTerminal({ user }) {
   const [gateName, setGateName] = useState('NORTH_GATE');
@@ -10,6 +10,52 @@ export default function GuardGateTerminal({ user }) {
   const [error, setError] = useState('');
   const [msg, setMsg] = useState('');
   const [loading, setLoading] = useState(false);
+
+  // Gate Spot Registration Queue & QR Modal State
+  const [showGateSpotQrModal, setShowGateSpotQrModal] = useState(false);
+  const [spotQueue, setSpotQueue] = useState([]);
+  const [adminUsers, setAdminUsers] = useState([]);
+  const [assignedHosts, setAssignedHosts] = useState({});
+
+  useEffect(() => {
+    fetchSpotQueue();
+    fetchUsersList();
+  }, []);
+
+  const fetchSpotQueue = async () => {
+    try {
+      const res = await getSpotRegistrationsQueue();
+      if (res.success) setSpotQueue(res.spot_requests);
+    } catch (err) {
+      console.error('Failed to fetch spot queue:', err);
+    }
+  };
+
+  const fetchUsersList = async () => {
+    try {
+      const res = await getAdminUsers();
+      if (res.success) setAdminUsers(res.users);
+    } catch (err) {
+      console.error('Failed to fetch admin users:', err);
+    }
+  };
+
+  const handleAssignHost = async (registrationId) => {
+    const hostId = assignedHosts[registrationId];
+    if (!hostId) {
+      alert('Please select a Resident / Employee / PRO to assign.');
+      return;
+    }
+    try {
+      const res = await assignSpotHost(registrationId, parseInt(hostId), 'Host assigned by Gate Security Guard');
+      if (res.success) {
+        alert(res.message);
+        fetchSpotQueue();
+      }
+    } catch (err) {
+      alert(err.response?.data?.message || 'Failed to assign host.');
+    }
+  };
 
   // Editable Accompanying Breakdown fields allowed for Security Guard
   const [adultMen, setAdultMen] = useState(1);
@@ -124,16 +170,25 @@ export default function GuardGateTerminal({ user }) {
         subtitle={`Active Guard: ${user.name} | Gate Ingress & Egress Verification`}
         roleBadge="SECURITY GUARD"
         actionButton={
-          <div style={{ background: '#ffffff', padding: '0.4rem 0.8rem', borderRadius: '8px', border: '1px solid #fcd34d' }}>
-            <label style={{ margin: 0, fontWeight: 'bold', fontSize: '0.82rem', color: '#78350f' }}>
-              Active Gate:
-              <select value={gateName} onChange={(e) => setGateName(e.target.value)} style={{ margin: '0.2rem 0 0 0', fontSize: '0.82rem', padding: '0.2rem 0.5rem' }}>
-                <option value="NORTH_GATE">North Gate (Primary Ingress)</option>
-                <option value="EAST_GATE">East Gate (Primary Egress)</option>
-                <option value="WEST_GATE">West Gate (Construction & Material)</option>
-                <option value="SOUTH_GATE">South Gate (Restricted - Security Head)</option>
-              </select>
-            </label>
+          <div style={{ display: 'flex', gap: '0.6rem', alignItems: 'center', flexWrap: 'wrap' }}>
+            <button
+              onClick={() => setShowGateSpotQrModal(true)}
+              style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', background: '#2563eb', borderColor: '#2563eb', color: 'white', fontWeight: 'bold', fontSize: '0.85rem' }}
+            >
+              <QrCode size={16} /> 📱 Gate Spot QR Code
+            </button>
+
+            <div style={{ background: '#ffffff', padding: '0.4rem 0.8rem', borderRadius: '8px', border: '1px solid #fcd34d' }}>
+              <label style={{ margin: 0, fontWeight: 'bold', fontSize: '0.82rem', color: '#78350f' }}>
+                Active Gate:
+                <select value={gateName} onChange={(e) => setGateName(e.target.value)} style={{ margin: '0.2rem 0 0 0', fontSize: '0.82rem', padding: '0.2rem 0.5rem' }}>
+                  <option value="NORTH_GATE">North Gate (Primary Ingress)</option>
+                  <option value="EAST_GATE">East Gate (Primary Egress)</option>
+                  <option value="WEST_GATE">West Gate (Construction & Material)</option>
+                  <option value="SOUTH_GATE">South Gate (Restricted - Security Head)</option>
+                </select>
+              </label>
+            </div>
           </div>
         }
       />
@@ -363,6 +418,159 @@ export default function GuardGateTerminal({ user }) {
             >
               <LogOut size={20} /> Record Egress (OUT)
             </button>
+          </div>
+        </div>
+      )}
+
+      {/* Spot Registration Queue & Host/PRO Assignment Card */}
+      <div className="card" style={{ marginTop: '1.5rem', borderTop: '4px solid #2563eb' }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.8rem' }}>
+          <div>
+            <h3 style={{ margin: 0, color: '#1e293b', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+              <UserCheck size={20} color="#2563eb" /> Gate Spot Registrations Queue ({spotQueue.length})
+            </h3>
+            <p style={{ margin: 0, fontSize: '0.8rem', color: '#64748b' }}>
+              Visitors who scanned the Gate Spot QR Code and submitted form at the gate. Select Host/PRO to route approval request.
+            </p>
+          </div>
+          <button type="button" onClick={fetchSpotQueue} className="secondary outline" style={{ fontSize: '0.78rem', padding: '0.3rem 0.7rem' }}>
+            🔄 Refresh Queue
+          </button>
+        </div>
+
+        <table role="grid">
+          <thead>
+            <tr>
+              <th>Passcode / Visitor</th>
+              <th>Category & Purpose</th>
+              <th>Accompanying</th>
+              <th>Assigned Host / PRO</th>
+              <th>Approval Status</th>
+              <th>Guard Action</th>
+            </tr>
+          </thead>
+          <tbody>
+            {spotQueue.length === 0 ? (
+              <tr>
+                <td colSpan="6" style={{ textAlign: 'center', color: '#64748b', padding: '1rem' }}>
+                  No pending spot registrations at gate.
+                </td>
+              </tr>
+            ) : (
+              spotQueue.map((spot) => (
+                <tr key={spot.id}>
+                  <td>
+                    <strong>{spot.pass_code}</strong><br/>
+                    <span style={{ fontSize: '0.85rem' }}>{spot.visitor_name}</span><br/>
+                    <span style={{ fontSize: '0.75rem', color: '#64748b' }}>{spot.visitor_phone}</span>
+                  </td>
+                  <td style={{ fontSize: '0.8rem' }}>
+                    <span className="badge badge-pending" style={{ fontSize: '0.65rem' }}>{spot.visitor_category}</span><br/>
+                    <span style={{ color: '#475569' }}>{spot.purpose}</span>
+                  </td>
+                  <td style={{ fontSize: '0.8rem' }}>
+                    👨 {spot.adult_men_count || 1} | 👩 {spot.adult_women_count || 0} | 👦 {spot.boys_count || 0} | 👧 {spot.girls_count || 0}
+                  </td>
+                  <td>
+                    {spot.host_name ? (
+                      <span style={{ fontSize: '0.85rem', fontWeight: 'bold', color: '#15803d' }}>
+                        ✓ {spot.host_name} ({spot.department || 'Ashram'})
+                      </span>
+                    ) : (
+                      <div style={{ display: 'flex', gap: '0.3rem', alignItems: 'center' }}>
+                        <select
+                          value={assignedHosts[spot.id] || ''}
+                          onChange={(e) => setAssignedHosts({ ...assignedHosts, [spot.id]: e.target.value })}
+                          style={{ fontSize: '0.78rem', padding: '0.2rem', margin: 0, flex: 1 }}
+                        >
+                          <option value="">-- Select Host / PRO --</option>
+                          {adminUsers.map((u) => (
+                            <option key={u.id} value={u.id}>
+                              {u.name} ({u.role} - {u.department || 'General'})
+                            </option>
+                          ))}
+                        </select>
+                        <button
+                          type="button"
+                          onClick={() => handleAssignHost(spot.id)}
+                          style={{ fontSize: '0.75rem', padding: '0.25rem 0.5rem', margin: 0 }}
+                        >
+                          Assign
+                        </button>
+                      </div>
+                    )}
+                  </td>
+                  <td>
+                    <span className={`badge badge-${spot.status.toLowerCase()}`}>
+                      {spot.status === 'PENDING_L1' ? 'PENDING HOST APPROVAL' : spot.status}
+                    </span>
+                  </td>
+                  <td>
+                    {spot.status === 'APPROVED' ? (
+                      <button
+                        type="button"
+                        className="gate-btn-in"
+                        onClick={() => { setSearchQuery(spot.pass_code); handleSearch({ preventDefault: () => {} }); }}
+                        style={{ fontSize: '0.75rem', padding: '0.2rem 0.6rem' }}>
+                        IN Button & Allow
+                      </button>
+                    ) : spot.status === 'REJECTED' ? (
+                      <span style={{ fontSize: '0.75rem', color: '#dc2626', fontWeight: 'bold' }}>
+                        ❌ DO NOT ALLOW VISITOR
+                      </span>
+                    ) : (
+                      <span style={{ fontSize: '0.75rem', color: '#d97706' }}>
+                        Awaiting Approval
+                      </span>
+                    )}
+                  </td>
+                </tr>
+              ))
+            )}
+          </tbody>
+        </table>
+      </div>
+
+      {/* Gate Spot QR Code Poster Modal */}
+      {showGateSpotQrModal && (
+        <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, background: 'rgba(0,0,0,0.6)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 9999, padding: '1rem' }}>
+          <div className="card" style={{ maxWidth: '440px', width: '100%', padding: '1.5rem', borderRadius: '12px', textAlign: 'center', background: 'linear-gradient(180deg, #ffffff 0%, #eff6ff 100%)' }}>
+            <h3 style={{ margin: '0 0 0.4rem 0', color: '#1e293b' }}>Gate Spot Visitor Registration QR</h3>
+            <p style={{ fontSize: '0.85rem', color: '#475569', margin: '0 0 1rem 0' }}>
+              Ask arriving visitors at the gate to scan this QR code with their mobile phone camera to fill out their details.
+            </p>
+
+            <div style={{ background: '#ffffff', padding: '1.2rem', borderRadius: '12px', border: '3px solid #2563eb', margin: '1rem 0', boxShadow: '0 10px 25px rgba(37,99,235,0.15)' }}>
+              <img
+                src={`https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=${encodeURIComponent(`${window.location.origin}/?invite=true&mode=Spot`)}`}
+                alt="Gate Spot Visitor Registration QR Code"
+                style={{ width: '200px', height: '200px', margin: '0 auto 0.8rem auto', display: 'block', borderRadius: '8px' }}
+              />
+              <span style={{ fontSize: '0.8rem', color: '#2563eb', fontWeight: 'bold', display: 'block' }}>
+                SCAN WITH MOBILE CAMERA TO REGISTER AT GATE
+              </span>
+            </div>
+
+            <div style={{ display: 'flex', gap: '0.5rem' }}>
+              <button
+                type="button"
+                onClick={() => {
+                  navigator.clipboard.writeText(`${window.location.origin}/?invite=true&mode=Spot`);
+                  alert('Gate Spot Form URL copied to clipboard!');
+                }}
+                style={{ flex: 1, fontSize: '0.82rem', padding: '0.5rem' }}
+              >
+                📋 Copy Form Link
+              </button>
+              <button
+                type="button"
+                className="secondary outline"
+                onClick={() => setShowGateSpotQrModal(false)}
+                style={{ flex: 1, fontSize: '0.82rem', padding: '0.5rem' }}
+              >
+                Close Poster
+              </button>
+            </div>
           </div>
         </div>
       )}

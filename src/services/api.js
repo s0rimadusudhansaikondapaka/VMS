@@ -168,4 +168,14 @@ export const createPublicVisitorRegistration = async (data) => {
   return res.data;
 };
 
+export const getSpotRegistrationsQueue = async () => {
+  const res = await api.get('/gate/spot-queue');
+  return res.data;
+};
+
+export const assignSpotHost = async (registration_id, host_id, remarks) => {
+  const res = await api.post('/gate/assign-host', { registration_id, host_id, remarks });
+  return res.data;
+};
+
 export default api;
