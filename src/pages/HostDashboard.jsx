@@ -1,8 +1,8 @@
 import React, { useState, useEffect } from 'react';
-import { createRegistration, updateRegistration, getHostRegistrations, updateApproval, getVisitHistory } from '../services/api';
+import { createRegistration, updateRegistration, getHostRegistrations, updateApproval, getVisitHistory, generateQrCode } from '../services/api';
 import CameraCaptureModal from '../components/CameraCaptureModal';
 import DashboardHeader from '../components/DashboardHeader';
-import { UserPlus, CheckCircle, XCircle, Clock, Plus, Trash2, Camera, CreditCard, Users, Car, Calendar, ShieldCheck, KeyRound, Pencil, History } from 'lucide-react';
+import { UserPlus, CheckCircle, XCircle, Clock, Plus, Trash2, Camera, CreditCard, Users, Car, Calendar, ShieldCheck, KeyRound, Pencil, History, QrCode, Share2, Copy } from 'lucide-react';
 
 export default function HostDashboard({ user }) {
   const [registrations, setRegistrations] = useState([]);
@@ -13,6 +13,26 @@ export default function HostDashboard({ user }) {
   const [editingRegistrationId, setEditingRegistrationId] = useState(null);
   const [showHistory, setShowHistory] = useState(false);
   const [visitHistory, setVisitHistory] = useState([]);
+  const [showShareModal, setShowShareModal] = useState(false);
+  const [qrModalData, setQrModalData] = useState(null);
+
+  const handleGenerateQr = async (reg) => {
+    try {
+      const res = await generateQrCode(reg.id);
+      if (res.success) {
+        setQrModalData({
+          pass_code: res.pass_code,
+          qr_code_url: res.qr_code_url,
+          visitor_name: reg.visitor_name,
+          is_single_use: res.is_single_use,
+        });
+      } else {
+        alert(res.message || 'Failed to generate QR Code.');
+      }
+    } catch (err) {
+      alert(err.response?.data?.message || 'Error generating QR Code.');
+    }
+  };
 
   // Form State
   const [fullName, setFullName] = useState('');
@@ -98,6 +118,9 @@ export default function HostDashboard({ user }) {
       setCategory('DELIVERY');
     } else if (typeVal === 'NO_SMARTPHONE') {
       setHasSmartphone(false);
+    } else if (typeVal === 'SPOT_UNFAMILIAR') {
+      setCategory('GENERAL');
+      setPurpose('General Ashram Unfamiliar Visitor');
     } else {
       setIsPermanentPass(false);
       setHasSmartphone(true);
@@ -255,9 +278,20 @@ export default function HostDashboard({ user }) {
         subtitle={`Welcome back, ${user.name} | Residency Status: ${user.residency_status || 'Resident'}`}
         roleBadge="RESIDENT / HOST"
         actionButton={
-          <button onClick={() => setShowModal(!showModal)} style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', background: '#d97706', borderColor: '#d97706', color: 'white', fontWeight: 'bold' }}>
-            <UserPlus size={18} /> Invite / Pre-Register Guest
-          </button>
+          <div style={{ display: 'flex', gap: '0.6rem', flexWrap: 'wrap' }}>
+            <button
+              onClick={() => setShowShareModal(true)}
+              style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', background: '#2563eb', borderColor: '#2563eb', color: 'white', fontWeight: 'bold', fontSize: '0.85rem' }}
+            >
+              <Share2 size={16} /> Share Guest Invite Link
+            </button>
+            <button
+              onClick={() => setShowModal(!showModal)}
+              style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', background: '#d97706', borderColor: '#d97706', color: 'white', fontWeight: 'bold', fontSize: '0.85rem' }}
+            >
+              <UserPlus size={16} /> Invite / Pre-Register Guest
+            </button>
+          </div>
         }
       />
 
@@ -277,30 +311,66 @@ export default function HostDashboard({ user }) {
             {editingRegistrationId ? `✏️ Edit Visitor Invite #${editingRegistrationId} (Before Approval)` : 'Guest Pre-Registration & Visitor Workflow Form'}
           </h3>
           <form onSubmit={handleCreate}>
-            {/* PPTX Requirement 1: Registration Type Selector */}
-            <div style={{ background: '#eff6ff', padding: '0.75rem', borderRadius: '8px', border: '1px solid #bfdbfe', marginBottom: '1rem' }}>
-              <strong style={{ fontSize: '0.85rem', color: '#1e40af' }}>Select Registration Workflow (5 Types):</strong>
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '0.5rem', marginTop: '0.4rem' }}>
-                <label style={{ fontSize: '0.8rem', cursor: 'pointer' }}>
-                  <input type="radio" name="regType" value="PRE_APPROVAL" checked={registrationType === 'PRE_APPROVAL'} onChange={() => handleTypeChange('PRE_APPROVAL')} />
-                  Pre-Approval Registration
-                </label>
-                <label style={{ fontSize: '0.8rem', cursor: 'pointer' }}>
-                  <input type="radio" name="regType" value="SPOT_REGISTRATION" checked={registrationType === 'SPOT_REGISTRATION'} onChange={() => handleTypeChange('SPOT_REGISTRATION')} />
-                  Spot Registration at Gate
-                </label>
-                <label style={{ fontSize: '0.8rem', cursor: 'pointer' }}>
-                  <input type="radio" name="regType" value="NO_SMARTPHONE" checked={registrationType === 'NO_SMARTPHONE'} onChange={() => handleTypeChange('NO_SMARTPHONE')} />
-                  Visitor Without Smartphone
-                </label>
-                <label style={{ fontSize: '0.8rem', cursor: 'pointer', color: '#057a55', fontWeight: 'bold' }}>
-                  <input type="radio" name="regType" value="FREQUENT_VISITOR" checked={registrationType === 'FREQUENT_VISITOR'} onChange={() => handleTypeChange('FREQUENT_VISITOR')} />
-                  Frequent Visitor / Maid (Permanent Passcode)
-                </label>
-                <label style={{ fontSize: '0.8rem', cursor: 'pointer', color: '#b45309', fontWeight: 'bold' }}>
-                  <input type="radio" name="regType" value="DELIVERY_COURIER" checked={registrationType === 'DELIVERY_COURIER'} onChange={() => handleTypeChange('DELIVERY_COURIER')} />
-                  Delivery Boy / Courier (Phone Lookup)
-                </label>
+            {/* Registration Workflow Selector (5 Types & Sub-workflows) */}
+            <div style={{ background: '#eff6ff', padding: '0.85rem', borderRadius: '8px', border: '1px solid #bfdbfe', marginBottom: '1rem' }}>
+              <strong style={{ fontSize: '0.9rem', color: '#1e40af', display: 'block', marginBottom: '0.4rem' }}>
+                Select Registration Type (5 Application Workflows):
+              </strong>
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.6rem' }}>
+                <div style={{ background: '#ffffff', padding: '0.6rem', borderRadius: '6px', border: '1px solid #cbd5e1' }}>
+                  <label style={{ fontSize: '0.82rem', fontWeight: 'bold', color: '#1e293b', display: 'block', marginBottom: '0.2rem' }}>
+                    1. Pre-Approval Registration
+                  </label>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '0.25rem', paddingLeft: '0.5rem' }}>
+                    <label style={{ fontSize: '0.78rem', cursor: 'pointer' }}>
+                      <input type="radio" name="regType" value="PRE_APPROVAL" checked={registrationType === 'PRE_APPROVAL'} onChange={() => handleTypeChange('PRE_APPROVAL')} />
+                      1b. Referrer fills form on behalf of Guest
+                    </label>
+                    <span style={{ fontSize: '0.72rem', color: '#2563eb', cursor: 'pointer', fontStyle: 'italic', paddingLeft: '1.2rem' }} onClick={() => { setShowModal(false); setShowShareModal(true); }}>
+                      🔗 Or click here for 1a: Guest fills form via Share Link
+                    </span>
+                  </div>
+                </div>
+
+                <div style={{ background: '#ffffff', padding: '0.6rem', borderRadius: '6px', border: '1px solid #cbd5e1' }}>
+                  <label style={{ fontSize: '0.82rem', fontWeight: 'bold', color: '#1e293b', display: 'block', marginBottom: '0.2rem' }}>
+                    2. Spot Registration (At Gate / Entry)
+                  </label>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '0.25rem', paddingLeft: '0.5rem' }}>
+                    <label style={{ fontSize: '0.78rem', cursor: 'pointer' }}>
+                      <input type="radio" name="regType" value="SPOT_REGISTRATION" checked={registrationType === 'SPOT_REGISTRATION'} onChange={() => handleTypeChange('SPOT_REGISTRATION')} />
+                      2a. Visitor familiar with Ashram Resident
+                    </label>
+                    <label style={{ fontSize: '0.78rem', cursor: 'pointer' }}>
+                      <input type="radio" name="regType" value="SPOT_UNFAMILIAR" checked={registrationType === 'SPOT_UNFAMILIAR'} onChange={() => handleTypeChange('SPOT_UNFAMILIAR')} />
+                      2b. Visitor unfamiliar with Ashram individuals
+                    </label>
+                  </div>
+                </div>
+
+                <div style={{ background: '#ffffff', padding: '0.6rem', borderRadius: '6px', border: '1px solid #cbd5e1' }}>
+                  <label style={{ fontSize: '0.82rem', fontWeight: 'bold', color: '#1e293b', cursor: 'pointer' }}>
+                    <input type="radio" name="regType" value="NO_SMARTPHONE" checked={registrationType === 'NO_SMARTPHONE'} onChange={() => handleTypeChange('NO_SMARTPHONE')} />
+                    3. Visitor without Smartphone / Phone
+                  </label>
+                  <p style={{ margin: '0.2rem 0 0 1.2rem', fontSize: '0.72rem', color: '#64748b' }}>Generates printable pass slip & numeric passcode.</p>
+                </div>
+
+                <div style={{ background: '#ffffff', padding: '0.6rem', borderRadius: '6px', border: '1px solid #cbd5e1' }}>
+                  <label style={{ fontSize: '0.82rem', fontWeight: 'bold', color: '#057a55', cursor: 'pointer' }}>
+                    <input type="radio" name="regType" value="FREQUENT_VISITOR" checked={registrationType === 'FREQUENT_VISITOR'} onChange={() => handleTypeChange('FREQUENT_VISITOR')} />
+                    4. Frequent Visitor / Maid (Permanent Pass)
+                  </label>
+                  <p style={{ margin: '0.2rem 0 0 1.2rem', fontSize: '0.72rem', color: '#057a55' }}>Resets to APPROVED upon exit for repeated daily entry.</p>
+                </div>
+
+                <div style={{ background: '#ffffff', padding: '0.6rem', borderRadius: '6px', border: '1px solid #cbd5e1', gridColumn: 'span 2' }}>
+                  <label style={{ fontSize: '0.82rem', fontWeight: 'bold', color: '#b45309', cursor: 'pointer' }}>
+                    <input type="radio" name="regType" value="DELIVERY_COURIER" checked={registrationType === 'DELIVERY_COURIER'} onChange={() => handleTypeChange('DELIVERY_COURIER')} />
+                    5. Delivery, Courier boys, Cab Drivers
+                  </label>
+                  <p style={{ margin: '0.2rem 0 0 1.2rem', fontSize: '0.72rem', color: '#b45309' }}>Quick phone number lookup and instant gate pass.</p>
+                </div>
               </div>
             </div>
 
@@ -672,6 +742,16 @@ export default function HostDashboard({ user }) {
                           </button>
                         </>
                       )}
+                      {(reg.status === 'APPROVED' || reg.status === 'INSIDE_CAMPUS' || reg.status === 'ADMIN_BYPASSED') && (
+                        <button
+                          type="button"
+                          onClick={() => handleGenerateQr(reg)}
+                          style={{ padding: '0.25rem 0.6rem', fontSize: '0.75rem', background: '#7c3aed', borderColor: '#7c3aed', color: 'white', fontWeight: 'bold', display: 'flex', alignItems: 'center', gap: '0.3rem' }}
+                          title="Generate QR Code and Passcode for Guest"
+                        >
+                          <QrCode size={14} /> {reg.qr_code_url ? 'View QR Pass' : 'Generate QR Code'}
+                        </button>
+                      )}
                     </div>
                   </td>
                 </tr>
@@ -736,6 +816,109 @@ export default function HostDashboard({ user }) {
           </table>
         )}
       </div>
+
+      {/* Share Guest Invite Link Modal */}
+      {showShareModal && (
+        <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, background: 'rgba(0,0,0,0.6)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 9999, padding: '1rem' }}>
+          <div className="card" style={{ maxWidth: '500px', width: '100%', padding: '1.5rem', borderRadius: '12px' }}>
+            <h3 style={{ margin: '0 0 0.8rem 0', color: '#1e293b', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+              <Share2 size={20} color="#2563eb" /> Share Pre-Approval Guest Invite Link
+            </h3>
+            <p style={{ fontSize: '0.85rem', color: '#64748b', margin: '0 0 1rem 0' }}>
+              Send this single-use link to your guest to fill out their details on their smartphone prior to arrival.
+            </p>
+
+            <div style={{ background: '#f8fafc', padding: '0.8rem', borderRadius: '8px', border: '1px solid #e2e8f0', marginBottom: '1rem' }}>
+              <span style={{ fontSize: '0.78rem', fontWeight: 'bold', color: '#1e40af' }}>Single Visitor Invite Link:</span>
+              <div style={{ display: 'flex', gap: '0.4rem', marginTop: '0.3rem' }}>
+                <input type="text" readOnly value={`${window.location.origin}/?invite=true&host_id=${user.id}&mode=Single`} style={{ fontSize: '0.8rem', margin: 0, flex: 1 }} />
+                <button
+                  type="button"
+                  onClick={() => {
+                    navigator.clipboard.writeText(`${window.location.origin}/?invite=true&host_id=${user.id}&mode=Single`);
+                    alert('Single Visitor Link copied to clipboard!');
+                  }}
+                  style={{ fontSize: '0.8rem', padding: '0.4rem 0.7rem', margin: 0 }}
+                >
+                  <Copy size={14} /> Copy
+                </button>
+              </div>
+            </div>
+
+            <div style={{ background: '#f8fafc', padding: '0.8rem', borderRadius: '8px', border: '1px solid #e2e8f0', marginBottom: '1rem' }}>
+              <span style={{ fontSize: '0.78rem', fontWeight: 'bold', color: '#057a55' }}>Group Visit Invite Link:</span>
+              <div style={{ display: 'flex', gap: '0.4rem', marginTop: '0.3rem' }}>
+                <input type="text" readOnly value={`${window.location.origin}/?invite=true&host_id=${user.id}&mode=Group`} style={{ fontSize: '0.8rem', margin: 0, flex: 1 }} />
+                <button
+                  type="button"
+                  onClick={() => {
+                    navigator.clipboard.writeText(`${window.location.origin}/?invite=true&host_id=${user.id}&mode=Group`);
+                    alert('Group Visit Link copied to clipboard!');
+                  }}
+                  style={{ fontSize: '0.8rem', padding: '0.4rem 0.7rem', margin: 0 }}
+                >
+                  <Copy size={14} /> Copy
+                </button>
+              </div>
+            </div>
+
+            <div style={{ display: 'flex', gap: '0.5rem' }}>
+              <a
+                href={`https://wa.me/?text=${encodeURIComponent(`Jay Sai Ram! Please fill out your visitor pre-approval registration form for Sathya Sai Grama using this link: ${window.location.origin}/?invite=true&host_id=${user.id}&mode=Single`)}`}
+                target="_blank"
+                rel="noreferrer"
+                style={{ flex: 1, textDecoration: 'none' }}
+              >
+                <button type="button" style={{ width: '100%', background: '#25d366', borderColor: '#25d366', color: 'white', fontWeight: 'bold', fontSize: '0.85rem' }}>
+                  📲 Share via WhatsApp
+                </button>
+              </a>
+              <button type="button" className="secondary outline" onClick={() => setShowShareModal(false)} style={{ fontSize: '0.85rem' }}>
+                Close
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Generated QR Code & Passcode Modal */}
+      {qrModalData && (
+        <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, background: 'rgba(0,0,0,0.6)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 9999, padding: '1rem' }}>
+          <div className="card" style={{ maxWidth: '420px', width: '100%', padding: '1.5rem', borderRadius: '12px', textAlign: 'center' }}>
+            <h3 style={{ margin: '0 0 0.4rem 0', color: '#1e293b' }}>Guest QR Code & Passcode</h3>
+            <span style={{ fontSize: '0.85rem', color: '#64748b' }}>Guest: <strong>{qrModalData.visitor_name}</strong></span>
+
+            <div style={{ background: '#f8fafc', padding: '1.2rem', borderRadius: '8px', border: '1px solid #e2e8f0', margin: '1rem 0' }}>
+              {qrModalData.qr_code_url ? (
+                <img src={qrModalData.qr_code_url} alt="Authorized QR Code" style={{ width: '180px', height: '180px', margin: '0 auto 0.8rem auto', display: 'block', borderRadius: '8px', border: '2px solid #7c3aed' }} />
+              ) : (
+                <div style={{ width: '180px', height: '180px', background: '#e2e8f0', margin: '0 auto 0.8rem auto', display: 'flex', alignItems: 'center', justifyContent: 'center', borderRadius: '8px' }}>QR Code</div>
+              )}
+              <span style={{ fontSize: '0.78rem', color: '#64748b', fontWeight: 'bold' }}>AUTHORIZED GATE PASSCODE</span>
+              <h2 style={{ fontSize: '2rem', color: '#7c3aed', margin: '0.2rem 0', fontWeight: '800', letterSpacing: '0.05em' }}>{qrModalData.pass_code}</h2>
+              <span style={{ background: '#fef3c7', color: '#92400e', padding: '0.2rem 0.6rem', borderRadius: '9999px', fontSize: '0.72rem', fontWeight: 'bold', display: 'inline-block' }}>
+                ✓ {qrModalData.is_single_use ? 'Single-Use Pass (Valid Only Once)' : 'Frequent Visitor Permanent Pass'}
+              </span>
+            </div>
+
+            <div style={{ display: 'flex', gap: '0.5rem' }}>
+              <a
+                href={`https://wa.me/?text=${encodeURIComponent(`Jay Sai Ram! Here is your entry Passcode and QR Code for Sathya Sai Grama:\nPasscode: ${qrModalData.pass_code}\nStatus: Approved (Valid Only Once)`)}`}
+                target="_blank"
+                rel="noreferrer"
+                style={{ flex: 1, textDecoration: 'none' }}
+              >
+                <button type="button" style={{ width: '100%', background: '#25d366', borderColor: '#25d366', color: 'white', fontWeight: 'bold', fontSize: '0.82rem' }}>
+                  📲 WhatsApp to Guest
+                </button>
+              </a>
+              <button type="button" className="secondary outline" onClick={() => setQrModalData(null)} style={{ fontSize: '0.82rem' }}>
+                Close
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

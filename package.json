@@ -9,6 +9,8 @@
     "preview": "vite preview"
   },
   "dependencies": {
+    "@capacitor/cli": "^8.5.0",
+    "@capacitor/core": "^8.5.0",
     "axios": "^1.7.9",
     "html5-qrcode": "^2.3.8",
     "lucide-react": "^0.475.0",

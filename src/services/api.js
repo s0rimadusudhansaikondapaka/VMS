@@ -153,4 +153,19 @@ export const bulkUploadVisitors = async (visitors) => {
   return res.data;
 };
 
+export const generateQrCode = async (registration_id) => {
+  const res = await api.post('/registrations/generate-qr', { registration_id });
+  return res.data;
+};
+
+export const getPublicHostInfo = async (host_id) => {
+  const res = await api.get(`/registrations/public-host/${host_id}`);
+  return res.data;
+};
+
+export const createPublicVisitorRegistration = async (data) => {
+  const res = await api.post('/registrations/public-visitor', data);
+  return res.data;
+};
+
 export default api;

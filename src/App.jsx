@@ -6,11 +6,14 @@ import GuardGateTerminal from './pages/GuardGateTerminal';
 import SupervisorConsole from './pages/SupervisorConsole';
 import SecurityHeadDashboard from './pages/SecurityHeadDashboard';
 import AdminDashboard from './pages/AdminDashboard';
+import GuestInviteForm from './pages/GuestInviteForm';
 import { getMe } from './services/api';
 
 export default function App() {
   const [user, setUser] = useState(null);
   const [loading, setLoading] = useState(true);
+
+  const isInviteRoute = window.location.search.includes('invite') || window.location.search.includes('host_id') || window.location.pathname.includes('/invite');
 
   useEffect(() => {
     const token = localStorage.getItem('vms_token');
@@ -32,6 +35,15 @@ export default function App() {
     localStorage.removeItem('vms_token');
     setUser(null);
   };
+
+  if (isInviteRoute) {
+    return (
+      <div>
+        <Navbar user={user} onLogout={handleLogout} />
+        <GuestInviteForm />
+      </div>
+    );
+  }
 
   if (loading) {
     return <div className="container" style={{ marginTop: '5rem', textAlign: 'center' }}>Loading VMS Application...</div>;
