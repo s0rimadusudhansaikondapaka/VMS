@@ -5,11 +5,12 @@ import { Shield, User, Camera, Upload, CheckCircle, Calendar, Users, Car, AlertT
 
 export default function GuestInviteForm() {
   const params = new URLSearchParams(window.location.search);
-  const hostId = params.get('host_id') || '1';
+  const hostId = params.get('guid') || params.get('host_guid') || params.get('host_id') || '1';
   const initialMode = params.get('mode') || 'Single';
 
   const [hostInfo, setHostInfo] = useState(null);
   const [loadingHost, setLoadingHost] = useState(true);
+  const [registrationMode, setRegistrationMode] = useState(initialMode || 'Single');
   const [showCameraModal, setShowCameraModal] = useState(false);
   const [cameraTarget, setCameraTarget] = useState('photo'); // 'photo' or 'idCard'
 
@@ -61,6 +62,7 @@ export default function GuestInviteForm() {
 
   const [submitting, setSubmitting] = useState(false);
   const [submittedPassCode, setSubmittedPassCode] = useState(null);
+  const [isLinkUsed, setIsLinkUsed] = useState(false);
   const [error, setError] = useState('');
 
   useEffect(() => {
@@ -73,6 +75,9 @@ export default function GuestInviteForm() {
       const res = await getPublicHostInfo(hostId);
       if (res.success) {
         setHostInfo(res.host);
+        if (res.is_used) {
+          setIsLinkUsed(true);
+        }
       }
     } catch (err) {
       console.error('Failed to load host info:', err);
@@ -111,7 +116,7 @@ export default function GuestInviteForm() {
     e.preventDefault();
     setError('');
     setSubmitting(true);
-    const isSingle = initialMode === 'Single';
+    const isSingle = registrationMode === 'Single';
     const computedMen = isSingle ? (gender === 'Female' ? 0 : 1) : (parseInt(adultMen) || 0);
     const computedWomen = isSingle ? (gender === 'Female' ? 1 : 0) : (parseInt(adultWomen) || 0);
     const computedBoys = isSingle ? 0 : (parseInt(boysCount) || 0);
@@ -119,7 +124,8 @@ export default function GuestInviteForm() {
 
     try {
       const res = await createPublicVisitorRegistration({
-        host_id: parseInt(hostId),
+        host_id: hostId,
+        token: params.get('token') || (typeof hostId === 'string' && hostId.startsWith('inv_') ? hostId : null),
         full_name: fullName,
         phone,
         email,
@@ -128,7 +134,7 @@ export default function GuestInviteForm() {
         id_type: idType,
         id_card_number: idCardNumber,
         id_card_image_url: idCardImageUrl,
-        registration_mode: initialMode,
+        registration_mode: registrationMode,
         visitor_category: category,
         purpose: purpose || 'Visitor Pre-Approval Invite Form',
         valid_from: validFrom,
@@ -152,6 +158,26 @@ export default function GuestInviteForm() {
       setSubmitting(false);
     }
   };
+
+  if (isLinkUsed) {
+    return (
+      <main className="container" style={{ marginTop: '2rem', marginBottom: '3rem' }}>
+        <div className="card" style={{ borderTop: '6px solid #dc2626', textAlign: 'center', padding: '2.5rem' }}>
+          <AlertTriangle size={58} color="#dc2626" style={{ margin: '0 auto 1rem auto' }} />
+          <h2 style={{ color: '#991b1b', margin: '0 0 0.5rem 0' }}>Invitation Link Expired</h2>
+          <p style={{ fontSize: '0.95rem', color: '#475569', maxWidth: '520px', margin: '0 auto 1.5rem auto', lineHeight: '1.5' }}>
+            This single-use invitation link for host <strong>{hostInfo?.name || 'Resident / Staff'}</strong> has already been submitted and completed.
+          </p>
+          <div style={{ background: '#fef2f2', border: '1px solid #fca5a5', padding: '0.8rem 1rem', borderRadius: '8px', fontSize: '0.85rem', color: '#991b1b', fontWeight: 'bold', display: 'inline-block' }}>
+            ✓ Submissions are allowed only once per invitation link.
+          </div>
+          <p style={{ fontSize: '0.82rem', color: '#64748b', marginTop: '1.5rem' }}>
+            If you need to register again, please request a new invite link from your host.
+          </p>
+        </div>
+      </main>
+    );
+  }
 
   if (submittedPassCode) {
     return (
@@ -180,7 +206,7 @@ export default function GuestInviteForm() {
   }
 
   return (
-    <main className="container" style={{ maxWidth: '640px', marginTop: '1.5rem', marginBottom: '3rem' }}>
+    <main className="container" style={{ marginTop: '1.5rem', marginBottom: '3rem' }}>
       {showCameraModal && (
         <CameraCaptureModal
           onPhotoCaptured={handlePhotoCaptured}
@@ -220,6 +246,33 @@ export default function GuestInviteForm() {
         {error && <div style={{ background: '#fee2e2', color: '#991b1b', padding: '0.75rem', borderRadius: '6px', marginBottom: '1rem' }}>{error}</div>}
 
         <form onSubmit={handleSubmit}>
+          {/* Registration Mode Selection: Single Visitor vs Group Visit */}
+          <div style={{ background: '#f8fafc', padding: '0.75rem 1rem', borderRadius: '8px', border: '1px solid #cbd5e1', marginBottom: '1.2rem', display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '0.5rem' }}>
+            <span style={{ fontSize: '0.88rem', fontWeight: 'bold', color: '#1e293b' }}>Visit Type Mode:</span>
+            <div style={{ display: 'flex', gap: '1.5rem', alignItems: 'center' }}>
+              <label style={{ cursor: 'pointer', fontSize: '0.85rem', fontWeight: 'bold', color: registrationMode === 'Single' ? '#2563eb' : '#475569', display: 'flex', alignItems: 'center', gap: '0.4rem', margin: 0 }}>
+                <input
+                  type="radio"
+                  name="guestRegMode"
+                  value="Single"
+                  checked={registrationMode === 'Single'}
+                  onChange={(e) => setRegistrationMode(e.target.value)}
+                />
+                Single Visitor
+              </label>
+              <label style={{ cursor: 'pointer', fontSize: '0.85rem', fontWeight: 'bold', color: registrationMode === 'Group' ? '#057a55' : '#475569', display: 'flex', alignItems: 'center', gap: '0.4rem', margin: 0 }}>
+                <input
+                  type="radio"
+                  name="guestRegMode"
+                  value="Group"
+                  checked={registrationMode === 'Group'}
+                  onChange={(e) => setRegistrationMode(e.target.value)}
+                />
+                Group Visit
+              </label>
+            </div>
+          </div>
+
           {/* Section 1: Demographics */}
           <h4 style={{ fontSize: '0.9rem', color: '#2563eb', marginTop: '0.5rem' }}>1. Visitor Demographics & Identity</h4>
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.8rem' }}>
@@ -322,7 +375,7 @@ export default function GuestInviteForm() {
             </label>
           </div>
 
-          {initialMode === 'Group' ? (
+          {registrationMode === 'Group' || registrationMode === 'group' ? (
             <div style={{ background: '#f8fafc', padding: '0.75rem', borderRadius: '6px', border: '1px solid #cbd5e1', marginTop: '0.5rem' }}>
               <strong style={{ fontSize: '0.85rem', color: '#334155' }}>Group Accompanying Breakdown:</strong>
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr 1fr', gap: '0.8rem', marginTop: '0.4rem' }}>

@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { createRegistration, updateRegistration, getHostRegistrations, updateApproval, getVisitHistory, generateQrCode } from '../services/api';
+import { createRegistration, updateRegistration, getHostRegistrations, updateApproval, getVisitHistory, generateQrCode, generateInviteToken } from '../services/api';
 import CameraCaptureModal from '../components/CameraCaptureModal';
 import DashboardHeader from '../components/DashboardHeader';
 import { UserPlus, CheckCircle, XCircle, Clock, Plus, Trash2, Camera, CreditCard, Users, Car, Calendar, ShieldCheck, KeyRound, Pencil, History, QrCode, Share2, Copy, Upload } from 'lucide-react';
@@ -14,7 +14,20 @@ export default function HostDashboard({ user }) {
   const [showHistory, setShowHistory] = useState(false);
   const [visitHistory, setVisitHistory] = useState([]);
   const [showShareModal, setShowShareModal] = useState(false);
+  const [activeShareToken, setActiveShareToken] = useState('');
   const [qrModalData, setQrModalData] = useState(null);
+
+  const handleOpenShareModal = async () => {
+    try {
+      const res = await generateInviteToken();
+      if (res.success && res.token) {
+        setActiveShareToken(res.token);
+      }
+    } catch (e) {
+      console.error('Failed to generate invite token:', e);
+    }
+    setShowShareModal(true);
+  };
 
   const handleGenerateQr = async (reg) => {
     try {
@@ -81,6 +94,55 @@ export default function HostDashboard({ user }) {
 
   const [validFrom, setValidFrom] = useState(getDefaultFrom());
   const [validUntil, setValidUntil] = useState(getDefaultUntil());
+
+  // Role capability checks for visit_type filtering
+  const isUserResident = user?.role === 'RESIDENT' || user?.residency_status === 'Resident' || user?.role === 'ADMIN';
+  const isUserEmployee = user?.role === 'EMPLOYEE' || user?.role === 'HOD' || user?.residency_status === 'Employee' || user?.role === 'ADMIN';
+
+  // Referrer Review & Approval Modal State (Screenshot 2)
+  const [reviewModalData, setReviewModalData] = useState(null);
+  const [reviewVisitType, setReviewVisitType] = useState('HOME');
+  const [reviewCategory, setReviewCategory] = useState('GENERAL');
+  const [reviewPriority, setReviewPriority] = useState('P3');
+  const [reviewRemarks, setReviewRemarks] = useState('');
+  const [reviewValidFrom, setReviewValidFrom] = useState('');
+  const [reviewValidUntil, setReviewValidUntil] = useState('');
+
+  const openReviewModal = (reg) => {
+    setReviewModalData(reg);
+    const initialVisit = reg.visit_type || (isUserResident ? 'HOME' : isUserEmployee ? 'OFFICE' : 'BHAJAN');
+    setReviewVisitType(initialVisit);
+    setReviewCategory(reg.visitor_category || 'GENERAL');
+    setReviewPriority(reg.priority || 'P3');
+    setReviewRemarks(reg.remarks || '');
+    setReviewValidFrom(reg.valid_from ? new Date(reg.valid_from).toISOString().slice(0, 16) : getDefaultFrom());
+    setReviewValidUntil(reg.valid_until ? new Date(reg.valid_until).toISOString().slice(0, 16) : getDefaultUntil());
+  };
+
+  const handleReviewAction = async (action) => {
+    if (!reviewModalData) return;
+    try {
+      const res = await updateApproval(
+        reviewModalData.id,
+        action,
+        reviewRemarks || `Action ${action} by Referrer ${user.name}`,
+        {
+          priority: reviewPriority,
+          visit_type: reviewVisitType,
+          visitor_category: reviewCategory,
+          valid_from: reviewValidFrom,
+          valid_until: reviewValidUntil,
+        }
+      );
+      if (res.success) {
+        alert(res.message || `Registration #${reviewModalData.id} updated!`);
+        setReviewModalData(null);
+        fetchRegistrations();
+      }
+    } catch (err) {
+      alert(err.response?.data?.message || 'Action failed.');
+    }
+  };
 
   // Accompanying Breakdown
   const [adultMen, setAdultMen] = useState(1);
@@ -308,7 +370,7 @@ export default function HostDashboard({ user }) {
         actionButton={
           <div style={{ display: 'flex', gap: '0.6rem', flexWrap: 'wrap' }}>
             <button
-              onClick={() => setShowShareModal(true)}
+              onClick={handleOpenShareModal}
               style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', background: '#2563eb', borderColor: '#2563eb', color: 'white', fontWeight: 'bold', fontSize: '0.85rem' }}
             >
               <Share2 size={16} /> Share Guest Invite Link
@@ -545,7 +607,7 @@ export default function HostDashboard({ user }) {
               </label>
             </div>
 
-            {registrationMode === 'Group' ? (
+            {registrationMode === 'Group' || registrationMode === 'group' ? (
               <div style={{ background: '#f8fafc', padding: '0.75rem', borderRadius: '6px', border: '1px solid #cbd5e1', marginTop: '0.5rem' }}>
                 <strong style={{ fontSize: '0.85rem', color: '#334155' }}>Group Accompanying Breakdown:</strong>
                 <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr 1fr', gap: '0.8rem', marginTop: '0.4rem' }}>
@@ -695,18 +757,13 @@ export default function HostDashboard({ user }) {
                   </td>
                   <td style={{ whiteSpace: 'nowrap' }}>
                     <div style={{ display: 'flex', gap: '0.3rem', flexWrap: 'wrap' }}>
-                      {reg.status.startsWith('PENDING_') && (
-                        <button className="secondary outline" onClick={() => handleStartEdit(reg)} style={{ padding: '0.2rem 0.5rem', fontSize: '0.75rem', color: '#2563eb', borderColor: '#2563eb' }} title="Edit invitation details before approval">
-                          <Pencil size={14} /> Edit
-                        </button>
-                      )}
                       {reg.status === 'PENDING_L1' && (
                         <>
-                          <button className="outline" onClick={() => handleAction(reg.id, 'APPROVE')} style={{ padding: '0.2rem 0.5rem', fontSize: '0.75rem' }}>
-                            <CheckCircle size={14} /> Approve
+                          <button className="outline" onClick={() => openReviewModal(reg)} style={{ padding: '0.2rem 0.5rem', fontSize: '0.75rem', background: '#057a55', borderColor: '#057a55', color: 'white', fontWeight: 'bold' }}>
+                            <CheckCircle size={14} /> Review & Approve
                           </button>
-                          <button className="secondary outline" onClick={() => handleAction(reg.id, 'REJECT')} style={{ padding: '0.2rem 0.5rem', fontSize: '0.75rem' }}>
-                            <XCircle size={14} /> Reject
+                          <button className="secondary outline" onClick={() => openReviewModal(reg)} style={{ padding: '0.2rem 0.5rem', fontSize: '0.75rem' }}>
+                            <Pencil size={14} /> Edit Details
                           </button>
                         </>
                       )}
@@ -792,57 +849,125 @@ export default function HostDashboard({ user }) {
             <h3 style={{ margin: '0 0 0.8rem 0', color: '#1e293b', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
               <Share2 size={20} color="#2563eb" /> Share Pre-Approval Guest Invite Link
             </h3>
-            <p style={{ fontSize: '0.85rem', color: '#64748b', margin: '0 0 1rem 0' }}>
-              Send this single-use link to your guest to fill out their details on their smartphone prior to arrival.
+            <p style={{ fontSize: '0.88rem', color: '#475569', margin: '0 0 1.5rem 0', lineHeight: '1.4' }}>
+              Share this invite link directly with your guest via WhatsApp. They can fill out their details and choose <strong>Single</strong> or <strong>Group Visit</strong> on their smartphone prior to arrival.
             </p>
 
-            <div style={{ background: '#f8fafc', padding: '0.8rem', borderRadius: '8px', border: '1px solid #e2e8f0', marginBottom: '1rem' }}>
-              <span style={{ fontSize: '0.78rem', fontWeight: 'bold', color: '#1e40af' }}>Single Visitor Invite Link:</span>
-              <div style={{ display: 'flex', gap: '0.4rem', marginTop: '0.3rem' }}>
-                <input type="text" readOnly value={`${window.location.origin}/?invite=true&host_id=${user.id}&mode=Single`} style={{ fontSize: '0.8rem', margin: 0, flex: 1 }} />
-                <button
-                  type="button"
-                  onClick={() => {
-                    navigator.clipboard.writeText(`${window.location.origin}/?invite=true&host_id=${user.id}&mode=Single`);
-                    alert('Single Visitor Link copied to clipboard!');
-                  }}
-                  style={{ fontSize: '0.8rem', padding: '0.4rem 0.7rem', margin: 0 }}
-                >
-                  <Copy size={14} /> Copy
-                </button>
-              </div>
-            </div>
-
-            <div style={{ background: '#f8fafc', padding: '0.8rem', borderRadius: '8px', border: '1px solid #e2e8f0', marginBottom: '1rem' }}>
-              <span style={{ fontSize: '0.78rem', fontWeight: 'bold', color: '#057a55' }}>Group Visit Invite Link:</span>
-              <div style={{ display: 'flex', gap: '0.4rem', marginTop: '0.3rem' }}>
-                <input type="text" readOnly value={`${window.location.origin}/?invite=true&host_id=${user.id}&mode=Group`} style={{ fontSize: '0.8rem', margin: 0, flex: 1 }} />
-                <button
-                  type="button"
-                  onClick={() => {
-                    navigator.clipboard.writeText(`${window.location.origin}/?invite=true&host_id=${user.id}&mode=Group`);
-                    alert('Group Visit Link copied to clipboard!');
-                  }}
-                  style={{ fontSize: '0.8rem', padding: '0.4rem 0.7rem', margin: 0 }}
-                >
-                  <Copy size={14} /> Copy
-                </button>
-              </div>
-            </div>
-
-            <div style={{ display: 'flex', gap: '0.5rem' }}>
+            <div style={{ display: 'flex', gap: '0.6rem', flexWrap: 'wrap' }}>
               <a
-                href={`https://wa.me/?text=${encodeURIComponent(`Jay Sai Ram! Please fill out your visitor pre-approval registration form for Sathya Sai Grama using this link: ${window.location.origin}/?invite=true&host_id=${user.id}&mode=Single`)}`}
+                href={`https://wa.me/?text=${encodeURIComponent(`Jay Sai Ram! Please fill out your visitor pre-approval registration form for Sathya Sai Grama using this single-use link: ${window.location.origin}/?invite=true&${activeShareToken ? `token=${activeShareToken}` : `guid=${user.guid || user.id}`}`)}`}
                 target="_blank"
                 rel="noreferrer"
-                style={{ flex: 1, textDecoration: 'none' }}
+                style={{ flex: 1, textDecoration: 'none', minWidth: '150px' }}
               >
-                <button type="button" style={{ width: '100%', background: '#25d366', borderColor: '#25d366', color: 'white', fontWeight: 'bold', fontSize: '0.85rem' }}>
+                <button type="button" style={{ width: '100%', background: '#25d366', borderColor: '#25d366', color: 'white', fontWeight: 'bold', fontSize: '0.85rem', padding: '0.65rem' }}>
                   📲 Share via WhatsApp
                 </button>
               </a>
-              <button type="button" className="secondary outline" onClick={() => setShowShareModal(false)} style={{ fontSize: '0.85rem' }}>
+
+              <a
+                href={`mailto:?subject=${encodeURIComponent('Sathya Sai Grama - Guest Visitor Pre-Approval Link')}&body=${encodeURIComponent(`Jay Sai Ram!\n\nPlease fill out your visitor pre-approval registration form for Sathya Sai Grama using the following single-use link prior to your arrival:\n\n${window.location.origin}/?invite=true&${activeShareToken ? `token=${activeShareToken}` : `guid=${user.guid || user.id}`}\n\nNote: This link is valid for a single registration submission.\n\nThank you!`)}`}
+                style={{ flex: 1, textDecoration: 'none', minWidth: '150px' }}
+              >
+                <button type="button" style={{ width: '100%', background: '#2563eb', borderColor: '#2563eb', color: 'white', fontWeight: 'bold', fontSize: '0.85rem', padding: '0.65rem' }}>
+                  ✉️ Share via Email
+                </button>
+              </a>
+
+              <button type="button" className="secondary outline" onClick={() => setShowShareModal(false)} style={{ fontSize: '0.85rem', padding: '0.65rem 1rem' }}>
                 Close
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Referrer Review & Approval Modal (Screenshot 2: Add below details or skip) */}
+      {reviewModalData && (
+        <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, background: 'rgba(0,0,0,0.6)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 9999, padding: '1rem' }}>
+          <div className="card" style={{ maxWidth: '540px', width: '100%', padding: '1.5rem', borderRadius: '12px' }}>
+            <div style={{ borderBottom: '2px solid #2563eb', paddingBottom: '0.6rem', marginBottom: '1rem' }}>
+              <h3 style={{ margin: 0, color: '#1e293b' }}>Referrer Review & Approval</h3>
+              <p style={{ margin: 0, fontSize: '0.82rem', color: '#64748b' }}>
+                Review guest: <strong>{reviewModalData.visitor_name}</strong> ({reviewModalData.visitor_phone})
+              </p>
+            </div>
+
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.8rem' }}>
+              <label>
+                Resident / Department / Ashram Visit
+                <select value={reviewVisitType} onChange={(e) => setReviewVisitType(e.target.value)}>
+                  {isUserResident && <option value="HOME">Resident / Home Visit</option>}
+                  {isUserEmployee && <option value="OFFICE">Department / Office Visit</option>}
+                  <option value="BHAJAN">Ashram Bhajan Visit</option>
+                  <option value="EVENT">Ashram Event Visit</option>
+                  <option value="TOUR">Ashram Tour Visit</option>
+                </select>
+              </label>
+
+              <label>
+                Category (Govt., Vendors etc.)
+                <select value={reviewCategory} onChange={(e) => setReviewCategory(e.target.value)}>
+                  <option value="GENERAL">General Guest</option>
+                  <option value="VIP">VIP</option>
+                  <option value="VVIP">VVIP</option>
+                  <option value="MAID">Domestic Helper / Maid</option>
+                  <option value="FREQUENT_VISITOR">Frequent Visitor</option>
+                  <option value="DELIVERY">Delivery / Courier</option>
+                  <option value="VENDOR">Vendor</option>
+                  <option value="FOREIGN_NATIONAL">Foreign National</option>
+                </select>
+              </label>
+
+              <label>
+                Priority (P1, P2, P3, P4)
+                <select value={reviewPriority} onChange={(e) => setReviewPriority(e.target.value)}>
+                  <option value="P1">P1 - Highest / VVIP</option>
+                  <option value="P2">P2 - High Priority</option>
+                  <option value="P3">P3 - Normal Priority</option>
+                  <option value="P4">P4 - Low Priority</option>
+                </select>
+              </label>
+
+              <label>
+                Arrival Date / Time
+                <input type="datetime-local" value={reviewValidFrom} onChange={(e) => setReviewValidFrom(e.target.value)} />
+              </label>
+
+              <label style={{ gridColumn: 'span 2' }}>
+                Departure Date / Time (Date of Visit)
+                <input type="datetime-local" value={reviewValidUntil} onChange={(e) => setReviewValidUntil(e.target.value)} />
+              </label>
+
+              <label style={{ gridColumn: 'span 2' }}>
+                Referrer Remarks
+                <textarea rows="2" value={reviewRemarks} onChange={(e) => setReviewRemarks(e.target.value)} placeholder="Add optional remarks for gate security or next level approver"></textarea>
+              </label>
+            </div>
+
+            <div style={{ display: 'flex', gap: '0.6rem', marginTop: '1.2rem' }}>
+              <button
+                type="button"
+                onClick={() => handleReviewAction('APPROVE')}
+                style={{ flex: 1, background: '#057a55', borderColor: '#057a55', color: 'white', fontWeight: 'bold', fontSize: '0.9rem', padding: '0.6rem' }}
+              >
+                ✓ Approve & Save Details
+              </button>
+              <button
+                type="button"
+                className="secondary outline"
+                onClick={() => handleReviewAction('REJECT')}
+                style={{ flex: 1, color: '#dc2626', borderColor: '#dc2626', fontWeight: 'bold', fontSize: '0.9rem', padding: '0.6rem' }}
+              >
+                ❌ Reject Entry
+              </button>
+              <button
+                type="button"
+                className="secondary"
+                onClick={() => setReviewModalData(null)}
+                style={{ padding: '0.6rem 1rem', fontSize: '0.85rem' }}
+              >
+                Cancel
               </button>
             </div>
           </div>
@@ -869,18 +994,28 @@ export default function HostDashboard({ user }) {
               </span>
             </div>
 
-            <div style={{ display: 'flex', gap: '0.5rem' }}>
+            <div style={{ display: 'flex', gap: '0.4rem', flexWrap: 'wrap' }}>
               <a
                 href={`https://wa.me/?text=${encodeURIComponent(`Jay Sai Ram! Here is your entry Passcode and QR Code for Sathya Sai Grama:\nPasscode: ${qrModalData.pass_code}\nStatus: Approved (Valid Only Once)`)}`}
                 target="_blank"
                 rel="noreferrer"
-                style={{ flex: 1, textDecoration: 'none' }}
+                style={{ flex: 1, textDecoration: 'none', minWidth: '120px' }}
               >
-                <button type="button" style={{ width: '100%', background: '#25d366', borderColor: '#25d366', color: 'white', fontWeight: 'bold', fontSize: '0.82rem' }}>
-                  📲 WhatsApp to Guest
+                <button type="button" style={{ width: '100%', background: '#25d366', borderColor: '#25d366', color: 'white', fontWeight: 'bold', fontSize: '0.8rem', padding: '0.5rem' }}>
+                  📲 WhatsApp
                 </button>
               </a>
-              <button type="button" className="secondary outline" onClick={() => setQrModalData(null)} style={{ fontSize: '0.82rem' }}>
+
+              <a
+                href={`mailto:?subject=${encodeURIComponent('Sathya Sai Grama - Entry Gate Passcode & QR Code')}&body=${encodeURIComponent(`Jay Sai Ram!\n\nHere is your entry Passcode and QR Code for Sathya Sai Grama:\nPasscode: ${qrModalData.pass_code}\nStatus: Approved (Valid Only Once)\n\nThank you!`)}`}
+                style={{ flex: 1, textDecoration: 'none', minWidth: '120px' }}
+              >
+                <button type="button" style={{ width: '100%', background: '#2563eb', borderColor: '#2563eb', color: 'white', fontWeight: 'bold', fontSize: '0.8rem', padding: '0.5rem' }}>
+                  ✉️ Email Pass
+                </button>
+              </a>
+
+              <button type="button" className="secondary outline" onClick={() => setQrModalData(null)} style={{ fontSize: '0.8rem', padding: '0.5rem 0.8rem' }}>
                 Close
               </button>
             </div>

@@ -38,8 +38,13 @@ export const updateRegistration = async (id, data) => {
   return res.data;
 };
 
-export const updateApproval = async (registration_id, action, remarks) => {
-  const res = await api.post('/registrations/approve', { registration_id, action, remarks });
+export const updateApproval = async (registration_id, action, remarks, extraDetails = {}) => {
+  const res = await api.post('/registrations/approve', { registration_id, action, remarks, ...extraDetails });
+  return res.data;
+};
+
+export const generateInviteToken = async () => {
+  const res = await api.post('/registrations/generate-invite-token');
   return res.data;
 };
 
