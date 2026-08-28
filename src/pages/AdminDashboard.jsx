@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { getReportData, adminBypassApprove, adminEmergencyPass, toggleL2Approval, getSystemSettings, getAdminUsers, getGateCategoryRules, toggleGateCategoryRule } from '../services/api';
+import { getReportData, adminBypassApprove, adminEmergencyPass, toggleL2Approval, getSystemSettings, getAdminUsers, getGateCategoryRules, toggleGateCategoryRule, getL2MatrixRules, updateL2MatrixRule } from '../services/api';
 import DashboardHeader from '../components/DashboardHeader';
 import UserAddWizardModal from '../components/UserAddWizardModal';
 import BulkUploadModal from '../components/BulkUploadModal';
@@ -43,7 +43,7 @@ export default function AdminDashboard({ user }) {
     totalPages: auditTotalPages,
     totalItems: auditTotalItems,
     paginatedData: paginatedAuditLogs,
-  } = useTablePagination(auditLogs, ['action', 'entity_type', 'remarks'], 10);
+  } = useTablePagination(auditLogs, ['action', 'entity_type', 'remarks', 'actor_name', 'actor_role', 'status', 'ip_address'], 10);
 
   // Modals state
   const [isWizardOpen, setIsWizardOpen] = useState(false);
@@ -56,10 +56,24 @@ export default function AdminDashboard({ user }) {
   const [emergencyPurpose, setEmergencyPurpose] = useState('');
   const [emergencyPassResult, setEmergencyPassResult] = useState(null);
 
+  const [l2MatrixRules, setL2MatrixRules] = useState([]);
+
   useEffect(() => {
     fetchData();
     fetchUsers();
     fetchGateRules();
+    fetchL2MatrixRules();
+
+    const handleRealtimeSync = (e) => {
+      console.log('[AdminDashboard] Realtime Event Received:', e.detail);
+      fetchData();
+      fetchUsers();
+      fetchGateRules();
+      fetchL2MatrixRules();
+    };
+
+    window.addEventListener('vms_realtime_sync', handleRealtimeSync);
+    return () => window.removeEventListener('vms_realtime_sync', handleRealtimeSync);
   }, []);
 
   const fetchGateRules = async () => {
@@ -68,6 +82,27 @@ export default function AdminDashboard({ user }) {
       if (res.success) setGateRules(res.rules);
     } catch (err) {
       console.error('Failed to fetch gate rules:', err);
+    }
+  };
+
+  const fetchL2MatrixRules = async () => {
+    try {
+      const res = await getL2MatrixRules();
+      if (res.success) setL2MatrixRules(res.rules);
+    } catch (err) {
+      console.error('Failed to fetch L2 matrix rules:', err);
+    }
+  };
+
+  const handleUpdateL2MatrixRule = async (hostCategory, visitTypeCategory, newApproverType) => {
+    try {
+      const res = await updateL2MatrixRule(hostCategory, visitTypeCategory, newApproverType);
+      if (res.success) {
+        setMsg(res.message);
+        fetchL2MatrixRules();
+      }
+    } catch (err) {
+      alert(err.response?.data?.message || 'Failed to update L2 matrix rule.');
     }
   };
 
@@ -329,6 +364,86 @@ export default function AdminDashboard({ user }) {
         </div>
       </div>
 
+      {/* Super Admin Customizable L2 Approval Routing Matrix Panel */}
+      <div className="card" style={{ marginBottom: '1.5rem', borderTop: '4px solid #4e081d' }}>
+        <div style={{ marginBottom: '0.8rem', display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: '0.5rem' }}>
+          <div>
+            <h3 style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', color: '#4e081d', margin: 0 }}>
+              <Shield size={22} color="#df6f06" /> Customizable L2 Approval Matrix Panel (Super Admin)
+            </h3>
+            <p style={{ fontSize: '0.85rem', color: '#475569', margin: '0.2rem 0 0 0' }}>
+              Configure and customize default L2 approver routing for Resident, Employee, and Combined (Resident + Employee) Hosts.
+            </p>
+          </div>
+          <span className="badge badge-inside" style={{ fontSize: '0.8rem', padding: '0.35rem 0.75rem' }}>
+            System Status: {l2Enabled ? '⚡ L2 Approvals Active' : '🔓 Super Admin Bypassed'}
+          </span>
+        </div>
+
+        <div style={{ overflowX: 'auto' }}>
+          <table role="grid" style={{ fontSize: '0.85rem' }}>
+            <thead>
+              <tr style={{ background: '#4e081d', color: '#ffffff' }}>
+                <th>Host Profile Category</th>
+                <th>Visit Purpose / Type</th>
+                <th>System Default L2 Rule</th>
+                <th>Active Configured L2 Approver</th>
+              </tr>
+            </thead>
+            <tbody>
+              {[
+                { hostCat: 'RESIDENT', hostLabel: 'Resident Host', visitCat: 'RESIDENT_VISIT', visitLabel: 'Resident / Home Visit (HOME)', defaultApprover: 'DEPARTMENT_PRO', desc: 'resident - PRO(department)' },
+                { hostCat: 'RESIDENT', hostLabel: 'Resident Host', visitCat: 'ASHRAM_VISIT', visitLabel: 'Ashram Visit (BHAJAN/ASHRAM/TOUR)', defaultApprover: 'DEPARTMENT_PRO', desc: 'asram - PRO(department)' },
+                { hostCat: 'EMPLOYEE', hostLabel: 'Employee Host', visitCat: 'EMPLOYEE_OFFICIAL_VISIT', visitLabel: 'Employee Visit (OFFICE/OFFICIAL)', defaultApprover: 'SAME_DEPARTMENT_HOD', desc: 'employee - SAME DEPARTMENT - HOD(role)' },
+                { hostCat: 'EMPLOYEE', hostLabel: 'Employee Host', visitCat: 'ASHRAM_VISIT', visitLabel: 'Ashram Visit (BHAJAN/ASHRAM/TOUR)', defaultApprover: 'DEPARTMENT_PRO', desc: 'asram - PRO(department)' },
+                { hostCat: 'BOTH', hostLabel: 'Resident + Employee Host', visitCat: 'RESIDENT_VISIT', visitLabel: 'Resident / Home Visit (HOME)', defaultApprover: 'DEPARTMENT_PRO', desc: 'resident - PRO(department)' },
+                { hostCat: 'BOTH', hostLabel: 'Resident + Employee Host', visitCat: 'EMPLOYEE_OFFICIAL_VISIT', visitLabel: 'Employee Visit (OFFICE/OFFICIAL)', defaultApprover: 'SAME_DEPARTMENT_HOD', desc: 'employee - SAME DEPARTMENT - HOD(role)' },
+                { hostCat: 'BOTH', hostLabel: 'Resident + Employee Host', visitCat: 'ASHRAM_VISIT', visitLabel: 'Ashram Visit (BHAJAN/ASHRAM/TOUR)', defaultApprover: 'DEPARTMENT_PRO', desc: 'asram - PRO(department)' },
+              ].map((row) => {
+                const rule = l2MatrixRules.find((r) => r.host_category === row.hostCat && r.visit_type_category === row.visitCat);
+                const currentApprover = rule ? rule.approver_type : row.defaultApprover;
+
+                return (
+                  <tr key={`${row.hostCat}_${row.visitCat}`}>
+                    <td>
+                      <strong>{row.hostLabel}</strong>
+                    </td>
+                    <td>{row.visitLabel}</td>
+                    <td>
+                      <span style={{ fontSize: '0.8rem', color: '#9c4c1c', fontWeight: '600' }}>
+                        {row.desc}
+                      </span>
+                    </td>
+                    <td>
+                      <select
+                        value={currentApprover}
+                        onChange={(e) => handleUpdateL2MatrixRule(row.hostCat, row.visitCat, e.target.value)}
+                        style={{
+                          fontSize: '0.82rem',
+                          padding: '0.3rem 0.6rem',
+                          margin: 0,
+                          borderRadius: '6px',
+                          border: '2px solid #df6f06',
+                          background: '#fffbf0',
+                          color: '#4e081d',
+                          fontWeight: 'bold',
+                          cursor: 'pointer',
+                        }}
+                      >
+                        <option value="DEPARTMENT_PRO">PRO (Department)</option>
+                        <option value="SAME_DEPARTMENT_HOD">Official HOD (Same Department Role)</option>
+                        <option value="ACCOMMODATION_TEAM">Accommodation Team (Department)</option>
+                        <option value="SUPER_ADMIN_BYPASS">Super Admin Direct Auto-Approve</option>
+                      </select>
+                    </td>
+                  </tr>
+                );
+              })}
+            </tbody>
+          </table>
+        </div>
+      </div>
+
       {/* System User Directory Table */}
       <div className="card" style={{ marginBottom: '1.5rem' }}>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.5rem' }}>
@@ -463,9 +578,21 @@ export default function AdminDashboard({ user }) {
         </table>
       </div>
 
-      {/* Audit Logs */}
-      <div className="card">
-        <h3>System Audit & Exception Ledger</h3>
+      {/* Universal Live System Audit Log Ledger */}
+      <div className="card" style={{ borderTop: '4px solid #4e081d' }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.5rem', flexWrap: 'wrap', gap: '0.5rem' }}>
+          <div>
+            <h3 style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', color: '#4e081d', margin: 0 }}>
+              <ShieldAlert color="#df6f06" size={22} /> Universal System Audit & Action Ledger (Super Admin)
+            </h3>
+            <p style={{ fontSize: '0.85rem', color: '#475569', margin: '0.2rem 0 0 0' }}>
+              Complete immutable security audit trail logging every user login, pass approval, gate movement, administrative change, and result.
+            </p>
+          </div>
+          <span className="badge badge-inside" style={{ fontSize: '0.8rem' }}>
+            Total Audit Records: {auditLogs.length}
+          </span>
+        </div>
 
         <PaginationControls
           searchTerm={auditSearch}
@@ -475,37 +602,92 @@ export default function AdminDashboard({ user }) {
           totalPages={auditTotalPages}
           totalItems={auditTotalItems}
           pageSize={10}
-          placeholder="Filter audit logs by Action, Entity, Remarks..."
+          placeholder="Filter audit logs by Who (Actor), Role, Action, Status, IP, or Remarks..."
         />
 
-        <table role="grid">
-          <thead>
-            <tr>
-              <th>ID</th>
-              <th>Action</th>
-              <th>Entity</th>
-              <th>Remarks</th>
-              <th>Timestamp</th>
-            </tr>
-          </thead>
-          <tbody>
-            {paginatedAuditLogs.length === 0 ? (
-              <tr>
-                <td colSpan="5" style={{ textAlign: 'center', color: '#64748b' }}>No audit logs matching filter.</td>
+        <div style={{ overflowX: 'auto' }}>
+          <table role="grid" style={{ fontSize: '0.85rem' }}>
+            <thead>
+              <tr style={{ background: '#4e081d', color: '#ffffff' }}>
+                <th>Log ID & Time</th>
+                <th>Who (Actor & Role)</th>
+                <th>What (Action Performed)</th>
+                <th>Result & Details</th>
+                <th>Status</th>
+                <th>IP Address</th>
               </tr>
-            ) : (
-              paginatedAuditLogs.map((log) => (
-                <tr key={log.id}>
-                  <td>{log.id}</td>
-                  <td><strong>{log.action}</strong></td>
-                  <td>{log.entity_type}</td>
-                  <td>{log.remarks}</td>
-                  <td>{new Date(log.timestamp).toLocaleString()}</td>
+            </thead>
+            <tbody>
+              {paginatedAuditLogs.length === 0 ? (
+                <tr>
+                  <td colSpan="6" style={{ textAlign: 'center', color: '#64748b', padding: '1.5rem' }}>
+                    No audit logs matching filter.
+                  </td>
                 </tr>
-              ))
-            )}
-          </tbody>
-        </table>
+              ) : (
+                paginatedAuditLogs.map((log) => (
+                  <tr key={log.id}>
+                    <td>
+                      <div style={{ fontWeight: 'bold', color: '#4e081d' }}>#{log.id}</div>
+                      <div style={{ fontSize: '0.75rem', color: '#64748b' }}>
+                        {new Date(log.timestamp).toLocaleString()}
+                      </div>
+                    </td>
+                    <td>
+                      <div style={{ fontWeight: 'bold', color: '#1e293b' }}>
+                        {log.actor_name || 'System / Guest'}
+                      </div>
+                      <span className="badge badge-inside" style={{ fontSize: '0.68rem', padding: '0.15rem 0.45rem', marginTop: '0.2rem' }}>
+                        {log.actor_role || 'SYSTEM'}
+                      </span>
+                    </td>
+                    <td>
+                      <span
+                        style={{
+                          fontWeight: 'bold',
+                          fontSize: '0.78rem',
+                          padding: '0.2rem 0.55rem',
+                          borderRadius: '6px',
+                          background: log.action?.includes('APPROVE') || log.action === 'USER_LOGIN' || log.action?.includes('GATE')
+                            ? '#dcfce7'
+                            : log.action?.includes('FAIL') || log.action?.includes('DENIED')
+                            ? '#fee2e2'
+                            : '#fff8eb',
+                          color: log.action?.includes('APPROVE') || log.action === 'USER_LOGIN' || log.action?.includes('GATE')
+                            ? '#15803d'
+                            : log.action?.includes('FAIL') || log.action?.includes('DENIED')
+                            ? '#b91c1c'
+                            : '#9c4c1c',
+                          border: '1px solid currentColor',
+                          display: 'inline-block',
+                        }}
+                      >
+                        {log.action}
+                      </span>
+                    </td>
+                    <td style={{ maxWidth: '350px', wordBreak: 'break-word', fontSize: '0.82rem' }}>
+                      <strong>[{log.entity_type} {log.entity_id ? `#${log.entity_id}` : ''}]</strong> {log.remarks}
+                    </td>
+                    <td>
+                      <span
+                        style={{
+                          fontWeight: 'bold',
+                          fontSize: '0.75rem',
+                          color: log.status === 'FAILED' ? '#dc2626' : '#057a55',
+                        }}
+                      >
+                        ● {log.status || 'SUCCESS'}
+                      </span>
+                    </td>
+                    <td style={{ fontSize: '0.78rem', color: '#64748b', fontFamily: 'monospace' }}>
+                      {log.ip_address || '127.0.0.1'}
+                    </td>
+                  </tr>
+                ))
+              )}
+            </tbody>
+          </table>
+        </div>
       </div>
     </div>
   );

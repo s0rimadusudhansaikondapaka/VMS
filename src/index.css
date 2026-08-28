@@ -296,3 +296,59 @@ table[role="grid"], table {
   opacity: 1;
 }
 
+/* ========================================================= */
+/* Strict Sri Madhusudan Sai Website Color Overrides          */
+/* Replaces ALL Black / Dark Gray Table & Grid Backgrounds   */
+/* ========================================================= */
+
+table, table[role="grid"] {
+  background-color: #ffffff !important;
+  color: var(--sms-text-dark) !important;
+  border: 1px solid var(--sms-border) !important;
+  border-radius: 8px !important;
+  overflow: hidden !important;
+}
+
+table thead, table[role="grid"] thead, table thead tr, table[role="grid"] thead tr {
+  background: var(--sms-maroon) !important;
+  color: #ffffff !important;
+}
+
+table th, table[role="grid"] th {
+  background-color: var(--sms-maroon) !important;
+  color: #ffffff !important;
+  border-bottom: 3px solid var(--sms-saffron) !important;
+  font-weight: 700 !important;
+  padding: 0.75rem 0.9rem !important;
+  font-size: 0.85rem !important;
+}
+
+table td, table[role="grid"] td {
+  background-color: #ffffff !important;
+  color: var(--sms-text-dark) !important;
+  border-bottom: 1px solid var(--sms-border) !important;
+  padding: 0.75rem 0.9rem !important;
+}
+
+/* Alternating Row Striping in Warm Cream Website Colors */
+table tbody tr:nth-child(even) td, table[role="grid"] tbody tr:nth-child(even) td {
+  background-color: var(--sms-card-warm) !important;
+}
+
+table tbody tr:hover td, table[role="grid"] tbody tr:hover td {
+  background-color: #fff3e0 !important; /* Soft Warm Saffron Tint on Hover */
+}
+
+/* Override Any Dark Inputs / Textareas / Selects */
+input, select, textarea {
+  background-color: #ffffff !important;
+  color: var(--sms-text-dark) !important;
+  border: 1px solid #cbd5e1 !important;
+}
+
+input:focus, select:focus, textarea:focus {
+  border-color: var(--sms-saffron) !important;
+  box-shadow: 0 0 0 3px rgba(223, 111, 6, 0.25) !important;
+  background-color: var(--sms-card-warm) !important;
+}
+

@@ -33,7 +33,18 @@ export default function GuardGateTerminal({ user }) {
   useEffect(() => {
     fetchSpotQueue();
     fetchUsersList();
-  }, []);
+
+    const handleRealtimeSync = (e) => {
+      console.log('[GuardGateTerminal] Realtime Event Received:', e.detail);
+      fetchSpotQueue();
+      if (passData && passData.pass_code) {
+        executePassVerification(passData.pass_code);
+      }
+    };
+
+    window.addEventListener('vms_realtime_sync', handleRealtimeSync);
+    return () => window.removeEventListener('vms_realtime_sync', handleRealtimeSync);
+  }, [passData]);
 
   const fetchSpotQueue = async () => {
     try {
@@ -436,6 +447,19 @@ export default function GuardGateTerminal({ user }) {
               </div>
             </div>
           </div>
+
+          {/* Approved By Approver Tracking Badge */}
+          {(passData.status === 'APPROVED' || passData.status === 'INSIDE_CAMPUS') && (
+            <div style={{ marginTop: '0.85rem', background: '#ecfdf5', border: '1.5px solid #34d399', padding: '0.6rem 1rem', borderRadius: '8px', fontSize: '0.88rem', color: '#065f46', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                <CheckCircle size={18} color="#059669" />
+                <span>
+                  <strong>Pass Approved By:</strong> {passData.approved_by_display || passData.approved_by_name || 'Authorized Host/Admin'}
+                </span>
+              </div>
+              <span className="badge badge-approved" style={{ fontSize: '0.7rem' }}>VERIFIED APPROVAL</span>
+            </div>
+          )}
 
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1.2fr', gap: '1.5rem', marginTop: '1rem' }}>
             {/* Read-Only Credentials & Photos */}

@@ -9,6 +9,14 @@ export default function PublicPassView({ passCode }) {
 
   useEffect(() => {
     fetchPass();
+
+    const handleRealtimeSync = (e) => {
+      console.log('[PublicPassView] Realtime Event Received:', e.detail);
+      fetchPass();
+    };
+
+    window.addEventListener('vms_realtime_sync', handleRealtimeSync);
+    return () => window.removeEventListener('vms_realtime_sync', handleRealtimeSync);
   }, [passCode]);
 
   const fetchPass = async () => {
@@ -113,6 +121,9 @@ export default function PublicPassView({ passCode }) {
           <div style={{ borderTop: '1px solid #cbd5e1', marginTop: '1rem', paddingTop: '0.8rem', fontSize: '0.78rem', color: '#475569', textAlign: 'left' }}>
             <div><strong>Arrival:</strong> {new Date(passData.valid_from).toLocaleString()}</div>
             <div><strong>Valid Until:</strong> {new Date(passData.valid_until).toLocaleString()}</div>
+            <div style={{ marginTop: '0.4rem', color: '#065f46', background: '#ecfdf5', padding: '0.3rem 0.5rem', borderRadius: '4px', border: '1px solid #a7f3d0' }}>
+              <strong>Approved By:</strong> {passData.approved_by_display || passData.approved_by_name || 'Authorized Sathya Sai Grama Authority'}
+            </div>
           </div>
         </div>
 

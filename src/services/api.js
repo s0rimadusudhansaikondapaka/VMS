@@ -63,6 +63,16 @@ export const toggleGateCategoryRule = async (gate_name, visitor_category, is_all
   return res.data;
 };
 
+export const getL2MatrixRules = async () => {
+  const res = await api.get('/admin/l2-matrix-rules');
+  return res.data;
+};
+
+export const updateL2MatrixRule = async (host_category, visit_type_category, approver_type) => {
+  const res = await api.post('/admin/l2-matrix-rules/update', { host_category, visit_type_category, approver_type });
+  return res.data;
+};
+
 export const getHostRegistrations = async () => {
   const res = await api.get('/registrations/host');
   return res.data;
