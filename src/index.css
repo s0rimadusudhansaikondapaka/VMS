@@ -1,21 +1,64 @@
 :root {
-  --primary: #1a56db;
-  --primary-hover: #1e429f;
-  --bg-gradient: linear-gradient(135deg, #f8fafc 0%, #e2e8f0 100%);
+  /* Official Sri Madhusudan Sai Website Color Palette (https://srimadhusudansai.com/) */
+  --sms-saffron: #df6f06;
+  --sms-saffron-hover: #b85b05;
+  --sms-saffron-dark: #9c4c1c;
+  --sms-maroon: #4e081d;
+  --sms-maroon-dark: #370513;
+  --sms-gold: #fcb900;
+  --sms-bg-light: #fdfbf7;
+  --sms-card-bg: #ffffff;
+  --sms-card-warm: #fffbf0;
+  --sms-text-dark: #1e293b;
+  --sms-text-muted: #475569;
+  --sms-border: #e2e8f0;
+
+  /* Theme Variable Aliases */
+  --primary: var(--sms-saffron);
+  --primary-hover: var(--sms-saffron-hover);
+  --bg-gradient: linear-gradient(135deg, #fdfbf7 0%, #fff8eb 100%);
 }
 
 body {
-  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+  font-family: "Hind", "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
   background: var(--bg-gradient);
+  color: var(--sms-text-dark);
   min-height: 100vh;
   margin: 0;
   padding: 0;
 }
 
+/* Button & Control Theme Colors */
+button, .button, input[type="submit"] {
+  background-color: var(--sms-saffron);
+  border-color: var(--sms-saffron);
+  color: #ffffff;
+  font-weight: 700;
+  border-radius: 8px;
+  transition: all 0.2s ease;
+}
+
+button:hover, .button:hover, input[type="submit"]:hover {
+  background-color: var(--sms-saffron-hover);
+  border-color: var(--sms-saffron-hover);
+}
+
+button.secondary {
+  background-color: var(--sms-maroon);
+  border-color: var(--sms-maroon);
+  color: #ffffff;
+}
+
+button.secondary:hover {
+  background-color: var(--sms-maroon-dark);
+  border-color: var(--sms-maroon-dark);
+}
+
 .card {
   background: #ffffff;
   border-radius: 12px;
-  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+  box-shadow: 0 4px 12px rgba(78, 8, 29, 0.06), 0 2px 4px rgba(0, 0, 0, 0.04);
+  border: 1px solid #f1f5f9;
   padding: 1.5rem;
   margin-bottom: 1.5rem;
 }
@@ -31,8 +74,8 @@ body {
 
 .badge-approved { background-color: #def7ec; color: #03543f; }
 .badge-pending { background-color: #fef3c7; color: #92400e; }
-.badge-inside { background-color: #e1effe; color: #1e429f; }
-.badge-vvip { background-color: #fce8f3; color: #99154b; }
+.badge-inside { background-color: #fff8eb; color: #9c4c1c; border: 1px solid #fde68a; }
+.badge-vvip { background-color: #fce8f3; color: #4e081d; border: 1px solid #fbcfe8; }
 .badge-rejected { background-color: #fde8e8; color: #9b1c1c; }
 
 .grid-cols-4 {
@@ -44,7 +87,7 @@ body {
 .metric-value {
   font-size: 2rem;
   font-weight: 800;
-  color: #1e293b;
+  color: var(--sms-maroon);
 }
 
 .gate-btn-in {
@@ -55,8 +98,8 @@ body {
 }
 
 .gate-btn-out {
-  background-color: #c81e1e !important;
-  border-color: #c81e1e !important;
+  background-color: var(--sms-maroon) !important;
+  border-color: var(--sms-maroon) !important;
   color: white !important;
   font-weight: bold;
 }
@@ -193,3 +236,63 @@ table[role="grid"], table {
     margin-bottom: 0.5rem !important;
   }
 }
+
+/* ========================================================= */
+/* Field Focus Highlight & Custom Hover Tooltip Styling      */
+/* ========================================================= */
+.field-highlighted {
+  border: 2px solid var(--sms-saffron) !important;
+  background-color: var(--sms-card-warm) !important;
+  box-shadow: 0 0 0 3px rgba(223, 111, 6, 0.25) !important;
+  outline: none !important;
+  transition: all 0.2s ease-in-out !important;
+}
+
+[data-tooltip] {
+  position: relative;
+}
+
+[data-tooltip]::before {
+  content: attr(data-tooltip);
+  position: absolute;
+  bottom: 125%;
+  left: 50%;
+  transform: translateX(-50%) translateY(4px);
+  background: var(--sms-maroon);
+  color: #ffffff;
+  padding: 0.35rem 0.65rem;
+  font-size: 0.72rem;
+  font-weight: 600;
+  border-radius: 6px;
+  white-space: nowrap;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.2s ease, transform 0.2s ease;
+  z-index: 99999;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.25);
+}
+
+[data-tooltip]::after {
+  content: '';
+  position: absolute;
+  bottom: 105%;
+  left: 50%;
+  transform: translateX(-50%);
+  border-width: 5px;
+  border-style: solid;
+  border-color: #0f172a transparent transparent transparent;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.2s ease;
+  z-index: 99999;
+}
+
+[data-tooltip]:hover::before {
+  opacity: 1;
+  transform: translateX(-50%) translateY(0);
+}
+
+[data-tooltip]:hover::after {
+  opacity: 1;
+}
+

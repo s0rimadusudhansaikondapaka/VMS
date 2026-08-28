@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { getOverstayAlerts, supervisorOverride, getVisitorsInsideCampus } from '../services/api';
 import DashboardHeader from '../components/DashboardHeader';
+import { useTablePagination, PaginationControls } from '../components/TablePagination';
 import { AlertCircle, ShieldAlert, CheckCircle, XCircle, Clock } from 'lucide-react';
 
 export default function SupervisorConsole({ user }) {
@@ -9,6 +10,26 @@ export default function SupervisorConsole({ user }) {
   const [selectedReg, setSelectedReg] = useState(null);
   const [remarks, setRemarks] = useState('');
   const [msg, setMsg] = useState('');
+
+  const {
+    searchTerm: overSearch,
+    setSearchTerm: setOverSearch,
+    currentPage: overPage,
+    setCurrentPage: setOverPage,
+    totalPages: overTotalPages,
+    totalItems: overTotalItems,
+    paginatedData: paginatedOverstays,
+  } = useTablePagination(overstays, ['visitor_name', 'visitor_phone', 'pass_code', 'host_name'], 10);
+
+  const {
+    searchTerm: inSearch,
+    setSearchTerm: setInSearch,
+    currentPage: inPage,
+    setCurrentPage: setInPage,
+    totalPages: inTotalPages,
+    totalItems: inTotalItems,
+    paginatedData: paginatedInsideVisitors,
+  } = useTablePagination(insideVisitors, ['visitor_name', 'pass_code', 'host_name', 'vehicle_no', 'visitor_category'], 10);
 
   useEffect(() => {
     fetchData();
@@ -67,6 +88,18 @@ export default function SupervisorConsole({ user }) {
         <h3 style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', color: '#b45309' }}>
           <AlertCircle /> Overstay & Delayed Exit Alerts (9:00 PM / 9:30 PM Triggers)
         </h3>
+
+        <PaginationControls
+          searchTerm={overSearch}
+          setSearchTerm={setOverSearch}
+          currentPage={overPage}
+          setCurrentPage={setOverPage}
+          totalPages={overTotalPages}
+          totalItems={overTotalItems}
+          pageSize={10}
+          placeholder="Search overstays by Visitor Name, Phone, Passcode..."
+        />
+
         <table role="grid">
           <thead>
             <tr>
@@ -79,12 +112,12 @@ export default function SupervisorConsole({ user }) {
             </tr>
           </thead>
           <tbody>
-            {overstays.length === 0 ? (
+            {paginatedOverstays.length === 0 ? (
               <tr>
-                <td colSpan="6" style={{ textAlign: 'center', color: '#057a55' }}>✓ No overstay alerts at this time. All campus visitors within scheduled limits.</td>
+                <td colSpan="6" style={{ textAlign: 'center', color: '#057a55' }}>✓ No overstay alerts matching filter. All campus visitors within scheduled limits.</td>
               </tr>
             ) : (
-              overstays.map((over) => (
+              paginatedOverstays.map((over) => (
                 <tr key={over.id}>
                   <td><strong>{over.pass_code}</strong></td>
                   <td>{over.visitor_name}<br/><span style={{ fontSize: '0.75rem' }}>{over.visitor_phone}</span></td>
@@ -135,6 +168,18 @@ export default function SupervisorConsole({ user }) {
       {/* Active Campus Visitors */}
       <div className="card">
         <h3>Current Visitors Inside Campus ({insideVisitors.length})</h3>
+
+        <PaginationControls
+          searchTerm={inSearch}
+          setSearchTerm={setInSearch}
+          currentPage={inPage}
+          setCurrentPage={setInPage}
+          totalPages={inTotalPages}
+          totalItems={inTotalItems}
+          pageSize={10}
+          placeholder="Filter inside visitors by Name, Passcode, Vehicle, Host..."
+        />
+
         <table role="grid">
           <thead>
             <tr>
@@ -147,16 +192,22 @@ export default function SupervisorConsole({ user }) {
             </tr>
           </thead>
           <tbody>
-            {insideVisitors.map((vis) => (
-              <tr key={vis.id}>
-                <td><strong>{vis.pass_code}</strong></td>
-                <td>{vis.visitor_name}</td>
-                <td>{vis.visitor_category}</td>
-                <td>{vis.vehicle_no || 'N/A'}</td>
-                <td>{vis.host_name || 'N/A'}</td>
-                <td><span className="badge badge-inside">{vis.status}</span></td>
+            {paginatedInsideVisitors.length === 0 ? (
+              <tr>
+                <td colSpan="6" style={{ textAlign: 'center', color: '#64748b' }}>No active visitors inside campus matching filter.</td>
               </tr>
-            ))}
+            ) : (
+              paginatedInsideVisitors.map((vis) => (
+                <tr key={vis.id}>
+                  <td><strong>{vis.pass_code}</strong></td>
+                  <td>{vis.visitor_name}</td>
+                  <td>{vis.visitor_category}</td>
+                  <td>{vis.vehicle_no || 'N/A'}</td>
+                  <td>{vis.host_name || 'N/A'}</td>
+                  <td><span className="badge badge-inside">{vis.status}</span></td>
+                </tr>
+              ))
+            )}
           </tbody>
         </table>
       </div>

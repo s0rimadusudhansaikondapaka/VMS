@@ -1,11 +1,13 @@
 import React, { useState, useEffect } from 'react';
 import { createSingleUser, getDepartments } from '../services/api';
+import FormFieldGuide from './FormFieldGuide';
 import { UserPlus, CheckCircle, ChevronRight, ChevronLeft, Shield, Building, Key, X } from 'lucide-react';
 
 export default function UserAddWizardModal({ isOpen, onClose, onSuccess }) {
   const [step, setStep] = useState(1);
   const [departments, setDepartments] = useState([]);
   const [loading, setLoading] = useState(false);
+  const [activeField, setActiveField] = useState('');
   const [error, setError] = useState('');
   const [successMsg, setSuccessMsg] = useState('');
 
@@ -144,140 +146,161 @@ export default function UserAddWizardModal({ isOpen, onClose, onSuccess }) {
         {successMsg && <div style={{ background: '#def7ec', color: '#03543f', padding: '0.75rem', borderRadius: '6px', marginBottom: '1rem', fontSize: '0.85rem' }}>{successMsg}</div>}
 
         {/* Form Body */}
-        <form onSubmit={handleSubmit}>
-          {/* STEP 1: Personal Details */}
-          {step === 1 && (
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
-              <div>
-                <label style={labelStyle}>Full Name *</label>
-                <input
-                  type="text"
-                  placeholder="e.g. Ramesh Kumar"
-                  value={formData.name}
-                  onChange={(e) => handleChange('name', e.target.value)}
-                  required
-                />
-              </div>
-
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
+        <div style={{ display: 'grid', gridTemplateColumns: 'minmax(0, 1fr) 270px', gap: '1.2rem', alignItems: 'start' }}>
+          <form onSubmit={handleSubmit}>
+            {/* STEP 1: Personal Details */}
+            {step === 1 && (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
                 <div>
-                  <label style={labelStyle}>Email Address *</label>
-                  <input
-                    type="email"
-                    placeholder="ramesh@ashram.org"
-                    value={formData.email}
-                    onChange={(e) => handleChange('email', e.target.value)}
-                    required
-                  />
-                </div>
-                <div>
-                  <label style={labelStyle}>Phone Number *</label>
+                  <label style={labelStyle}>Full Name *</label>
                   <input
                     type="text"
-                    placeholder="+91 9876543210"
-                    value={formData.phone}
-                    onChange={(e) => handleChange('phone', e.target.value)}
+                    placeholder="e.g. Ramesh Kumar"
+                    value={formData.name}
+                    onChange={(e) => handleChange('name', e.target.value)}
+                    onFocus={() => setActiveField('fullName')}
+                    className={activeField === 'fullName' ? 'field-highlighted' : ''}
                     required
                   />
                 </div>
-              </div>
 
-              <div>
-                <label style={labelStyle}>Residency Status</label>
-                <select
-                  value={formData.residency_status}
-                  onChange={(e) => handleChange('residency_status', e.target.value)}
-                >
-                  <option value="RESIDENT">Ashram Resident (Stays in Campus)</option>
-                  <option value="NON_RESIDENT">Non-Resident (Day Commuter / Guest)</option>
-                </select>
-              </div>
-            </div>
-          )}
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
+                  <div>
+                    <label style={labelStyle}>Email Address *</label>
+                    <input
+                      type="email"
+                      placeholder="ramesh@ashram.org"
+                      value={formData.email}
+                      onChange={(e) => handleChange('email', e.target.value)}
+                      onFocus={() => setActiveField('email')}
+                      className={activeField === 'email' ? 'field-highlighted' : ''}
+                      required
+                    />
+                  </div>
+                  <div>
+                    <label style={labelStyle}>Phone Number *</label>
+                    <input
+                      type="text"
+                      placeholder="+91 9876543210"
+                      value={formData.phone}
+                      onChange={(e) => handleChange('phone', e.target.value)}
+                      onFocus={() => setActiveField('phone')}
+                      className={activeField === 'phone' ? 'field-highlighted' : ''}
+                      required
+                    />
+                  </div>
+                </div>
 
-          {/* STEP 2: Role & Department Assignment */}
-          {step === 2 && (
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
-              <div>
-                <label style={labelStyle}>System Role *</label>
-                <select
-                  value={formData.role}
-                  onChange={(e) => handleChange('role', e.target.value)}
-                >
-                  <option value="RESIDENT">RESIDENT (Host Visitor Approver L1)</option>
-                  <option value="EMPLOYEE">EMPLOYEE (Ashram Staff)</option>
-                  <option value="HOD">HOD (Department Head L2 Approver)</option>
-                  <option value="GUARD">GUARD (Security Gate Pass Terminal)</option>
-                  <option value="SUPERVISOR">SUPERVISOR (Security Console & Overrides)</option>
-                  <option value="SECURITY_HEAD">SECURITY_HEAD (Master Security Approver)</option>
-                  <option value="ADMIN">ADMIN (System Superadmin)</option>
-                </select>
-              </div>
+                <div>
+                  <label style={labelStyle}>Residency Status</label>
+                  <select
+                    value={formData.residency_status}
+                    onChange={(e) => handleChange('residency_status', e.target.value)}
+                    onFocus={() => setActiveField('address')}
+                  >
+                    <option value="RESIDENT">Ashram Resident (Stays in Campus)</option>
+                    <option value="NON_RESIDENT">Non-Resident (Day Commuter / Guest)</option>
+                  </select>
+                </div>
 
-              <div>
-                <label style={labelStyle}>Department Assignment</label>
-                <select
-                  value={formData.department_id}
-                  onChange={(e) => handleChange('department_id', e.target.value)}
-                >
-                  <option value="">-- No Department Assigned --</option>
-                  {departments.map((dept) => (
-                    <option key={dept.id} value={dept.id}>
-                      {dept.name}
-                    </option>
-                  ))}
-                </select>
+                <div>
+                  <label style={labelStyle}>
+                    {formData.residency_status === 'RESIDENT' ? 'Ashram Home Address / Villa & Flat No' : 'Department Office Address / Location'}
+                  </label>
+                  <input
+                    type="text"
+                    placeholder={formData.residency_status === 'RESIDENT' ? 'e.g. Flat 302, Sai Residence Block A, Sathya Sai Grama' : 'e.g. Room 12, Admin Block, Education Dept'}
+                    value={formData.address || ''}
+                    onChange={(e) => handleChange('address', e.target.value)}
+                    onFocus={() => setActiveField('address')}
+                    className={activeField === 'address' ? 'field-highlighted' : ''}
+                  />
+                </div>
               </div>
-            </div>
-          )}
+            )}
 
-          {/* STEP 3: Account Setup & Confirmation */}
-          {step === 3 && (
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
-              <div>
-                <label style={labelStyle}>Initial Default Password</label>
-                <input
-                  type="text"
-                  value={formData.password}
-                  onChange={(e) => handleChange('password', e.target.value)}
-                  placeholder="password123"
-                />
-                <p style={{ margin: '0.2rem 0 0 0', fontSize: '0.75rem', color: '#64748b' }}>User can login with this password or via Phone OTP</p>
+            {/* STEP 2: Role & Department Assignment */}
+            {step === 2 && (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+                <div>
+                  <label style={labelStyle}>System Role *</label>
+                  <select
+                    value={formData.role}
+                    onChange={(e) => handleChange('role', e.target.value)}
+                  >
+                    <option value="RESIDENT">RESIDENT (Host Visitor Approver L1)</option>
+                    <option value="EMPLOYEE">EMPLOYEE (Ashram Staff)</option>
+                    <option value="HOD">HOD (Department Head L2 Approver)</option>
+                    <option value="GUARD">GUARD (Security Gate Pass Terminal)</option>
+                    <option value="SUPERVISOR">SUPERVISOR (Security Officer Override)</option>
+                    <option value="SECURITY_HEAD">SECURITY_HEAD (Chief Security Officer)</option>
+                    <option value="ADMIN">ADMIN (Super Administrator)</option>
+                  </select>
+                </div>
+
+                <div>
+                  <label style={labelStyle}>Department Assignment</label>
+                  <select
+                    value={formData.department_id}
+                    onChange={(e) => handleChange('department_id', e.target.value)}
+                  >
+                    <option value="">-- Select Department --</option>
+                    {departments.map((d) => (
+                      <option key={d.id} value={d.id}>{d.name}</option>
+                    ))}
+                  </select>
+                </div>
+
+                <div>
+                  <label style={labelStyle}>Initial Default Password</label>
+                  <input
+                    type="text"
+                    value={formData.password}
+                    onChange={(e) => handleChange('password', e.target.value)}
+                  />
+                </div>
               </div>
+            )}
 
-              <div style={{ background: '#f8fafc', padding: '1rem', borderRadius: '8px', border: '1px solid #e2e8f0' }}>
-                <h4 style={{ margin: '0 0 0.5rem 0', color: '#475569', fontSize: '0.9rem' }}>User Summary Review</h4>
-                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.5rem', fontSize: '0.85rem' }}>
-                  <div><strong>Name:</strong> {formData.name}</div>
-                  <div><strong>Role:</strong> <span style={{ color: '#7e22ce', fontWeight: 'bold' }}>{formData.role}</span></div>
-                  <div><strong>Email:</strong> {formData.email}</div>
-                  <div><strong>Phone:</strong> {formData.phone}</div>
-                  <div><strong>Residency:</strong> {formData.residency_status}</div>
+            {/* STEP 3: Confirmation Summary */}
+            {step === 3 && (
+              <div style={{ background: '#f8fafc', padding: '1rem', borderRadius: '8px', border: '1px solid #cbd5e1' }}>
+                <h4 style={{ margin: '0 0 0.8rem 0', color: '#1e293b', fontSize: '0.95rem' }}>Verify New User Account Details:</h4>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem', fontSize: '0.88rem' }}>
+                  <div><strong>Full Name:</strong> {formData.name}</div>
+                  <div><strong>Email Address:</strong> {formData.email}</div>
+                  <div><strong>Phone Number:</strong> {formData.phone}</div>
+                  <div><strong>Residency Status:</strong> {formData.residency_status}</div>
+                  <div><strong>Ashram Address:</strong> {formData.address || 'Ashram Campus'}</div>
+                  <div><strong>Assigned System Role:</strong> <span className="badge badge-vvip">{formData.role}</span></div>
                   <div><strong>Department:</strong> {departments.find(d => String(d.id) === String(formData.department_id))?.name || 'None'}</div>
                 </div>
               </div>
-            </div>
-          )}
-
-          {/* Buttons Footer */}
-          <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: '1.5rem' }}>
-            {step > 1 ? (
-              <button type="button" onClick={handlePrev} style={secondaryBtnStyle}>
-                <ChevronLeft size={16} /> Back
-              </button>
-            ) : <div />}
-
-            {step < 3 ? (
-              <button type="button" onClick={handleNext} style={primaryBtnStyle}>
-                Next <ChevronRight size={16} />
-              </button>
-            ) : (
-              <button type="submit" disabled={loading} style={{ ...primaryBtnStyle, background: '#057a55', borderColor: '#057a55' }}>
-                {loading ? 'Creating...' : 'Create User Account'} <CheckCircle size={16} />
-              </button>
             )}
-          </div>
-        </form>
+
+            {/* Buttons Footer */}
+            <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: '1.5rem' }}>
+              {step > 1 ? (
+                <button type="button" onClick={handlePrev} style={secondaryBtnStyle} data-tooltip="Go back to previous step">
+                  <ChevronLeft size={16} /> Back
+                </button>
+              ) : <div />}
+
+              {step < 3 ? (
+                <button type="button" onClick={handleNext} style={primaryBtnStyle} data-tooltip="Proceed to next step">
+                  Next <ChevronRight size={16} />
+                </button>
+              ) : (
+                <button type="submit" disabled={loading} style={{ ...primaryBtnStyle, background: '#057a55', borderColor: '#057a55' }} data-tooltip="Create user account now">
+                  {loading ? 'Creating...' : 'Create User Account'} <CheckCircle size={16} />
+                </button>
+              )}
+            </div>
+          </form>
+
+          {/* Right-side Helper Guide Panel */}
+          <FormFieldGuide activeField={activeField} />
+        </div>
       </div>
     </div>
   );

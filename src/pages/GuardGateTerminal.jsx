@@ -1,7 +1,8 @@
 import React, { useState, useEffect } from 'react';
-import { verifyGatePass, processGateMovement, createRegistration, getSpotRegistrationsQueue, assignSpotHost, getAdminUsers } from '../services/api';
+import { verifyGatePass, processGateMovement, createRegistration, getSpotRegistrationsQueue, assignSpotHost, getAdminUsers, updateApproval } from '../services/api';
 import DashboardHeader from '../components/DashboardHeader';
 import QrScannerModal from '../components/QrScannerModal';
+import { useTablePagination, PaginationControls } from '../components/TablePagination';
 import { ShieldCheck, LogIn, LogOut, Search, UserCheck, AlertTriangle, Car, Users, Calendar, Camera, Phone, KeyRound, UserPlus, QrCode, Share2, CheckCircle, XCircle, Clock } from 'lucide-react';
 
 export default function GuardGateTerminal({ user }) {
@@ -18,6 +19,16 @@ export default function GuardGateTerminal({ user }) {
   const [spotQueue, setSpotQueue] = useState([]);
   const [adminUsers, setAdminUsers] = useState([]);
   const [assignedHosts, setAssignedHosts] = useState({});
+
+  const {
+    searchTerm: spotSearch,
+    setSearchTerm: setSpotSearch,
+    currentPage: spotPage,
+    setCurrentPage: setSpotPage,
+    totalPages: spotTotalPages,
+    totalItems: spotTotalItems,
+    paginatedData: paginatedSpotQueue,
+  } = useTablePagination(spotQueue, ['visitor_name', 'visitor_phone', 'pass_code', 'host_name', 'purpose'], 10);
 
   useEffect(() => {
     fetchSpotQueue();
@@ -69,7 +80,24 @@ export default function GuardGateTerminal({ user }) {
 
   const [showAssistedEntry, setShowAssistedEntry] = useState(false);
   const [assistedName, setAssistedName] = useState('');
-  const [assistedPhone, setAssistedPhone] = useState('');
+  const handleSupervisorOverrideApprove = async (spot) => {
+    try {
+      const res = await updateApproval(
+        spot.id,
+        'APPROVE',
+        `SO / Supervisor override approval on behalf of non-responding host by ${user.name}`,
+        { priority: 'P3' }
+      );
+      if (res.success) {
+        setMsg(`Approved visitor ${spot.visitor_name} on behalf of host/PRO. Notification sent to host!`);
+        fetchSpotQueue();
+        setSearchQuery(spot.pass_code);
+        executePassVerification(spot.pass_code);
+      }
+    } catch (err) {
+      alert(err.response?.data?.message || 'Supervisor override approval failed.');
+    }
+  };
   const [assistedPurpose, setAssistedPurpose] = useState('');
   const [assistedHostName, setAssistedHostName] = useState('');
 
@@ -79,7 +107,7 @@ export default function GuardGateTerminal({ user }) {
     setMsg('');
     setLoading(true);
     try {
-      const res = await verifyGatePass(queryToVerify.trim());
+      const res = await verifyGatePass(queryToVerify.trim(), activeGate);
       if (res.success) {
         setPassData(res.pass);
         setAdultMen(res.pass.adult_men_count || 1);
@@ -339,6 +367,76 @@ export default function GuardGateTerminal({ user }) {
             </div>
           </div>
 
+          {/* Authorized & Allowed Gates List Banner */}
+          <div style={{
+            background: passData.is_current_gate_allowed === false ? '#fef2f2' : '#f0fdf4',
+            border: `2px solid ${passData.is_current_gate_allowed === false ? '#ef4444' : '#22c55e'}`,
+            borderRadius: '10px',
+            padding: '0.85rem 1rem',
+            marginTop: '1rem',
+          }}>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '0.4rem', flexWrap: 'wrap', gap: '0.5rem' }}>
+              <h4 style={{
+                margin: 0,
+                fontSize: '0.98rem',
+                color: passData.is_current_gate_allowed === false ? '#b91c1c' : '#15803d',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '0.4rem',
+              }}>
+                {passData.is_current_gate_allowed === false ? (
+                  <>⛔ Category Restricted at Current Gate ({activeGate.replace('_', ' ')})</>
+                ) : (
+                  <>✅ Category Allowed at Current Gate ({activeGate.replace('_', ' ')})</>
+                )}
+              </h4>
+              <span className="badge" style={{
+                background: passData.is_current_gate_allowed === false ? '#fee2e2' : '#dcfce7',
+                color: passData.is_current_gate_allowed === false ? '#991b1b' : '#166534',
+                fontWeight: 'bold',
+              }}>
+                Category: {passData.visitor_category || 'GENERAL'}
+              </span>
+            </div>
+
+            {passData.is_current_gate_allowed === false && (
+              <p style={{ margin: '0 0 0.5rem 0', fontSize: '0.85rem', color: '#991b1b', fontWeight: 'bold' }}>
+                ⚠️ Visitor category '{passData.visitor_category}' is NOT ALLOWED at {activeGate.replace('_', ' ')}. Please direct visitor to one of the authorized gates listed below.
+              </p>
+            )}
+
+            <div style={{ marginTop: '0.3rem' }}>
+              <strong style={{ fontSize: '0.82rem', color: '#334155', display: 'block', marginBottom: '0.3rem' }}>
+                📍 Authorized & Allowed Gates for '{passData.visitor_category || 'GENERAL'}' Category ({passData.allowed_gates ? passData.allowed_gates.length : 0} Gates):
+              </strong>
+              <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap' }}>
+                {passData.allowed_gates && passData.allowed_gates.length > 0 ? (
+                  passData.allowed_gates.map((g) => (
+                    <span
+                      key={g}
+                      style={{
+                        background: g === activeGate ? '#15803d' : '#2563eb',
+                        color: 'white',
+                        fontSize: '0.75rem',
+                        padding: '0.22rem 0.65rem',
+                        borderRadius: '20px',
+                        fontWeight: 'bold',
+                        display: 'inline-flex',
+                        alignItems: 'center',
+                        gap: '0.3rem',
+                        boxShadow: g === activeGate ? '0 0 0 2px #bbf7d0' : 'none',
+                      }}
+                    >
+                      ✓ {g.replace('_', ' ')} {g === activeGate ? '(Current Gate)' : ''}
+                    </span>
+                  ))
+                ) : (
+                  <span style={{ fontSize: '0.8rem', color: '#dc2626', fontWeight: 'bold' }}>None (Disabled across all gates by Super Admin)</span>
+                )}
+              </div>
+            </div>
+          </div>
+
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1.2fr', gap: '1.5rem', marginTop: '1rem' }}>
             {/* Read-Only Credentials & Photos */}
             <div>
@@ -456,22 +554,23 @@ export default function GuardGateTerminal({ user }) {
           <div style={{ display: 'flex', gap: '1rem', marginTop: '1.5rem' }}>
             <button
               onClick={() => handleMovement('IN')}
-              disabled={passData.status === 'INSIDE_CAMPUS'}
+              disabled={passData.status === 'INSIDE_CAMPUS' || passData.is_current_gate_allowed === false}
               className="gate-btn-in"
+              data-tooltip={passData.is_current_gate_allowed === false ? `Category ${passData.visitor_category} disabled at ${activeGate}` : 'Record visitor entry IN at gate'}
               style={{
                 flex: 1,
                 display: 'flex',
                 alignItems: 'center',
-                justify: 'center',
+                justifyContent: 'center',
                 gap: '0.5rem',
-                opacity: passData.status === 'INSIDE_CAMPUS' ? 0.55 : 1,
-                cursor: passData.status === 'INSIDE_CAMPUS' ? 'not-allowed' : 'pointer',
-                background: passData.status === 'INSIDE_CAMPUS' ? '#475569' : undefined,
-                borderColor: passData.status === 'INSIDE_CAMPUS' ? '#475569' : undefined,
+                opacity: (passData.status === 'INSIDE_CAMPUS' || passData.is_current_gate_allowed === false) ? 0.55 : 1,
+                cursor: (passData.status === 'INSIDE_CAMPUS' || passData.is_current_gate_allowed === false) ? 'not-allowed' : 'pointer',
+                background: (passData.status === 'INSIDE_CAMPUS' || passData.is_current_gate_allowed === false) ? '#64748b' : undefined,
+                borderColor: (passData.status === 'INSIDE_CAMPUS' || passData.is_current_gate_allowed === false) ? '#64748b' : undefined,
               }}
             >
               <LogIn size={20} />
-              {passData.status === 'INSIDE_CAMPUS' ? '✓ Already Inside Campus (IN)' : 'Record Ingress (IN)'}
+              {passData.is_current_gate_allowed === false ? '⛔ Restricted at this Gate' : passData.status === 'INSIDE_CAMPUS' ? '✓ Already Inside Campus (IN)' : 'Record Ingress (IN)'}
             </button>
             <button
               onClick={() => handleMovement('OUT')}
@@ -512,6 +611,17 @@ export default function GuardGateTerminal({ user }) {
           </button>
         </div>
 
+        <PaginationControls
+          searchTerm={spotSearch}
+          setSearchTerm={setSpotSearch}
+          currentPage={spotPage}
+          setCurrentPage={setSpotPage}
+          totalPages={spotTotalPages}
+          totalItems={spotTotalItems}
+          pageSize={10}
+          placeholder="Filter queue by Visitor Name, Phone, Passcode, Host..."
+        />
+
         <table role="grid">
           <thead>
             <tr>
@@ -524,14 +634,14 @@ export default function GuardGateTerminal({ user }) {
             </tr>
           </thead>
           <tbody>
-            {spotQueue.length === 0 ? (
+            {paginatedSpotQueue.length === 0 ? (
               <tr>
                 <td colSpan="6" style={{ textAlign: 'center', color: '#64748b', padding: '1rem' }}>
-                  No pending spot registrations at gate.
+                  No spot registrations found matching search filter.
                 </td>
               </tr>
             ) : (
-              spotQueue.map((spot) => (
+              paginatedSpotQueue.map((spot) => (
                 <tr key={spot.id}>
                   <td>
                     <strong>{spot.pass_code}</strong><br/>
@@ -560,7 +670,7 @@ export default function GuardGateTerminal({ user }) {
                           <option value="">-- Select Host / PRO --</option>
                           {adminUsers.map((u) => (
                             <option key={u.id} value={u.id}>
-                              {u.name} ({u.role} - {u.department || 'General'})
+                              {u.name} [{u.flat_info || u.address ? `${u.flat_info || u.address}` : (u.department || u.role)}]
                             </option>
                           ))}
                         </select>
@@ -584,7 +694,7 @@ export default function GuardGateTerminal({ user }) {
                       <button
                         type="button"
                         className="gate-btn-in"
-                        onClick={() => { setSearchQuery(spot.pass_code); handleSearch({ preventDefault: () => {} }); }}
+                        onClick={() => { setSearchQuery(spot.pass_code); executePassVerification(spot.pass_code); }}
                         style={{ fontSize: '0.75rem', padding: '0.2rem 0.6rem' }}>
                         IN Button & Allow
                       </button>
@@ -593,9 +703,19 @@ export default function GuardGateTerminal({ user }) {
                         ❌ DO NOT ALLOW VISITOR
                       </span>
                     ) : (
-                      <span style={{ fontSize: '0.75rem', color: '#d97706' }}>
-                        Awaiting Approval
-                      </span>
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: '0.3rem' }}>
+                        <span style={{ fontSize: '0.72rem', color: '#d97706', fontWeight: 'bold' }}>
+                          ⏳ Awaiting Host Response
+                        </span>
+                        <button
+                          type="button"
+                          onClick={() => handleSupervisorOverrideApprove(spot)}
+                          style={{ fontSize: '0.7rem', padding: '0.2rem 0.4rem', background: '#d97706', borderColor: '#d97706', color: 'white', fontWeight: 'bold', borderRadius: '4px' }}
+                          title="If resident/Employee/PRO does not respond, SO & Supervisor can approve on their behalf"
+                        >
+                          ⚡ SO/Supervisor Approve
+                        </button>
+                      </div>
                     )}
                   </td>
                 </tr>

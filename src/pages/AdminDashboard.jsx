@@ -1,17 +1,49 @@
 import React, { useState, useEffect } from 'react';
-import { getReportData, adminBypassApprove, adminEmergencyPass, toggleL2Approval, getSystemSettings, getAdminUsers } from '../services/api';
+import { getReportData, adminBypassApprove, adminEmergencyPass, toggleL2Approval, getSystemSettings, getAdminUsers, getGateCategoryRules, toggleGateCategoryRule } from '../services/api';
 import DashboardHeader from '../components/DashboardHeader';
 import UserAddWizardModal from '../components/UserAddWizardModal';
 import BulkUploadModal from '../components/BulkUploadModal';
-import { KeyRound, Zap, ShieldAlert, CheckCircle, Lock, Unlock, AlertTriangle, FileSpreadsheet, UserPlus, Users, UploadCloud } from 'lucide-react';
+import { useTablePagination, PaginationControls } from '../components/TablePagination';
+import { KeyRound, Zap, ShieldAlert, CheckCircle, Lock, Unlock, AlertTriangle, FileSpreadsheet, UserPlus, Users, UploadCloud, Shield, Check, X } from 'lucide-react';
 
 export default function AdminDashboard({ user }) {
   const [registrations, setRegistrations] = useState([]);
   const [auditLogs, setAuditLogs] = useState([]);
   const [usersList, setUsersList] = useState([]);
+  const [gateRules, setGateRules] = useState([]);
   const [l2Enabled, setL2Enabled] = useState(true);
   const [msg, setMsg] = useState('');
   const [error, setError] = useState('');
+
+  const {
+    searchTerm: userSearch,
+    setSearchTerm: setUserSearch,
+    currentPage: userPage,
+    setCurrentPage: setUserPage,
+    totalPages: userTotalPages,
+    totalItems: userTotalItems,
+    paginatedData: paginatedUsers,
+  } = useTablePagination(usersList, ['name', 'email', 'phone', 'role', 'department'], 10);
+
+  const {
+    searchTerm: masterSearch,
+    setSearchTerm: setMasterSearch,
+    currentPage: masterPage,
+    setCurrentPage: setMasterPage,
+    totalPages: masterTotalPages,
+    totalItems: masterTotalItems,
+    paginatedData: paginatedMasterRegs,
+  } = useTablePagination(registrations, ['visitor_name', 'pass_code', 'visitor_category', 'status'], 10);
+
+  const {
+    searchTerm: auditSearch,
+    setSearchTerm: setAuditSearch,
+    currentPage: auditPage,
+    setCurrentPage: setAuditPage,
+    totalPages: auditTotalPages,
+    totalItems: auditTotalItems,
+    paginatedData: paginatedAuditLogs,
+  } = useTablePagination(auditLogs, ['action', 'entity_type', 'remarks'], 10);
 
   // Modals state
   const [isWizardOpen, setIsWizardOpen] = useState(false);
@@ -27,7 +59,29 @@ export default function AdminDashboard({ user }) {
   useEffect(() => {
     fetchData();
     fetchUsers();
+    fetchGateRules();
   }, []);
+
+  const fetchGateRules = async () => {
+    try {
+      const res = await getGateCategoryRules();
+      if (res.success) setGateRules(res.rules);
+    } catch (err) {
+      console.error('Failed to fetch gate rules:', err);
+    }
+  };
+
+  const handleToggleGateRule = async (gateName, catName, currentAllowed) => {
+    try {
+      const res = await toggleGateCategoryRule(gateName, catName, !currentAllowed);
+      if (res.success) {
+        setMsg(res.message);
+        fetchGateRules();
+      }
+    } catch (err) {
+      alert(err.response?.data?.message || 'Failed to update gate rule.');
+    }
+  };
 
   const fetchData = async () => {
     try {
@@ -211,6 +265,70 @@ export default function AdminDashboard({ user }) {
         </div>
       </div>
 
+      {/* Gatewise Visitor Category Access Matrix (Super Admin) */}
+      <div className="card" style={{ marginBottom: '1.5rem', borderTop: '4px solid #0284c7' }}>
+        <div style={{ marginBottom: '0.8rem' }}>
+          <h3 style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', color: '#0369a1', margin: 0 }}>
+            <Shield size={22} color="#0284c7" /> Gatewise Visitor Category Access Matrix
+          </h3>
+          <p style={{ fontSize: '0.85rem', color: '#64748b', margin: '0.2rem 0 0 0' }}>
+            Super Admin can allow or disable specific visitor categories at each gate. Guards scanning passes at gates will automatically block ingress for disabled categories.
+          </p>
+        </div>
+
+        <div style={{ overflowX: 'auto' }}>
+          <table role="grid" style={{ fontSize: '0.82rem' }}>
+            <thead>
+              <tr style={{ background: '#f0f9ff' }}>
+                <th style={{ minWidth: '150px' }}>Visitor Category</th>
+                {['NORTH_GATE', 'SOUTH_GATE', 'EAST_GATE', 'WEST_GATE', 'STAFF_GATE'].map((gate) => (
+                  <th key={gate} style={{ textAlign: 'center', minWidth: '120px' }}>
+                    {gate.replace('_', ' ')}
+                  </th>
+                ))}
+              </tr>
+            </thead>
+            <tbody>
+              {['GENERAL', 'VVIP', 'VIP', 'VENDOR', 'CONTRACTOR', 'FOREIGN_NATIONAL', 'DELIVERY', 'CAB', 'MAID', 'FREQUENT_VISITOR'].map((cat) => (
+                <tr key={cat}>
+                  <td><strong>{cat}</strong></td>
+                  {['NORTH_GATE', 'SOUTH_GATE', 'EAST_GATE', 'WEST_GATE', 'STAFF_GATE'].map((gate) => {
+                    const rule = gateRules.find((r) => r.gate_name === gate && r.visitor_category === cat);
+                    const isAllowed = rule ? rule.is_allowed : true;
+                    return (
+                      <td key={gate} style={{ textAlign: 'center' }}>
+                        <button
+                          type="button"
+                          onClick={() => handleToggleGateRule(gate, cat, isAllowed)}
+                          style={{
+                            fontSize: '0.72rem',
+                            padding: '0.25rem 0.55rem',
+                            margin: 0,
+                            borderRadius: '20px',
+                            fontWeight: 'bold',
+                            cursor: 'pointer',
+                            background: isAllowed ? '#dcfce7' : '#fee2e2',
+                            color: isAllowed ? '#15803d' : '#b91c1c',
+                            border: `1px solid ${isAllowed ? '#86efac' : '#fca5a5'}`,
+                            display: 'inline-flex',
+                            alignItems: 'center',
+                            gap: '0.3rem',
+                          }}
+                          title={`Click to ${isAllowed ? 'Disable' : 'Allow'} ${cat} at ${gate}`}
+                        >
+                          {isAllowed ? <Check size={12} /> : <X size={12} />}
+                          {isAllowed ? 'ALLOWED' : 'DISABLED'}
+                        </button>
+                      </td>
+                    );
+                  })}
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      </div>
+
       {/* System User Directory Table */}
       <div className="card" style={{ marginBottom: '1.5rem' }}>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.5rem' }}>
@@ -228,6 +346,17 @@ export default function AdminDashboard({ user }) {
           </button>
         </div>
 
+        <PaginationControls
+          searchTerm={userSearch}
+          setSearchTerm={setUserSearch}
+          currentPage={userPage}
+          setCurrentPage={setUserPage}
+          totalPages={userTotalPages}
+          totalItems={userTotalItems}
+          pageSize={10}
+          placeholder="Filter users by Name, Email, Phone, Role, Department..."
+        />
+
         <table role="grid">
           <thead>
             <tr>
@@ -237,17 +366,18 @@ export default function AdminDashboard({ user }) {
               <th>Phone</th>
               <th>Role</th>
               <th>Residency</th>
+              <th>Ashram Address / Location</th>
               <th>Department</th>
               <th>Status</th>
             </tr>
           </thead>
           <tbody>
-            {usersList.length === 0 ? (
+            {paginatedUsers.length === 0 ? (
               <tr>
-                <td colSpan="8" style={{ textAlign: 'center', color: '#64748b' }}>No users found.</td>
+                <td colSpan="9" style={{ textAlign: 'center', color: '#64748b' }}>No users found.</td>
               </tr>
             ) : (
-              usersList.map((u) => (
+              paginatedUsers.map((u) => (
                 <tr key={u.id}>
                   <td>#{u.id}</td>
                   <td><strong>{u.name}</strong></td>
@@ -259,6 +389,7 @@ export default function AdminDashboard({ user }) {
                     </span>
                   </td>
                   <td>{u.residency_status}</td>
+                  <td style={{ fontSize: '0.8rem', color: '#475569' }}>{u.address || u.flat_info || 'Ashram Campus'}</td>
                   <td>{u.department_name || 'N/A'}</td>
                   <td>
                     <span style={{ color: u.registration_status === 'ACTIVE' ? '#057a55' : '#dc2626', fontWeight: 'bold', fontSize: '0.8rem' }}>
@@ -276,6 +407,18 @@ export default function AdminDashboard({ user }) {
       <div className="card">
         <h3>Master Registrations & Admin Bypass Control</h3>
         <p style={{ fontSize: '0.85rem', color: '#64748b' }}>Admin can force-approve any pending or rejected visitor registration directly.</p>
+
+        <PaginationControls
+          searchTerm={masterSearch}
+          setSearchTerm={setMasterSearch}
+          currentPage={masterPage}
+          setCurrentPage={setMasterPage}
+          totalPages={masterTotalPages}
+          totalItems={masterTotalItems}
+          pageSize={10}
+          placeholder="Search registrations by Visitor Name, Passcode, Category, Status..."
+        />
+
         <table role="grid">
           <thead>
             <tr>
@@ -287,12 +430,12 @@ export default function AdminDashboard({ user }) {
             </tr>
           </thead>
           <tbody>
-            {registrations.length === 0 ? (
+            {paginatedMasterRegs.length === 0 ? (
               <tr>
-                <td colSpan="5" style={{ textAlign: 'center', color: '#64748b' }}>No registrations found.</td>
+                <td colSpan="5" style={{ textAlign: 'center', color: '#64748b' }}>No registrations found matching filter.</td>
               </tr>
             ) : (
-              registrations.map((reg) => (
+              paginatedMasterRegs.map((reg) => (
                 <tr key={reg.id}>
                   <td><strong>{reg.pass_code}</strong></td>
                   <td>{reg.visitor_name}</td>
@@ -323,6 +466,18 @@ export default function AdminDashboard({ user }) {
       {/* Audit Logs */}
       <div className="card">
         <h3>System Audit & Exception Ledger</h3>
+
+        <PaginationControls
+          searchTerm={auditSearch}
+          setSearchTerm={setAuditSearch}
+          currentPage={auditPage}
+          setCurrentPage={setAuditPage}
+          totalPages={auditTotalPages}
+          totalItems={auditTotalItems}
+          pageSize={10}
+          placeholder="Filter audit logs by Action, Entity, Remarks..."
+        />
+
         <table role="grid">
           <thead>
             <tr>
@@ -334,15 +489,21 @@ export default function AdminDashboard({ user }) {
             </tr>
           </thead>
           <tbody>
-            {auditLogs.slice(0, 10).map((log) => (
-              <tr key={log.id}>
-                <td>{log.id}</td>
-                <td><strong>{log.action}</strong></td>
-                <td>{log.entity_type}</td>
-                <td>{log.remarks}</td>
-                <td>{new Date(log.timestamp).toLocaleString()}</td>
+            {paginatedAuditLogs.length === 0 ? (
+              <tr>
+                <td colSpan="5" style={{ textAlign: 'center', color: '#64748b' }}>No audit logs matching filter.</td>
               </tr>
-            ))}
+            ) : (
+              paginatedAuditLogs.map((log) => (
+                <tr key={log.id}>
+                  <td>{log.id}</td>
+                  <td><strong>{log.action}</strong></td>
+                  <td>{log.entity_type}</td>
+                  <td>{log.remarks}</td>
+                  <td>{new Date(log.timestamp).toLocaleString()}</td>
+                </tr>
+              ))
+            )}
           </tbody>
         </table>
       </div>

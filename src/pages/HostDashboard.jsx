@@ -2,11 +2,14 @@ import React, { useState, useEffect } from 'react';
 import { createRegistration, updateRegistration, getHostRegistrations, updateApproval, getVisitHistory, generateQrCode, generateInviteToken } from '../services/api';
 import CameraCaptureModal from '../components/CameraCaptureModal';
 import DashboardHeader from '../components/DashboardHeader';
+import FormFieldGuide from '../components/FormFieldGuide';
+import { useTablePagination, PaginationControls } from '../components/TablePagination';
 import { UserPlus, CheckCircle, XCircle, Clock, Plus, Trash2, Camera, CreditCard, Users, Car, Calendar, ShieldCheck, KeyRound, Pencil, History, QrCode, Share2, Copy, Upload } from 'lucide-react';
 
 export default function HostDashboard({ user }) {
   const [registrations, setRegistrations] = useState([]);
   const [showModal, setShowModal] = useState(false);
+  const [activeField, setActiveField] = useState('');
   const [showCameraModal, setShowCameraModal] = useState(false);
   const [msg, setMsg] = useState('');
   const [error, setError] = useState('');
@@ -16,6 +19,26 @@ export default function HostDashboard({ user }) {
   const [showShareModal, setShowShareModal] = useState(false);
   const [activeShareToken, setActiveShareToken] = useState('');
   const [qrModalData, setQrModalData] = useState(null);
+
+  const {
+    searchTerm: regSearch,
+    setSearchTerm: setRegSearch,
+    currentPage: regPage,
+    setCurrentPage: setRegPage,
+    totalPages: regTotalPages,
+    totalItems: regTotalItems,
+    paginatedData: paginatedRegistrations,
+  } = useTablePagination(registrations, ['visitor_name', 'visitor_phone', 'pass_code', 'visitor_category', 'purpose'], 10);
+
+  const {
+    searchTerm: histSearch,
+    setSearchTerm: setHistSearch,
+    currentPage: histPage,
+    setCurrentPage: setHistPage,
+    totalPages: histTotalPages,
+    totalItems: histTotalItems,
+    paginatedData: paginatedHistory,
+  } = useTablePagination(visitHistory, ['visitor_name', 'pass_code', 'visitor_category'], 10);
 
   const handleOpenShareModal = async () => {
     try {
@@ -157,10 +180,12 @@ export default function HostDashboard({ user }) {
 
   useEffect(() => {
     fetchRegistrations();
+    fetchVisitHistory();
 
     const handleRealtimeSync = (e) => {
       console.log('[HostDashboard] Realtime Sync Event received:', e.detail);
       fetchRegistrations();
+      fetchVisitHistory();
     };
 
     window.addEventListener('vms_realtime_sync', handleRealtimeSync);
@@ -408,9 +433,11 @@ export default function HostDashboard({ user }) {
           <h3 style={{ borderBottom: '2px solid #e2e8f0', paddingBottom: '0.5rem', color: '#1e293b' }}>
             {editingRegistrationId ? `✏️ Edit Visitor Invite #${editingRegistrationId} (Before Approval)` : 'Guest Pre-Registration & Visitor Workflow Form'}
           </h3>
-          <form onSubmit={handleCreate}>
-            {/* Registration Workflow Selector (5 Types & Sub-workflows) */}
-            <div style={{ background: '#eff6ff', padding: '0.85rem', borderRadius: '8px', border: '1px solid #bfdbfe', marginBottom: '1rem' }}>
+
+          <div style={{ display: 'grid', gridTemplateColumns: 'minmax(0, 1fr) 300px', gap: '1.5rem', alignItems: 'start' }}>
+            <form onSubmit={handleCreate}>
+              {/* Registration Workflow Selector (5 Types & Sub-workflows) */}
+              <div style={{ background: '#eff6ff', padding: '0.85rem', borderRadius: '8px', border: '1px solid #bfdbfe', marginBottom: '1rem' }} onFocus={() => setActiveField('regType')}>
               <strong style={{ fontSize: '0.9rem', color: '#1e40af', display: 'block', marginBottom: '0.4rem' }}>
                 Select Registration Type (5 Application Workflows):
               </strong>
@@ -490,19 +517,44 @@ export default function HostDashboard({ user }) {
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '0.8rem' }}>
               <label>
                 Full Name *
-                <input type="text" required value={fullName} onChange={(e) => setFullName(e.target.value)} />
+                <input
+                  type="text"
+                  required
+                  value={fullName}
+                  onChange={(e) => setFullName(e.target.value)}
+                  onFocus={() => setActiveField('fullName')}
+                  className={activeField === 'fullName' ? 'field-highlighted' : ''}
+                />
               </label>
               <label>
                 Phone Number *
-                <input type="text" required value={phone} onChange={(e) => setPhone(e.target.value)} />
+                <input
+                  type="text"
+                  required
+                  value={phone}
+                  onChange={(e) => setPhone(e.target.value)}
+                  onFocus={() => setActiveField('phone')}
+                  className={activeField === 'phone' ? 'field-highlighted' : ''}
+                />
               </label>
               <label>
                 Email Address
-                <input type="email" value={email} onChange={(e) => setEmail(e.target.value)} />
+                <input
+                  type="email"
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  onFocus={() => setActiveField('email')}
+                  className={activeField === 'email' ? 'field-highlighted' : ''}
+                />
               </label>
               <label>
                 Gender Selection *
-                <select value={gender} onChange={(e) => setGender(e.target.value)}>
+                <select
+                  value={gender}
+                  onChange={(e) => setGender(e.target.value)}
+                  onFocus={() => setActiveField('gender')}
+                  className={activeField === 'gender' ? 'field-highlighted' : ''}
+                >
                   <option value="Male">Male</option>
                   <option value="Female">Female</option>
                   <option value="Other">Other</option>
@@ -692,18 +744,34 @@ export default function HostDashboard({ user }) {
             </div>
 
             <div style={{ display: 'flex', gap: '1rem', marginTop: '1rem' }}>
-              <button type="submit" style={{ background: editingRegistrationId ? '#2563eb' : undefined, borderColor: editingRegistrationId ? '#2563eb' : undefined }}>
+              <button type="submit" style={{ background: editingRegistrationId ? '#2563eb' : undefined, borderColor: editingRegistrationId ? '#2563eb' : undefined }} data-tooltip="Submit visitor pass registration">
                 {editingRegistrationId ? 'Save Changes' : 'Submit Registration'}
               </button>
-              <button type="button" className="secondary" onClick={() => { setShowModal(false); resetForm(); }}>Cancel</button>
+              <button type="button" className="secondary" onClick={() => { setShowModal(false); resetForm(); }} data-tooltip="Cancel and close form">Cancel</button>
             </div>
           </form>
+
+          {/* Right-side Interactive Field Guide */}
+          <FormFieldGuide activeField={activeField} />
         </div>
+      </div>
       )}
 
       {/* Invited Visitors List */}
       <div className="card">
         <h3>My Invited Visitors ({registrations.length})</h3>
+        
+        <PaginationControls
+          searchTerm={regSearch}
+          setSearchTerm={setRegSearch}
+          currentPage={regPage}
+          setCurrentPage={setRegPage}
+          totalPages={regTotalPages}
+          totalItems={regTotalItems}
+          pageSize={10}
+          placeholder="Filter visitors by Name, Phone, Passcode, Category..."
+        />
+
         <table role="grid">
           <thead>
             <tr>
@@ -718,12 +786,12 @@ export default function HostDashboard({ user }) {
             </tr>
           </thead>
           <tbody>
-            {registrations.length === 0 ? (
+            {paginatedRegistrations.length === 0 ? (
               <tr>
-                <td colSpan="8" style={{ textAlign: 'center', color: '#64748b' }}>No registrations found.</td>
+                <td colSpan="8" style={{ textAlign: 'center', color: '#64748b' }}>No registrations found matching search filter.</td>
               </tr>
             ) : (
-              registrations.map((reg) => (
+              paginatedRegistrations.map((reg) => (
                 <tr key={reg.id}>
                   <td>
                     {reg.photo_url ? (
@@ -809,24 +877,36 @@ export default function HostDashboard({ user }) {
           </button>
         </div>
         {showHistory && (
-          <table role="grid" style={{ marginTop: '1rem' }}>
-            <thead>
-              <tr>
-                <th>Pass Code</th>
-                <th>Visitor Name</th>
-                <th>Category</th>
-                <th>Entry Time</th>
-                <th>Exit Time</th>
-                <th>Status</th>
-              </tr>
-            </thead>
-            <tbody>
-              {visitHistory.length === 0 ? (
+          <div>
+            <PaginationControls
+              searchTerm={histSearch}
+              setSearchTerm={setHistSearch}
+              currentPage={histPage}
+              setCurrentPage={setHistPage}
+              totalPages={histTotalPages}
+              totalItems={histTotalItems}
+              pageSize={10}
+              placeholder="Search history by Visitor Name, Passcode, Category..."
+            />
+
+            <table role="grid" style={{ marginTop: '1rem' }}>
+              <thead>
                 <tr>
-                  <td colSpan="6" style={{ textAlign: 'center', color: '#64748b' }}>No visit history found.</td>
+                  <th>Pass Code</th>
+                  <th>Visitor Name</th>
+                  <th>Category</th>
+                  <th>Entry Time</th>
+                  <th>Exit Time</th>
+                  <th>Status</th>
                 </tr>
-              ) : (
-                visitHistory.map((visit) => (
+              </thead>
+              <tbody>
+                {paginatedHistory.length === 0 ? (
+                  <tr>
+                    <td colSpan="6" style={{ textAlign: 'center', color: '#64748b' }}>No visit history found.</td>
+                  </tr>
+                ) : (
+                  paginatedHistory.map((visit) => (
                   <tr key={visit.id}>
                     <td><strong>{visit.pass_code}</strong></td>
                     <td>{visit.visitor_name}</td>
@@ -846,7 +926,8 @@ export default function HostDashboard({ user }) {
                 ))
               )}
             </tbody>
-          </table>
+            </table>
+          </div>
         )}
       </div>
 
@@ -1066,9 +1147,4 @@ export default function HostDashboard({ user }) {
                 Close
               </button>
             </div>
-          </div>
-        </div>
-      )}
-    </div>
-  );
-}
+       

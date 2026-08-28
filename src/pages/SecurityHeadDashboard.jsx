@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { getDashboardMetrics, getReportData, getSystemSettings, toggleL2Approval } from '../services/api';
 import DashboardHeader from '../components/DashboardHeader';
+import { useTablePagination, PaginationControls } from '../components/TablePagination';
 import { ShieldCheck, ToggleLeft, ToggleRight, FileText, Users, AlertTriangle, Crown } from 'lucide-react';
 
 export default function SecurityHeadDashboard({ user }) {
@@ -17,6 +18,16 @@ export default function SecurityHeadDashboard({ user }) {
   const [reportData, setReportData] = useState([]);
   const [loadingReport, setLoadingReport] = useState(false);
   const [msg, setMsg] = useState('');
+
+  const {
+    searchTerm: reportSearch,
+    setSearchTerm: setReportSearch,
+    currentPage: reportPage,
+    setCurrentPage: setReportPage,
+    totalPages: reportTotalPages,
+    totalItems: reportTotalItems,
+    paginatedData: paginatedReportData,
+  } = useTablePagination(reportData, ['visitor_name', 'phone', 'pass_code', 'host_name', 'action', 'remarks', 'visitor_category'], 10);
 
   useEffect(() => {
     fetchMetrics();
@@ -163,6 +174,17 @@ export default function SecurityHeadDashboard({ user }) {
           </div>
         </div>
 
+        <PaginationControls
+          searchTerm={reportSearch}
+          setSearchTerm={setReportSearch}
+          currentPage={reportPage}
+          setCurrentPage={setReportPage}
+          totalPages={reportTotalPages}
+          totalItems={reportTotalItems}
+          pageSize={10}
+          placeholder="Search report by Visitor Name, Passcode, Phone, Host, Action..."
+        />
+
         <table role="grid" style={{ marginTop: '1rem' }}>
           <thead>
             <tr>
@@ -192,12 +214,12 @@ export default function SecurityHeadDashboard({ user }) {
               <tr>
                 <td colSpan="6" style={{ textAlign: 'center' }}>Loading report data...</td>
               </tr>
-            ) : reportData.length === 0 ? (
+            ) : paginatedReportData.length === 0 ? (
               <tr>
-                <td colSpan="6" style={{ textAlign: 'center', color: '#64748b' }}>No data records found for this report.</td>
+                <td colSpan="6" style={{ textAlign: 'center', color: '#64748b' }}>No data records found matching filter.</td>
               </tr>
             ) : (
-              reportData.map((row, idx) => (
+              paginatedReportData.map((row, idx) => (
                 <tr key={row.id || idx}>
                   {reportType === 'EXCEPTION' ? (
                     <>

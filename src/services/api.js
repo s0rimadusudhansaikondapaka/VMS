@@ -48,8 +48,18 @@ export const generateInviteToken = async () => {
   return res.data;
 };
 
-export const getPublicPassDetails = async (passCode) => {
-  const res = await api.get(`/registrations/public-pass/${encodeURIComponent(passCode)}`);
+export const getPublicPassDetails = async (pass_code) => {
+  const res = await api.get(`/registrations/public-pass/${pass_code}`);
+  return res.data;
+};
+
+export const getGateCategoryRules = async () => {
+  const res = await api.get('/admin/gate-rules');
+  return res.data;
+};
+
+export const toggleGateCategoryRule = async (gate_name, visitor_category, is_allowed) => {
+  const res = await api.post('/admin/gate-rules/toggle', { gate_name, visitor_category, is_allowed });
   return res.data;
 };
 
@@ -58,8 +68,8 @@ export const getHostRegistrations = async () => {
   return res.data;
 };
 
-export const verifyGatePass = async (query) => {
-  const res = await api.get(`/gate/verify?query=${encodeURIComponent(query)}`);
+export const verifyGatePass = async (query, gateName = 'NORTH_GATE') => {
+  const res = await api.get(`/gate/verify?query=${encodeURIComponent(query)}&gateName=${encodeURIComponent(gateName)}`);
   return res.data;
 };
 

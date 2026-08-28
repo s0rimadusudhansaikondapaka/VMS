@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { getPublicHostInfo, createPublicVisitorRegistration } from '../services/api';
 import CameraCaptureModal from '../components/CameraCaptureModal';
+import FormFieldGuide from '../components/FormFieldGuide';
 import { Shield, User, Camera, Upload, CheckCircle, Calendar, Users, Car, AlertTriangle } from 'lucide-react';
 
 export default function GuestInviteForm() {
@@ -11,6 +12,7 @@ export default function GuestInviteForm() {
   const [hostInfo, setHostInfo] = useState(null);
   const [loadingHost, setLoadingHost] = useState(true);
   const [registrationMode, setRegistrationMode] = useState(initialMode || 'Single');
+  const [activeField, setActiveField] = useState('');
   const [showCameraModal, setShowCameraModal] = useState(false);
   const [cameraTarget, setCameraTarget] = useState('photo'); // 'photo' or 'idCard'
 
@@ -245,7 +247,8 @@ export default function GuestInviteForm() {
 
         {error && <div style={{ background: '#fee2e2', color: '#991b1b', padding: '0.75rem', borderRadius: '6px', marginBottom: '1rem' }}>{error}</div>}
 
-        <form onSubmit={handleSubmit}>
+        <div style={{ display: 'grid', gridTemplateColumns: 'minmax(0, 1fr) 300px', gap: '1.5rem', alignItems: 'start' }}>
+          <form onSubmit={handleSubmit}>
           {/* Registration Mode Selection: Single Visitor vs Group Visit */}
           <div style={{ background: '#f8fafc', padding: '0.75rem 1rem', borderRadius: '8px', border: '1px solid #cbd5e1', marginBottom: '1.2rem', display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '0.5rem' }}>
             <span style={{ fontSize: '0.88rem', fontWeight: 'bold', color: '#1e293b' }}>Visit Type Mode:</span>
@@ -278,19 +281,47 @@ export default function GuestInviteForm() {
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.8rem' }}>
             <label>
               Full Name *
-              <input type="text" required value={fullName} onChange={(e) => setFullName(e.target.value)} placeholder="Full Name" />
+              <input
+                type="text"
+                required
+                value={fullName}
+                onChange={(e) => setFullName(e.target.value)}
+                onFocus={() => setActiveField('fullName')}
+                className={activeField === 'fullName' ? 'field-highlighted' : ''}
+                placeholder="Full Name"
+              />
             </label>
             <label>
               Phone / WhatsApp Number *
-              <input type="tel" required value={phone} onChange={(e) => setPhone(e.target.value)} placeholder="+91 9876543210" />
+              <input
+                type="tel"
+                required
+                value={phone}
+                onChange={(e) => setPhone(e.target.value)}
+                onFocus={() => setActiveField('phone')}
+                className={activeField === 'phone' ? 'field-highlighted' : ''}
+                placeholder="+91 9876543210"
+              />
             </label>
             <label>
               Email Address
-              <input type="email" value={email} onChange={(e) => setEmail(e.target.value)} placeholder="name@example.com" />
+              <input
+                type="email"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                onFocus={() => setActiveField('email')}
+                className={activeField === 'email' ? 'field-highlighted' : ''}
+                placeholder="name@example.com"
+              />
             </label>
             <label>
               Gender *
-              <select value={gender} onChange={(e) => setGender(e.target.value)}>
+              <select
+                value={gender}
+                onChange={(e) => setGender(e.target.value)}
+                onFocus={() => setActiveField('gender')}
+                className={activeField === 'gender' ? 'field-highlighted' : ''}
+              >
                 <option value="Male">Male</option>
                 <option value="Female">Female</option>
                 <option value="Other">Other</option>
@@ -414,11 +445,16 @@ export default function GuestInviteForm() {
           <button
             type="submit"
             disabled={submitting}
+            data-tooltip="Submit pre-approval guest registration form to host"
             style={{ width: '100%', marginTop: '1.2rem', background: 'linear-gradient(135deg, #d97706 0%, #b45309 100%)', borderColor: '#d97706', color: 'white', fontWeight: 'bold', fontSize: '1rem', padding: '0.75rem' }}
           >
             {submitting ? 'Submitting Form...' : 'Submit Guest Registration'}
           </button>
         </form>
+
+        {/* Right-side Interactive Field Guide */}
+        <FormFieldGuide activeField={activeField} />
+      </div>
       </div>
     </main>
   );

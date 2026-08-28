@@ -7,7 +7,7 @@ export default function Navbar({ user, onLogout }) {
   const navigate = useNavigate();
 
   return (
-    <nav className="container-fluid" style={{ background: '#1e293b', color: 'white', padding: '0.8rem 2rem', marginBottom: '1.5rem', boxShadow: '0 2px 10px rgba(0,0,0,0.15)' }}>
+    <nav className="container-fluid" style={{ background: '#4e081d', color: 'white', padding: '0.8rem 2rem', marginBottom: '1.5rem', boxShadow: '0 4px 15px rgba(78, 8, 29, 0.3)', borderBottom: '3px solid #df6f06' }}>
       <ul>
         <li>
           <Link to="/" style={{ color: 'white', textDecoration: 'none', fontWeight: 'bold', fontSize: '1.2rem', display: 'flex', alignItems: 'center', gap: '0.9rem' }}>
@@ -19,9 +19,9 @@ export default function Navbar({ user, onLogout }) {
                   width: '44px',
                   height: '44px',
                   borderRadius: '50%',
-                  border: '2px solid #f59e0b',
+                  border: '2px solid #fcb900',
                   objectFit: 'cover',
-                  boxShadow: '0 0 10px rgba(245, 158, 11, 0.5)',
+                  boxShadow: '0 0 10px rgba(252, 185, 0, 0.6)',
                   display: 'block'
                 }} 
                 title="Sadguru Sri Madhusudan Sai"
@@ -29,9 +29,9 @@ export default function Navbar({ user, onLogout }) {
             </div>
             <div style={{ display: 'flex', flexDirection: 'column' }}>
               <span style={{ fontSize: '1.15rem', fontWeight: 'bold', display: 'flex', alignItems: 'center', gap: '0.4rem', color: '#ffffff' }}>
-                <Shield size={20} color="#f59e0b" /> Sathya Sai Grama VMS
+                <Shield size={20} color="#fcb900" /> Sathya Sai Grama VMS
               </span>
-              <span style={{ fontSize: '0.72rem', color: '#fbbf24', fontStyle: 'italic', fontWeight: '500' }}>
+              <span style={{ fontSize: '0.72rem', color: '#fcb900', fontStyle: 'italic', fontWeight: '500' }}>
                 Under the Divine Guidance of Sadguru Sri Madhusudan Sai
               </span>
             </div>
