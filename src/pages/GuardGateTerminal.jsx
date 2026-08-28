@@ -39,6 +39,26 @@ export default function GuardGateTerminal({ user }) {
   const [showGateLogsModal, setShowGateLogsModal] = useState(false);
   const [showSelfRegModal, setShowSelfRegModal] = useState(false);
 
+  const {
+    searchTerm: movementSearch,
+    setSearchTerm: setMovementSearch,
+    currentPage: movementPage,
+    setCurrentPage: setMovementPage,
+    totalPages: movementTotalPages,
+    totalItems: movementTotalItems,
+    paginatedData: paginatedGateMovements,
+  } = useTablePagination(gateMovementList, ['visitor_name', 'visitor_phone', 'pass_code', 'guard_name', 'direction', 'gate_name', 'vehicle_no'], 10);
+
+  const {
+    searchTerm: selfRegSearch,
+    setSearchTerm: setSelfRegSearch,
+    currentPage: selfRegPage,
+    setCurrentPage: setSelfRegPage,
+    totalPages: selfRegTotalPages,
+    totalItems: selfRegTotalItems,
+    paginatedData: paginatedSelfReg,
+  } = useTablePagination(selfRegList, ['visitor_name', 'visitor_phone', 'pass_code', 'visitor_category', 'host_name', 'status'], 10);
+
   useEffect(() => {
     fetchSpotQueue();
     fetchUsersList();
@@ -380,6 +400,17 @@ export default function GuardGateTerminal({ user }) {
               ✕ Close
             </button>
           </div>
+          <PaginationControls
+            searchTerm={movementSearch}
+            setSearchTerm={setMovementSearch}
+            currentPage={movementPage}
+            setCurrentPage={setMovementPage}
+            totalPages={movementTotalPages}
+            totalItems={movementTotalItems}
+            pageSize={10}
+            placeholder="Search movement logs by Visitor Name, Phone, Guard, Direction, Vehicle..."
+          />
+
           <div style={{ overflowX: 'auto' }}>
             <table role="grid" style={{ fontSize: '0.82rem' }}>
               <thead>
@@ -392,14 +423,14 @@ export default function GuardGateTerminal({ user }) {
                 </tr>
               </thead>
               <tbody>
-                {gateMovementList.length === 0 ? (
+                {paginatedGateMovements.length === 0 ? (
                   <tr>
                     <td colSpan="5" style={{ textAlign: 'center', color: '#64748b', padding: '1rem' }}>
-                      No gate movement logs recorded at {gateName} today.
+                      No gate movement logs recorded matching search criteria.
                     </td>
                   </tr>
                 ) : (
-                  gateMovementList.map((log) => (
+                  paginatedGateMovements.map((log) => (
                     <tr key={log.id}>
                       <td>{new Date(log.timestamp).toLocaleString()}</td>
                       <td>
@@ -440,6 +471,18 @@ export default function GuardGateTerminal({ user }) {
               ✕ Close
             </button>
           </div>
+
+          <PaginationControls
+            searchTerm={selfRegSearch}
+            setSearchTerm={setSelfRegSearch}
+            currentPage={selfRegPage}
+            setCurrentPage={setSelfRegPage}
+            totalPages={selfRegTotalPages}
+            totalItems={selfRegTotalItems}
+            pageSize={10}
+            placeholder="Search self-registered directory by Visitor Name, Phone, Passcode, Category..."
+          />
+
           <div style={{ overflowX: 'auto' }}>
             <table role="grid" style={{ fontSize: '0.82rem' }}>
               <thead>
@@ -454,14 +497,14 @@ export default function GuardGateTerminal({ user }) {
                 </tr>
               </thead>
               <tbody>
-                {selfRegList.length === 0 ? (
+                {paginatedSelfReg.length === 0 ? (
                   <tr>
                     <td colSpan="7" style={{ textAlign: 'center', color: '#64748b', padding: '1rem' }}>
-                      No self-registered or spot visitors found.
+                      No self-registered or spot visitors found matching search criteria.
                     </td>
                   </tr>
                 ) : (
-                  selfRegList.map((reg) => (
+                  paginatedSelfReg.map((reg) => (
                     <tr key={reg.id}>
                       <td><strong style={{ color: '#4e081d' }}>{reg.pass_code}</strong></td>
                       <td>
