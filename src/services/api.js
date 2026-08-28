@@ -58,6 +58,16 @@ export const getGateCategoryRules = async () => {
   return res.data;
 };
 
+export const getRecentGateLookups = async () => {
+  const res = await api.get('/gate/recent-lookups');
+  return res.data;
+};
+
+export const getGatewiseStatsAndSelfRegistered = async (gateName) => {
+  const res = await api.get(`/gate/gatewise-stats?gateName=${gateName || 'NORTH_GATE'}`);
+  return res.data;
+};
+
 export const toggleGateCategoryRule = async (gate_name, visitor_category, is_allowed) => {
   const res = await api.post('/admin/gate-rules/toggle', { gate_name, visitor_category, is_allowed });
   return res.data;
@@ -205,6 +215,16 @@ export const getSpotRegistrationsQueue = async () => {
 
 export const assignSpotHost = async (registration_id, host_id, remarks) => {
   const res = await api.post('/gate/assign-host', { registration_id, host_id, remarks });
+  return res.data;
+};
+
+export const getAllPendingL2Approvals = async () => {
+  const res = await api.get('/admin/l2-pending-approvals');
+  return res.data;
+};
+
+export const processL2ApprovalByAdmin = async (registration_id, action, remarks) => {
+  const res = await api.post('/admin/process-l2-approval', { registration_id, action, remarks });
   return res.data;
 };
 

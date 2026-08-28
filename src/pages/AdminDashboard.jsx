@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { getReportData, adminBypassApprove, adminEmergencyPass, toggleL2Approval, getSystemSettings, getAdminUsers, getGateCategoryRules, toggleGateCategoryRule, getL2MatrixRules, updateL2MatrixRule } from '../services/api';
+import { getReportData, adminBypassApprove, adminEmergencyPass, toggleL2Approval, getSystemSettings, getAdminUsers, getGateCategoryRules, toggleGateCategoryRule, getL2MatrixRules, updateL2MatrixRule, getAllPendingL2Approvals, processL2ApprovalByAdmin } from '../services/api';
 import DashboardHeader from '../components/DashboardHeader';
 import UserAddWizardModal from '../components/UserAddWizardModal';
 import BulkUploadModal from '../components/BulkUploadModal';
@@ -56,13 +56,24 @@ export default function AdminDashboard({ user }) {
   const [emergencyPurpose, setEmergencyPurpose] = useState('');
   const [emergencyPassResult, setEmergencyPassResult] = useState(null);
 
-  const [l2MatrixRules, setL2MatrixRules] = useState([]);
+  const [pendingL2List, setPendingL2List] = useState([]);
+
+  const {
+    searchTerm: l2Search,
+    setSearchTerm: setL2Search,
+    currentPage: l2Page,
+    setCurrentPage: setL2Page,
+    totalPages: l2TotalPages,
+    totalItems: l2TotalItems,
+    paginatedData: paginatedPendingL2,
+  } = useTablePagination(pendingL2List, ['visitor_name', 'pass_code', 'visitor_category', 'host_name', 'host_role', 'host_department'], 10);
 
   useEffect(() => {
     fetchData();
     fetchUsers();
     fetchGateRules();
     fetchL2MatrixRules();
+    fetchPendingL2();
 
     const handleRealtimeSync = (e) => {
       console.log('[AdminDashboard] Realtime Event Received:', e.detail);
@@ -70,11 +81,36 @@ export default function AdminDashboard({ user }) {
       fetchUsers();
       fetchGateRules();
       fetchL2MatrixRules();
+      fetchPendingL2();
     };
 
     window.addEventListener('vms_realtime_sync', handleRealtimeSync);
     return () => window.removeEventListener('vms_realtime_sync', handleRealtimeSync);
   }, []);
+
+  const fetchPendingL2 = async () => {
+    try {
+      const res = await getAllPendingL2Approvals();
+      if (res.success) setPendingL2List(res.pending_approvals);
+    } catch (err) {
+      console.error('Failed to fetch pending L2 approvals:', err);
+    }
+  };
+
+  const handleL2Decision = async (regId, action) => {
+    setError('');
+    setMsg('');
+    try {
+      const res = await processL2ApprovalByAdmin(regId, action, `Super Admin ${action} decision by ${user.name}`);
+      if (res.success) {
+        setMsg(res.message);
+        fetchData();
+        fetchPendingL2();
+      }
+    } catch (err) {
+      setError(err.response?.data?.message || `Failed to process ${action} decision.`);
+    }
+  };
 
   const fetchGateRules = async () => {
     try {
@@ -516,6 +552,98 @@ export default function AdminDashboard({ user }) {
             )}
           </tbody>
         </table>
+      </div>
+
+      {/* Super Admin Master Pending L2 Approvals Panel */}
+      <div className="card" style={{ borderTop: '4px solid #7c3aed' }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.5rem', flexWrap: 'wrap', gap: '0.5rem' }}>
+          <div>
+            <h3 style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', color: '#7c3aed', margin: 0 }}>
+              <CheckCircle size={22} color="#7c3aed" /> Master L2 Approvals Queue (Super Admin Control)
+            </h3>
+            <p style={{ fontSize: '0.85rem', color: '#475569', margin: '0.2rem 0 0 0' }}>
+              Super Admin can view all pending Level-2 approval requests across all departments and directly approve or reject them.
+            </p>
+          </div>
+          <span className="badge badge-pending_l2" style={{ fontSize: '0.82rem', padding: '0.3rem 0.7rem' }}>
+            Pending L2 Requests: {pendingL2List.length}
+          </span>
+        </div>
+
+        <PaginationControls
+          searchTerm={l2Search}
+          setSearchTerm={setL2Search}
+          currentPage={l2Page}
+          setCurrentPage={setL2Page}
+          totalPages={l2TotalPages}
+          totalItems={l2TotalItems}
+          pageSize={10}
+          placeholder="Search L2 pending requests by Visitor, Passcode, Host Name, Role, Department..."
+        />
+
+        <div style={{ overflowX: 'auto', marginTop: '0.5rem' }}>
+          <table role="grid">
+            <thead>
+              <tr style={{ background: '#f5f3ff' }}>
+                <th>Pass Code</th>
+                <th>Visitor Name & Category</th>
+                <th>Host / Referral Person</th>
+                <th>Department & Role</th>
+                <th>Status</th>
+                <th>Super Admin L2 Action</th>
+              </tr>
+            </thead>
+            <tbody>
+              {paginatedPendingL2.length === 0 ? (
+                <tr>
+                  <td colSpan="6" style={{ textAlign: 'center', color: '#64748b', padding: '1.2rem' }}>
+                    🎉 No pending L2 approvals requiring action.
+                  </td>
+                </tr>
+              ) : (
+                paginatedPendingL2.map((req) => (
+                  <tr key={req.id}>
+                    <td>
+                      <strong style={{ color: '#4e081d' }}>{req.pass_code}</strong>
+                      <div style={{ fontSize: '0.72rem', color: '#64748b' }}>{new Date(req.created_at).toLocaleString()}</div>
+                    </td>
+                    <td>
+                      <strong>{req.visitor_name}</strong> ({req.visitor_phone})
+                      <div><span className="badge badge-inside" style={{ fontSize: '0.7rem' }}>{req.visitor_category || 'GENERAL'}</span></div>
+                    </td>
+                    <td>
+                      {req.host_name || 'System Auto'}
+                      {req.host_address ? <div style={{ fontSize: '0.75rem', color: '#64748b' }}>Flat: {req.host_address}</div> : null}
+                    </td>
+                    <td>
+                      <strong>{req.host_role || 'RESIDENT'}</strong>
+                      <div style={{ fontSize: '0.75rem', color: '#475569' }}>{req.host_department || 'General'}</div>
+                    </td>
+                    <td>
+                      <span className={`badge badge-${req.status.toLowerCase()}`}>{req.status}</span>
+                    </td>
+                    <td>
+                      <div style={{ display: 'flex', gap: '0.4rem' }}>
+                        <button
+                          onClick={() => handleL2Decision(req.id, 'APPROVE')}
+                          style={{ background: '#166534', borderColor: '#166534', color: 'white', padding: '0.25rem 0.65rem', fontSize: '0.75rem', fontWeight: 'bold' }}
+                        >
+                          <Check size={14} /> Approve L2
+                        </button>
+                        <button
+                          onClick={() => handleL2Decision(req.id, 'REJECT')}
+                          style={{ background: '#991b1b', borderColor: '#991b1b', color: 'white', padding: '0.25rem 0.65rem', fontSize: '0.75rem', fontWeight: 'bold' }}
+                        >
+                          <X size={14} /> Reject L2
+                        </button>
+                      </div>
+                    </td>
+                  </tr>
+                ))
+              )}
+            </tbody>
+          </table>
+        </div>
       </div>
 
       {/* Admin Bypass List */}

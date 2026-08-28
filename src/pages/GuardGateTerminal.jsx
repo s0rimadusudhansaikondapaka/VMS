@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { verifyGatePass, processGateMovement, createRegistration, getSpotRegistrationsQueue, assignSpotHost, getAdminUsers, updateApproval } from '../services/api';
+import { verifyGatePass, processGateMovement, createRegistration, getSpotRegistrationsQueue, assignSpotHost, getAdminUsers, updateApproval, getRecentGateLookups, getGatewiseStatsAndSelfRegistered } from '../services/api';
 import DashboardHeader from '../components/DashboardHeader';
 import QrScannerModal from '../components/QrScannerModal';
 import { useTablePagination, PaginationControls } from '../components/TablePagination';
@@ -30,13 +30,26 @@ export default function GuardGateTerminal({ user }) {
     paginatedData: paginatedSpotQueue,
   } = useTablePagination(spotQueue, ['visitor_name', 'visitor_phone', 'pass_code', 'host_name', 'purpose'], 10);
 
+  const [recentLookups, setRecentLookups] = useState([]);
+  const [gateInCount, setGateInCount] = useState(0);
+  const [gateOutCount, setGateOutCount] = useState(0);
+  const [gateMovementList, setGateMovementList] = useState([]);
+  const [selfRegCount, setSelfRegCount] = useState(0);
+  const [selfRegList, setSelfRegList] = useState([]);
+  const [showGateLogsModal, setShowGateLogsModal] = useState(false);
+  const [showSelfRegModal, setShowSelfRegModal] = useState(false);
+
   useEffect(() => {
     fetchSpotQueue();
     fetchUsersList();
+    fetchRecentLookups();
+    fetchGateStats(gateName);
 
     const handleRealtimeSync = (e) => {
       console.log('[GuardGateTerminal] Realtime Event Received:', e.detail);
       fetchSpotQueue();
+      fetchRecentLookups();
+      fetchGateStats(gateName);
       if (passData && passData.pass_code) {
         executePassVerification(passData.pass_code);
       }
@@ -44,7 +57,31 @@ export default function GuardGateTerminal({ user }) {
 
     window.addEventListener('vms_realtime_sync', handleRealtimeSync);
     return () => window.removeEventListener('vms_realtime_sync', handleRealtimeSync);
-  }, [passData]);
+  }, [passData, gateName]);
+
+  const fetchGateStats = async (selectedGate) => {
+    try {
+      const res = await getGatewiseStatsAndSelfRegistered(selectedGate || gateName);
+      if (res.success) {
+        setGateInCount(res.gate_in_count || 0);
+        setGateOutCount(res.gate_out_count || 0);
+        setGateMovementList(res.gate_movement_list || []);
+        setSelfRegCount(res.self_registered_count || 0);
+        setSelfRegList(res.self_registered_list || []);
+      }
+    } catch (err) {
+      console.error('Failed to fetch gatewise stats:', err);
+    }
+  };
+
+  const fetchRecentLookups = async () => {
+    try {
+      const res = await getRecentGateLookups();
+      if (res.success) setRecentLookups(res.recent_passes || []);
+    } catch (err) {
+      console.error('Failed to fetch recent lookups:', err);
+    }
+  };
 
   const fetchSpotQueue = async () => {
     try {
@@ -91,6 +128,13 @@ export default function GuardGateTerminal({ user }) {
 
   const [showAssistedEntry, setShowAssistedEntry] = useState(false);
   const [assistedName, setAssistedName] = useState('');
+  const [assistedPhone, setAssistedPhone] = useState('');
+  const [assistedCompanyName, setAssistedCompanyName] = useState('');
+  const [assistedPurpose, setAssistedPurpose] = useState('');
+  const [assistedHostId, setAssistedHostId] = useState('');
+  const [assistedCategory, setAssistedCategory] = useState('GENERAL');
+  const [assistedVisitType, setAssistedVisitType] = useState('HOME');
+
   const handleSupervisorOverrideApprove = async (spot) => {
     try {
       const res = await updateApproval(
@@ -109,8 +153,6 @@ export default function GuardGateTerminal({ user }) {
       alert(err.response?.data?.message || 'Supervisor override approval failed.');
     }
   };
-  const [assistedPurpose, setAssistedPurpose] = useState('');
-  const [assistedHostName, setAssistedHostName] = useState('');
 
   const executePassVerification = async (queryToVerify) => {
     if (!queryToVerify || !queryToVerify.trim()) return;
@@ -207,12 +249,14 @@ export default function GuardGateTerminal({ user }) {
       const res = await createRegistration({
         full_name: assistedName,
         phone: assistedPhone,
+        company_name: assistedCompanyName,
         purpose: assistedPurpose || 'Spot Registration (Assisted Entry - No Smartphone)',
-        visitor_category: 'GENERAL',
-        visit_type: 'HOME',
+        visitor_category: assistedCategory || 'GENERAL',
+        visit_type: assistedVisitType || 'HOME',
         registration_type: 'SPOT_REGISTRATION',
         has_smartphone: false,
         is_spot_registration: true,
+        host_id: assistedHostId ? parseInt(assistedHostId) : null,
         valid_from: new Date().toISOString(),
         valid_until: new Date(Date.now() + 12 * 60 * 60 * 1000).toISOString(),
         adult_men_count: 1,
@@ -220,13 +264,17 @@ export default function GuardGateTerminal({ user }) {
         children_count: 0,
         vehicles: [],
       });
-      if (res.success) {
-        setMsg(`Assisted entry registration created! Pass Code: ${res.registration.pass_code}. Awaiting host/supervisor approval.`);
+      if (res.success && res.registration) {
+        setMsg(`Assisted entry registration created! Pass Code: ${res.registration.pass_code}. Entry pass generated.`);
         setShowAssistedEntry(false);
         setAssistedName('');
         setAssistedPhone('');
+        setAssistedCompanyName('');
         setAssistedPurpose('');
-        setAssistedHostName('');
+        setAssistedHostId('');
+        fetchSpotQueue();
+        setSearchQuery(res.registration.pass_code);
+        executePassVerification(res.registration.pass_code);
       }
     } catch (err) {
       setError(err.response?.data?.message || 'Assisted entry registration failed.');
@@ -267,6 +315,194 @@ export default function GuardGateTerminal({ user }) {
         }
       />
 
+      {/* Active Gate Traffic & Self-Registered Visitors Live Counter */}
+      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '1rem', marginBottom: '1.2rem' }}>
+        <div
+          onClick={() => setShowGateLogsModal(!showGateLogsModal)}
+          style={{ background: '#fffbf0', border: '2px solid #df6f06', borderRadius: '10px', padding: '0.8rem 1rem', cursor: 'pointer', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}
+        >
+          <div>
+            <div style={{ fontSize: '0.78rem', color: '#4e081d', fontWeight: 'bold' }}>
+              {gateName.replace('_', ' ')} Ingress (IN Today)
+            </div>
+            <div style={{ fontSize: '1.4rem', fontWeight: 'bold', color: '#15803d' }}>
+              {gateInCount} <span style={{ fontSize: '0.78rem', color: '#475569', fontWeight: 'normal' }}>visitors</span>
+            </div>
+          </div>
+          <button style={{ fontSize: '0.72rem', padding: '0.2rem 0.5rem', background: '#4e081d', color: '#fff', border: 'none', borderRadius: '4px' }}>
+            {showGateLogsModal ? 'Close List' : 'View Log List'}
+          </button>
+        </div>
+
+        <div
+          onClick={() => setShowGateLogsModal(!showGateLogsModal)}
+          style={{ background: '#fffbf0', border: '2px solid #df6f06', borderRadius: '10px', padding: '0.8rem 1rem', cursor: 'pointer', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}
+        >
+          <div>
+            <div style={{ fontSize: '0.78rem', color: '#4e081d', fontWeight: 'bold' }}>
+              {gateName.replace('_', ' ')} Egress (OUT Today)
+            </div>
+            <div style={{ fontSize: '1.4rem', fontWeight: 'bold', color: '#b91c1c' }}>
+              {gateOutCount} <span style={{ fontSize: '0.78rem', color: '#475569', fontWeight: 'normal' }}>visitors</span>
+            </div>
+          </div>
+          <button style={{ fontSize: '0.72rem', padding: '0.2rem 0.5rem', background: '#4e081d', color: '#fff', border: 'none', borderRadius: '4px' }}>
+            {showGateLogsModal ? 'Close List' : 'View Log List'}
+          </button>
+        </div>
+
+        <div
+          onClick={() => setShowSelfRegModal(!showSelfRegModal)}
+          style={{ background: '#fffbf0', border: '2px solid #df6f06', borderRadius: '10px', padding: '0.8rem 1rem', cursor: 'pointer', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}
+        >
+          <div>
+            <div style={{ fontSize: '0.78rem', color: '#4e081d', fontWeight: 'bold' }}>
+              Self-Registered / Spot Visitors
+            </div>
+            <div style={{ fontSize: '1.4rem', fontWeight: 'bold', color: '#7c3aed' }}>
+              {selfRegCount} <span style={{ fontSize: '0.78rem', color: '#475569', fontWeight: 'normal' }}>registered</span>
+            </div>
+          </div>
+          <button style={{ fontSize: '0.72rem', padding: '0.2rem 0.5rem', background: '#7c3aed', color: '#fff', border: 'none', borderRadius: '4px' }}>
+            {showSelfRegModal ? 'Close List' : 'View Visitors List'}
+          </button>
+        </div>
+      </div>
+
+      {/* Gatewise Movement Log List Modal / Card */}
+      {showGateLogsModal && (
+        <div className="card" style={{ borderTop: '4px solid #4e081d', marginBottom: '1.2rem' }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.5rem' }}>
+            <h3 style={{ margin: 0, color: '#4e081d', fontSize: '1.05rem', display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
+              <ShieldCheck size={20} color="#df6f06" /> Gatewise Movement Logs for {gateName.replace('_', ' ')} ({gateMovementList.length})
+            </h3>
+            <button onClick={() => setShowGateLogsModal(false)} className="secondary outline" style={{ fontSize: '0.75rem', padding: '0.2rem 0.6rem' }}>
+              ✕ Close
+            </button>
+          </div>
+          <div style={{ overflowX: 'auto' }}>
+            <table role="grid" style={{ fontSize: '0.82rem' }}>
+              <thead>
+                <tr style={{ background: '#4e081d', color: '#ffffff' }}>
+                  <th>Timestamp</th>
+                  <th>Visitor Name</th>
+                  <th>Direction</th>
+                  <th>Security Guard</th>
+                  <th>Members Present Breakdown</th>
+                </tr>
+              </thead>
+              <tbody>
+                {gateMovementList.length === 0 ? (
+                  <tr>
+                    <td colSpan="5" style={{ textAlign: 'center', color: '#64748b', padding: '1rem' }}>
+                      No gate movement logs recorded at {gateName} today.
+                    </td>
+                  </tr>
+                ) : (
+                  gateMovementList.map((log) => (
+                    <tr key={log.id}>
+                      <td>{new Date(log.timestamp).toLocaleString()}</td>
+                      <td>
+                        <strong>{log.visitor_name}</strong>
+                        <div style={{ fontSize: '0.75rem', color: '#64748b' }}>{log.visitor_phone}</div>
+                      </td>
+                      <td>
+                        <span style={{ fontWeight: 'bold', color: log.direction === 'IN' ? '#15803d' : '#b91c1c' }}>
+                          {log.direction === 'IN' ? '➔ IN (Ingress)' : '⬅ OUT (Egress)'}
+                        </span>
+                      </td>
+                      <td>
+                        <strong>{log.guard_name || 'Security Guard'}</strong> ({log.guard_role || 'GUARD'})
+                      </td>
+                      <td>
+                        <strong>Total: {log.person_count || 1} members</strong>
+                        <div style={{ fontSize: '0.75rem', color: '#64748b' }}>
+                          👨 {log.adult_men_count || 0} Men | 👩 {log.adult_women_count || 0} Women | 👦 {log.boys_count || 0} Boys | 👧 {log.girls_count || 0} Girls
+                        </div>
+                      </td>
+                    </tr>
+                  ))
+                )}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      )}
+
+      {/* Self-Registered Visitors Directory List Modal / Card */}
+      {showSelfRegModal && (
+        <div className="card" style={{ borderTop: '4px solid #7c3aed', marginBottom: '1.2rem' }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.5rem' }}>
+            <h3 style={{ margin: 0, color: '#7c3aed', fontSize: '1.05rem', display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
+              <UserPlus size={20} color="#7c3aed" /> Self-Registered & Spot Visitors Directory ({selfRegList.length})
+            </h3>
+            <button onClick={() => setShowSelfRegModal(false)} className="secondary outline" style={{ fontSize: '0.75rem', padding: '0.2rem 0.6rem' }}>
+              ✕ Close
+            </button>
+          </div>
+          <div style={{ overflowX: 'auto' }}>
+            <table role="grid" style={{ fontSize: '0.82rem' }}>
+              <thead>
+                <tr style={{ background: '#4e081d', color: '#ffffff' }}>
+                  <th>Pass Code</th>
+                  <th>Visitor Name</th>
+                  <th>Category</th>
+                  <th>Host Assigned</th>
+                  <th>Status</th>
+                  <th>Time Registered</th>
+                  <th>Action</th>
+                </tr>
+              </thead>
+              <tbody>
+                {selfRegList.length === 0 ? (
+                  <tr>
+                    <td colSpan="7" style={{ textAlign: 'center', color: '#64748b', padding: '1rem' }}>
+                      No self-registered or spot visitors found.
+                    </td>
+                  </tr>
+                ) : (
+                  selfRegList.map((reg) => (
+                    <tr key={reg.id}>
+                      <td><strong style={{ color: '#4e081d' }}>{reg.pass_code}</strong></td>
+                      <td>
+                        <strong>{reg.visitor_name}</strong>
+                        <div style={{ fontSize: '0.75rem', color: '#64748b' }}>{reg.visitor_phone}</div>
+                      </td>
+                      <td><span className="badge badge-inside">{reg.visitor_category || 'GENERAL'}</span></td>
+                      <td>{reg.host_name || 'Spot Assigned'}</td>
+                      <td>
+                        <span
+                          style={{
+                            fontWeight: 'bold',
+                            fontSize: '0.78rem',
+                            color: reg.status === 'INSIDE_CAMPUS' ? '#15803d' : reg.status === 'APPROVED' ? '#d97706' : '#64748b',
+                          }}
+                        >
+                          ● {reg.status}
+                        </span>
+                      </td>
+                      <td>{new Date(reg.created_at).toLocaleString()}</td>
+                      <td>
+                        <button
+                          onClick={() => {
+                            setSearchQuery(reg.pass_code);
+                            executePassVerification(reg.pass_code);
+                            setShowSelfRegModal(false);
+                          }}
+                          style={{ fontSize: '0.72rem', padding: '0.2rem 0.5rem', background: '#df6f06', borderColor: '#df6f06', color: '#fff' }}
+                        >
+                          Verify Pass
+                        </button>
+                      </td>
+                    </tr>
+                  ))
+                )}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      )}
+
       <div className="card">
         <h3>Verify Visitor Gate Pass</h3>
         <p style={{ fontSize: '0.85rem', color: '#64748b' }}>
@@ -295,21 +531,79 @@ export default function GuardGateTerminal({ user }) {
           </button>
         </form>
 
-        {/* Verification Category Shortcuts */}
-        <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap', alignItems: 'center', marginTop: '0.5rem', background: '#f8fafc', padding: '0.8rem', borderRadius: '8px', border: '1px solid #e2e8f0' }}>
-          <span style={{ fontSize: '0.78rem', color: '#334155', fontWeight: 'bold', width: '100%', marginBottom: '0.2rem' }}>Quick Gate Verification Lookups:</span>
-          <button type="button" className="secondary outline" onClick={() => quickSearchPhone('PASS-1001')} style={{ fontSize: '0.75rem', padding: '0.35rem 0.6rem', background: '#white' }}>
-            <KeyRound size={14} /> Single Visitor Pass (PASS-1001)
-          </button>
-          <button type="button" className="secondary outline" onClick={() => quickSearchPhone('MAID-PERM-5001')} style={{ fontSize: '0.75rem', padding: '0.35rem 0.6rem' }}>
-            <UserCheck size={14} /> Maid Permanent Pass (MAID-PERM-5001)
-          </button>
-          <button type="button" className="secondary outline" onClick={() => quickSearchPhone('+91 9933445566')} style={{ fontSize: '0.75rem', padding: '0.35rem 0.6rem' }}>
-            <Phone size={14} /> Delivery Boy Lookup (+91 9933445566)
-          </button>
-          <button type="button" className="secondary outline" onClick={() => quickSearchPhone('KA-01-MJ-9999')} style={{ fontSize: '0.75rem', padding: '0.35rem 0.6rem' }}>
-            <Car size={14} /> Vehicle Plate Lookup (KA-01-MJ-9999)
-          </button>
+        {/* Category Verification Method Cheat-Sheet */}
+        <div style={{ marginTop: '0.8rem', background: '#f8fafc', padding: '0.8rem', borderRadius: '10px', border: '1px solid #cbd5e1' }}>
+          <div style={{ fontSize: '0.82rem', fontWeight: 'bold', color: '#1e293b', marginBottom: '0.4rem' }}>
+            📌 Category Verification Methods (Security Standards):
+          </div>
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.5rem', fontSize: '0.78rem' }}>
+            <div style={{ background: '#ffffff', padding: '0.4rem 0.6rem', borderRadius: '6px', border: '1px solid #e2e8f0' }}>
+              <strong>🔑 House Maids / Caretakers / Labours:</strong> Permanent Passcode (e.g. <code>MAID-PERM-5001</code>)
+            </div>
+            <div style={{ background: '#ffffff', padding: '0.4rem 0.6rem', borderRadius: '6px', border: '1px solid #e2e8f0' }}>
+              <strong>🔑 Frequent Visitors / Devotees:</strong> Permanent Passcode (e.g. <code>DEVOTEE-PERM-7001</code>)
+            </div>
+            <div style={{ background: '#ffffff', padding: '0.4rem 0.6rem', borderRadius: '6px', border: '1px solid #e2e8f0' }}>
+              <strong>📞 Delivery / Milk / Gas / Dhobi:</strong> Mobile Phone Number (e.g. <code>+91 9933445566</code>)
+            </div>
+            <div style={{ background: '#ffffff', padding: '0.4rem 0.6rem', borderRadius: '6px', border: '1px solid #e2e8f0' }}>
+              <strong>🛠️ Home Repair / Cabs / Vendors:</strong> Pre-Approval & Permission Check
+            </div>
+          </div>
+        </div>
+
+        {/* Top 20 Quick Gate Verification Lookups */}
+        <div style={{ marginTop: '0.8rem', background: '#fffbf0', padding: '0.9rem', borderRadius: '10px', border: '1px solid #fed7aa' }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.5rem' }}>
+            <span style={{ fontSize: '0.82rem', color: '#4e081d', fontWeight: 'bold', display: 'flex', alignItems: 'center', gap: '0.35rem' }}>
+              <Clock size={16} color="#df6f06" /> Quick Gate Verification Lookups (Top 20 Recent Passes):
+            </span>
+            <span style={{ fontSize: '0.72rem', color: '#64748b' }}>Click any pass for instant lookup</span>
+          </div>
+
+          <div style={{ display: 'flex', gap: '0.45rem', flexWrap: 'wrap', alignItems: 'center' }}>
+            {recentLookups.length === 0 ? (
+              <span style={{ fontSize: '0.78rem', color: '#64748b' }}>No recent passes found.</span>
+            ) : (
+              recentLookups.map((pass) => (
+                <button
+                  key={pass.id}
+                  type="button"
+                  onClick={() => {
+                    setSearchQuery(pass.pass_code);
+                    executePassVerification(pass.pass_code);
+                  }}
+                  style={{
+                    fontSize: '0.75rem',
+                    padding: '0.3rem 0.65rem',
+                    background: '#4e081d',
+                    borderColor: '#4e081d',
+                    color: '#ffffff',
+                    borderRadius: '6px',
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    gap: '0.35rem',
+                    cursor: 'pointer',
+                    boxShadow: '0 1px 2px rgba(0,0,0,0.1)',
+                  }}
+                >
+                  <KeyRound size={13} color="#fcb900" />
+                  <strong>{pass.pass_code}</strong> ({pass.visitor_name})
+                  <span
+                    style={{
+                      fontSize: '0.65rem',
+                      padding: '0.1rem 0.35rem',
+                      borderRadius: '4px',
+                      background: pass.status === 'INSIDE_CAMPUS' ? '#15803d' : pass.status === 'APPROVED' ? '#d97706' : '#64748b',
+                      color: '#ffffff',
+                    }}
+                  >
+                    {pass.status}
+                  </span>
+                </button>
+              ))
+            )}
+          </div>
         </div>
 
         {error && <div style={{ background: '#fee2e2', color: '#991b1b', padding: '0.75rem', borderRadius: '6px', marginTop: '1rem' }}>{error}</div>}
@@ -333,27 +627,69 @@ export default function GuardGateTerminal({ user }) {
           Use this to register visitors who don't have a smartphone. Guard fills in details on their behalf.
         </p>
         {showAssistedEntry && (
-          <form onSubmit={handleAssistedEntry} style={{ marginTop: '1rem', background: '#f5f3ff', padding: '1rem', borderRadius: '8px', border: '1px solid #ddd6fe' }}>
+          <form onSubmit={handleAssistedEntry} style={{ marginTop: '1rem', background: '#fffbf0', padding: '1.2rem', borderRadius: '10px', border: '2px solid #df6f06' }}>
+            <div style={{ background: '#eff6ff', border: '1px solid #93c5fd', borderRadius: '8px', padding: '0.6rem 0.8rem', marginBottom: '0.8rem', fontSize: '0.8rem', color: '#1e3a8a' }}>
+              <strong>Spot Registration Workflow (Visitor without a smartphone/phone):</strong>
+              <ul style={{ margin: '0.3rem 0 0 1.2rem', padding: 0 }}>
+                <li><strong>Visitor Knows Resident/Employee:</strong> Select Resident/Employee Name & Flat/Department. Resident receives instant approval notification.</li>
+                <li><strong>Visitor Unknown / Visiting Ashram:</strong> Select <strong>PRO (Public Relations Officer)</strong>. PRO receives approval notification.</li>
+                <li><strong>Unresponsive Host:</strong> SO or Supervisor can click ⚡ SO/Supervisor Approve to clear entry.</li>
+              </ul>
+            </div>
+
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.8rem' }}>
-              <label>
-                Visitor Name *
-                <input type="text" required value={assistedName} onChange={(e) => setAssistedName(e.target.value)} placeholder="Full Name" />
+              <label style={{ fontSize: '0.85rem', fontWeight: 'bold', color: '#4e081d' }}>
+                Visitor Full Name *
+                <input type="text" required value={assistedName} onChange={(e) => setAssistedName(e.target.value)} placeholder="Enter Visitor Name" style={{ margin: '0.2rem 0 0 0' }} />
               </label>
-              <label>
-                Phone Number *
-                <input type="tel" required value={assistedPhone} onChange={(e) => setAssistedPhone(e.target.value)} placeholder="+91 9876543210" />
+              <label style={{ fontSize: '0.85rem', fontWeight: 'bold', color: '#4e081d' }}>
+                Visitor Mobile Number *
+                <input type="tel" required value={assistedPhone} onChange={(e) => setAssistedPhone(e.target.value)} placeholder="+91 9876543210" style={{ margin: '0.2rem 0 0 0' }} />
               </label>
             </div>
-            <label style={{ marginTop: '0.5rem' }}>
-              Purpose of Visit *
-              <input type="text" required value={assistedPurpose} onChange={(e) => setAssistedPurpose(e.target.value)} placeholder="e.g. Meeting Resident, Delivery, Tour" />
-            </label>
-            <label style={{ marginTop: '0.5rem' }}>
-              Host / Resident Name (if known)
-              <input type="text" value={assistedHostName} onChange={(e) => setAssistedHostName(e.target.value)} placeholder="Name of person they are visiting" />
-            </label>
-            <button type="submit" style={{ marginTop: '1rem', width: '100%', background: '#7c3aed', borderColor: '#7c3aed', color: 'white', fontWeight: 'bold' }}>
-              Submit Assisted Entry Registration
+
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.8rem', marginTop: '0.6rem' }}>
+              <label style={{ fontSize: '0.85rem', fontWeight: 'bold', color: '#4e081d' }}>
+                Host / Referral Person *
+                <select value={assistedHostId} onChange={(e) => setAssistedHostId(e.target.value)} required style={{ margin: '0.2rem 0 0 0' }}>
+                  <option value="">-- Select Host (Resident / Employee / PRO) --</option>
+                  {adminUsers.map((u) => (
+                    <option key={u.id} value={u.id}>
+                      {u.name} ({u.role}) {u.address ? `[${u.address}]` : ''}
+                    </option>
+                  ))}
+                </select>
+              </label>
+              <label style={{ fontSize: '0.85rem', fontWeight: 'bold', color: '#4e081d' }}>
+                Visitor Category
+                <select value={assistedCategory} onChange={(e) => setAssistedCategory(e.target.value)} style={{ margin: '0.2rem 0 0 0' }}>
+                  <option value="GENERAL">GENERAL</option>
+                  <option value="VIP">VIP</option>
+                  <option value="VVIP">VVIP</option>
+                  <option value="VENDOR">VENDOR</option>
+                  <option value="CONTRACTOR">CONTRACTOR</option>
+                  <option value="FOREIGN_NATIONAL">FOREIGN NATIONAL</option>
+                  <option value="DELIVERY">DELIVERY</option>
+                  <option value="CAB">CAB</option>
+                  <option value="MAID">MAID</option>
+                  <option value="FREQUENT_VISITOR">FREQUENT VISITOR</option>
+                </select>
+              </label>
+            </div>
+
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.8rem', marginTop: '0.6rem' }}>
+              <label style={{ fontSize: '0.85rem', fontWeight: 'bold', color: '#4e081d' }}>
+                Company / Agency Name (for Delivery / Courier / Vendors)
+                <input type="text" value={assistedCompanyName} onChange={(e) => setAssistedCompanyName(e.target.value)} placeholder="e.g. Amazon, Flipkart, Blue Dart, Gas Agency, Milk Supplier" style={{ margin: '0.2rem 0 0 0' }} />
+              </label>
+              <label style={{ fontSize: '0.85rem', fontWeight: 'bold', color: '#4e081d' }}>
+                Purpose of Visit *
+                <input type="text" required value={assistedPurpose} onChange={(e) => setAssistedPurpose(e.target.value)} placeholder="e.g. Courier Delivery, Repair Work, Official Visit" style={{ margin: '0.2rem 0 0 0' }} />
+              </label>
+            </div>
+
+            <button type="submit" style={{ marginTop: '1rem', width: '100%', background: '#df6f06', borderColor: '#df6f06', color: 'white', fontWeight: 'bold', fontSize: '0.92rem' }}>
+              Submit & Issue Assisted Entry Gate Pass
             </button>
           </form>
         )}
@@ -492,14 +828,35 @@ export default function GuardGateTerminal({ user }) {
               )}
 
               <h4 style={{ fontSize: '0.9rem', color: '#475569', borderBottom: '1px solid #e2e8f0', paddingBottom: '0.3rem', marginTop: '1rem' }}>
-                Scheduled Visit Window
+                Scheduled Visit Window & 8-Hour Grace Policy
               </h4>
               <p style={{ margin: '0.3rem 0', fontSize: '0.85rem' }}>
-                <Calendar size={14} /> <strong>Arrival (`validFrom`):</strong> {new Date(passData.valid_from).toLocaleString()}
+                <Calendar size={14} /> <strong>Scheduled Arrival (`validFrom`):</strong> {new Date(passData.valid_from).toLocaleString()}
               </p>
               <p style={{ margin: '0.3rem 0', fontSize: '0.85rem' }}>
-                <Calendar size={14} /> <strong>Departure (`validUntil`):</strong> {new Date(passData.valid_until).toLocaleString()}
+                <Calendar size={14} /> <strong>Scheduled Departure (`validUntil`):</strong> {new Date(passData.valid_until).toLocaleString()}
               </p>
+
+              {/* 8-Hour Grace Window Banner */}
+              {passData.earliest_allowed_entry && (
+                <div style={{
+                  marginTop: '0.5rem',
+                  padding: '0.6rem 0.8rem',
+                  borderRadius: '8px',
+                  background: passData.arrival_status === 'TOO_EARLY' ? '#fee2e2' : passData.arrival_status === 'ARRIVAL_EXPIRED' ? '#fff7ed' : '#dcfce7',
+                  border: '1px solid currentColor',
+                  color: passData.arrival_status === 'TOO_EARLY' ? '#b91c1c' : passData.arrival_status === 'ARRIVAL_EXPIRED' ? '#c2410c' : '#15803d',
+                  fontSize: '0.82rem',
+                  fontWeight: 'bold'
+                }}>
+                  <Clock size={14} style={{ display: 'inline', marginRight: '0.3rem' }} />
+                  {passData.arrival_message || `8-Hour Grace Period Active`}
+                  <div style={{ fontSize: '0.74rem', fontWeight: 'normal', marginTop: '0.2rem', color: '#334155' }}>
+                    Entry Grace Window: {new Date(passData.earliest_allowed_entry).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })} to {new Date(passData.latest_allowed_entry).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                  </div>
+                </div>
+              )}
+
               <p style={{ margin: '0.4rem 0' }}><strong>Purpose:</strong> {passData.purpose}</p>
               <p style={{ margin: '0.4rem 0' }}><strong>Designated Host:</strong> {passData.host_name || 'N/A'}</p>
               <p style={{ margin: '0.4rem 0', fontSize: '0.85rem', color: '#64748b' }}>
@@ -594,7 +951,13 @@ export default function GuardGateTerminal({ user }) {
               }}
             >
               <LogIn size={20} />
-              {passData.is_current_gate_allowed === false ? '⛔ Restricted at this Gate' : passData.status === 'INSIDE_CAMPUS' ? '✓ Already Inside Campus (IN)' : 'Record Ingress (IN)'}
+              {passData.is_current_gate_allowed === false 
+                ? '⛔ Restricted at this Gate' 
+                : passData.status === 'INSIDE_CAMPUS' 
+                ? '✓ Already Inside Campus (IN)' 
+                : passData.status === 'CHECKED_OUT' 
+                ? '➔ Re-Entry IN (Multi-Entry Active)' 
+                : 'Record Ingress (IN)'}
             </button>
             <button
               onClick={() => handleMovement('OUT')}
@@ -613,9 +976,62 @@ export default function GuardGateTerminal({ user }) {
               }}
             >
               <LogOut size={20} />
-              {passData.status === 'CHECKED_OUT' ? '✓ Already Checked Out (OUT)' : 'Record Egress (OUT)'}
+              {passData.status === 'CHECKED_OUT' ? '✓ Already Checked OUT' : 'Record Egress (OUT)'}
             </button>
           </div>
+
+          {/* Gate Movement Log & Members Audit Card */}
+          {passData.gate_movement_logs && passData.gate_movement_logs.length > 0 && (
+            <div style={{ marginTop: '1.5rem', background: '#fffbf0', border: '2px solid #df6f06', borderRadius: '10px', padding: '1rem' }}>
+              <h4 style={{ margin: '0 0 0.6rem 0', color: '#4e081d', display: 'flex', alignItems: 'center', gap: '0.4rem', fontSize: '0.95rem' }}>
+                <Shield size={18} color="#df6f06" /> Gate Ingress/Egress Guard Verification Audit Logs ({passData.gate_movement_logs.length})
+              </h4>
+              <div style={{ overflowX: 'auto' }}>
+                <table role="grid" style={{ fontSize: '0.82rem', margin: 0 }}>
+                  <thead>
+                    <tr style={{ background: '#4e081d', color: '#ffffff' }}>
+                      <th>Timestamp</th>
+                      <th>Gate & Direction</th>
+                      <th>Allowed By (Security Guard)</th>
+                      <th>Members Present Breakdown</th>
+                      <th>Address & Identity Proof Confirmation</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {passData.gate_movement_logs.map((log) => (
+                      <tr key={log.id}>
+                        <td>{new Date(log.timestamp).toLocaleString()}</td>
+                        <td>
+                          <span style={{ fontWeight: 'bold', color: log.direction === 'IN' ? '#15803d' : '#b91c1c' }}>
+                            {log.direction === 'IN' ? '➔ IN (Ingress)' : '⬅ OUT (Egress)'} @ {log.gate_name ? log.gate_name.replace('_', ' ') : activeGate}
+                          </span>
+                        </td>
+                        <td>
+                          <strong>{log.guard_name || 'Security Guard'}</strong> <span style={{ opacity: 0.75 }}>({log.guard_role || 'GUARD'})</span>
+                        </td>
+                        <td>
+                          <span style={{ fontWeight: 'bold', color: '#4e081d' }}>
+                            Total: {log.person_count || (Number(log.adult_men_count || 0) + Number(log.adult_women_count || 0) + Number(log.children_count || 0))} members
+                          </span>
+                          <div style={{ fontSize: '0.75rem', color: '#64748b' }}>
+                            👨 {log.adult_men_count || 0} Men | 👩 {log.adult_women_count || 0} Women | 👦 {log.boys_count || 0} Boys | 👧 {log.girls_count || 0} Girls
+                          </div>
+                        </td>
+                        <td>
+                          <span style={{ color: '#057a55', fontWeight: 'bold' }}>
+                            ✓ ID & Address Proof Confirmed
+                          </span>
+                          <div style={{ fontSize: '0.75rem', color: '#475569' }}>
+                            {passData.id_type || 'Aadhaar'}: {passData.id_card_number || passData.id_number || 'Verified'}
+                          </div>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          )}
         </div>
       )}
 
