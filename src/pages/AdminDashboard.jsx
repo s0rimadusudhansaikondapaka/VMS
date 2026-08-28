@@ -56,6 +56,7 @@ export default function AdminDashboard({ user }) {
   const [emergencyPurpose, setEmergencyPurpose] = useState('');
   const [emergencyPassResult, setEmergencyPassResult] = useState(null);
 
+  const [l2MatrixRules, setL2MatrixRules] = useState([]);
   const [pendingL2List, setPendingL2List] = useState([]);
 
   const {
