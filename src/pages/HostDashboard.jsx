@@ -161,6 +161,7 @@ export default function HostDashboard({ user }) {
         alert(res.message || `Registration #${reviewModalData.id} updated!`);
         setReviewModalData(null);
         fetchRegistrations();
+        fetchVisitHistory();
       }
     } catch (err) {
       alert(err.response?.data?.message || 'Action failed.');
@@ -1147,4 +1148,9 @@ export default function HostDashboard({ user }) {
                 Close
               </button>
             </div>
-       
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
