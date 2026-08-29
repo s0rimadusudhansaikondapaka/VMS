@@ -701,13 +701,13 @@ export default function AdminDashboard({ user }) {
                   <td>{u.email}</td>
                   <td>{u.phone}</td>
                   <td>
-                    <span className="badge badge-vvip" style={{ background: '#0d9488' }}>
-                      {u.user_type || 'RESIDENT'}
+                    <span className="badge badge-vvip" style={{ background: u.user_type === 'RESIDENT_EMPLOYEE' ? '#0d9488' : '#0284c7' }}>
+                      {u.user_type === 'RESIDENT_EMPLOYEE' ? 'RESIDENT + EMPLOYEE' : (u.user_type || 'RESIDENT')}
                     </span>
                   </td>
                   <td>
                     <span className="badge badge-vvip" style={{ background: u.role === 'ADMIN' ? '#9333ea' : u.role === 'HOD' ? '#2563eb' : u.role === 'GUARD' ? '#d97706' : '#475569' }}>
-                      {u.role}
+                      {u.role || 'HOST'}
                     </span>
                   </td>
                   <td>{u.residency_status}</td>
