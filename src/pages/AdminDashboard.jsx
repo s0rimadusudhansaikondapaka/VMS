@@ -1,3 +1,4 @@
+import React, { useState, useEffect } from 'react';
 import { getReportData, adminBypassApprove, adminEmergencyPass, toggleL2Approval, getSystemSettings, getAdminUsers, getGateCategoryRules, toggleGateCategoryRule, getL2MatrixRules, updateL2MatrixRule, getAllPendingL2Approvals, processL2ApprovalByAdmin, getGateDirectionConfig, updateGateDirectionConfig, getDepartments, updateAdminUser } from '../services/api';
 import DashboardHeader from '../components/DashboardHeader';
 import UserAddWizardModal from '../components/UserAddWizardModal';
