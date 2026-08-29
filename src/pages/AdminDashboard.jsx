@@ -696,7 +696,7 @@ export default function AdminDashboard({ user }) {
             ) : (
               paginatedUsers.map((u) => (
                 <tr key={u.id}>
-                  <td>#{u.id}</td>
+                  <td><code style={{ fontSize: '0.8rem', color: '#2563eb', fontWeight: 'bold' }}>{u.guid || (`USR-${u.id}`)}</code></td>
                   <td><strong>{u.name}</strong></td>
                   <td>{u.email}</td>
                   <td>{u.phone}</td>
@@ -944,7 +944,7 @@ export default function AdminDashboard({ user }) {
                 paginatedAuditLogs.map((log) => (
                   <tr key={log.id}>
                     <td>
-                      <div style={{ fontWeight: 'bold', color: '#4e081d' }}>#{log.id}</div>
+                      <div style={{ fontWeight: 'bold', color: '#4e081d' }}><code>{log.guid || (`AUD-${log.id}`)}</code></div>
                       <div style={{ fontSize: '0.75rem', color: '#64748b' }}>
                         {new Date(log.timestamp).toLocaleString()}
                       </div>

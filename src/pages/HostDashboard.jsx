@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { createRegistration, updateRegistration, getHostRegistrations, updateApproval, getVisitHistory, generateQrCode, generateInviteToken, getResidentFamilyMembers } from '../services/api';
+import { createRegistration, updateRegistration, getHostRegistrations, updateApproval, getVisitHistory, generateQrCode, generateInviteToken, getResidentFamilyMembers, addResidentFamilyMember, deleteResidentFamilyMember } from '../services/api';
 import CameraCaptureModal from '../components/CameraCaptureModal';
 import DashboardHeader from '../components/DashboardHeader';
 import FormFieldGuide from '../components/FormFieldGuide';
@@ -20,6 +20,60 @@ export default function HostDashboard({ user }) {
   const [showShareModal, setShowShareModal] = useState(false);
   const [activeShareToken, setActiveShareToken] = useState('');
   const [qrModalData, setQrModalData] = useState(null);
+
+  // Family Members Management state
+  const [showAddFamilyModal, setShowAddFamilyModal] = useState(false);
+  const [fmName, setFmName] = useState('');
+  const [fmRelationship, setFmRelationship] = useState('Spouse');
+  const [fmPhone, setFmPhone] = useState('');
+  const [fmEmail, setFmEmail] = useState('');
+  const [fmPassword, setFmPassword] = useState('password123');
+  const [fmAge, setFmAge] = useState('');
+  const [fmGender, setFmGender] = useState('Female');
+  const [fmError, setFmError] = useState('');
+  const [fmMsg, setFmMsg] = useState('');
+
+  const handleAddFamilyMemberSubmit = async (e) => {
+    e.preventDefault();
+    setFmError('');
+    setFmMsg('');
+    try {
+      const res = await addResidentFamilyMember({
+        full_name: fmName,
+        relationship: fmRelationship,
+        phone: fmPhone,
+        email: fmEmail,
+        password: fmPassword,
+        age: fmAge,
+        gender: fmGender,
+      });
+
+      if (res.success) {
+        setFmMsg(`Family member '${fmName}' added successfully! Host login account created (Email: ${res.credentials?.email}).`);
+        setFmName('');
+        setFmPhone('');
+        setFmEmail('');
+        setFmAge('');
+        fetchFamilyMembers();
+        setTimeout(() => setShowAddFamilyModal(false), 2500);
+      }
+    } catch (err) {
+      setFmError(err.response?.data?.message || 'Failed to add family member.');
+    }
+  };
+
+  const handleDeleteFamilyMember = async (id, name) => {
+    if (!window.confirm(`Are you sure you want to remove family member '${name}'? Their host login account will be suspended.`)) return;
+    try {
+      const res = await deleteResidentFamilyMember(id);
+      if (res.success) {
+        setMsg(res.message);
+        fetchFamilyMembers();
+      }
+    } catch (err) {
+      alert(err.response?.data?.message || 'Failed to remove family member.');
+    }
+  };
 
   const {
     searchTerm: regSearch,
@@ -1194,6 +1248,189 @@ export default function HostDashboard({ user }) {
           </div>
         </div>
       </div>
+
+      {/* Household Family Members & Host Logins Card */}
+      <div className="card" style={{ borderTop: '4px solid #0d9488', marginTop: '1.5rem' }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem', flexWrap: 'wrap', gap: '0.8rem' }}>
+          <div>
+            <h3 style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', color: '#0f766e', margin: 0 }}>
+              <Users size={22} color="#0f766e" /> Household Family Members & Family Host Logins
+            </h3>
+            <p style={{ fontSize: '0.85rem', color: '#64748b', margin: '0.2rem 0 0 0' }}>
+              Family members linked to your residence get their own login accounts to issue and approve visitor passes under your household.
+            </p>
+          </div>
+
+          <button
+            type="button"
+            onClick={() => setShowAddFamilyModal(true)}
+            style={{ background: '#0d9488', borderColor: '#0d9488', color: 'white', fontWeight: 'bold', fontSize: '0.85rem', display: 'flex', alignItems: 'center', gap: '0.4rem', padding: '0.55rem 1rem' }}
+          >
+            <UserPlus size={16} /> + Add Family Member & Host Account
+          </button>
+        </div>
+
+        {familyMembers.length === 0 ? (
+          <div style={{ background: '#f8fafc', padding: '1.5rem', borderRadius: '8px', textAlign: 'center', color: '#64748b', border: '1px dashed #cbd5e1' }}>
+            <Users size={32} color="#94a3b8" style={{ marginBottom: '0.5rem' }} />
+            <p style={{ margin: 0, fontWeight: 'bold' }}>No family members registered yet.</p>
+            <span style={{ fontSize: '0.8rem' }}>Click "+ Add Family Member & Host Account" to give your family members login access to issue guest passes.</span>
+          </div>
+        ) : (
+          <div style={{ overflowX: 'auto' }}>
+            <table role="grid">
+              <thead>
+                <tr>
+                  <th>Family Member Name</th>
+                  <th>Relationship</th>
+                  <th>Contact Phone</th>
+                  <th>Login Email</th>
+                  <th>Host Access Status</th>
+                  <th>Actions</th>
+                </tr>
+              </thead>
+              <tbody>
+                {familyMembers.map((fm) => (
+                  <tr key={fm.id}>
+                    <td>
+                      <strong>{fm.full_name}</strong>
+                    </td>
+                    <td>
+                      <span className="badge badge-vvip" style={{ background: '#0f766e' }}>
+                        {fm.relationship}
+                      </span>
+                    </td>
+                    <td>{fm.phone || 'N/A'}</td>
+                    <td>
+                      <code style={{ fontSize: '0.82rem', color: '#2563eb' }}>{fm.email || 'No Email'}</code>
+                    </td>
+                    <td>
+                      <span style={{ background: '#dcfce7', color: '#065f46', padding: '0.2rem 0.6rem', borderRadius: '12px', fontSize: '0.78rem', fontWeight: 'bold' }}>
+                        ● Active Host Login
+                      </span>
+                    </td>
+                    <td>
+                      <button
+                        type="button"
+                        onClick={() => handleDeleteFamilyMember(fm.id, fm.full_name)}
+                        style={{ background: '#fee2e2', color: '#dc2626', border: '1px solid #fca5a5', padding: '0.25rem 0.6rem', fontSize: '0.75rem', fontWeight: 'bold', display: 'inline-flex', alignItems: 'center', gap: '0.3rem', cursor: 'pointer', borderRadius: '4px' }}
+                      >
+                        <Trash2 size={13} /> Remove
+                      </button>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
+      </div>
+
+      {/* Add Family Member Modal */}
+      {showAddFamilyModal && (
+        <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, background: 'rgba(0,0,0,0.6)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 9999, padding: '1rem' }}>
+          <div className="card" style={{ maxWidth: '520px', width: '100%', padding: '1.6rem', borderRadius: '12px' }}>
+            <div style={{ borderBottom: '2px solid #0d9488', paddingBottom: '0.6rem', marginBottom: '1.2rem', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+              <h3 style={{ margin: 0, color: '#0f766e', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                <UserPlus size={20} color="#0d9488" /> Add Household Family Member & Host Account
+              </h3>
+              <button type="button" onClick={() => setShowAddFamilyModal(false)} style={{ background: 'transparent', border: 'none', fontSize: '1.2rem', cursor: 'pointer', color: '#64748b' }}>✕</button>
+            </div>
+
+            {fmError && <div style={{ background: '#fee2e2', color: '#991b1b', padding: '0.7rem', borderRadius: '6px', marginBottom: '1rem', fontSize: '0.85rem' }}>{fmError}</div>}
+            {fmMsg && <div style={{ background: '#def7ec', color: '#03543f', padding: '0.7rem', borderRadius: '6px', marginBottom: '1rem', fontSize: '0.85rem' }}>{fmMsg}</div>}
+
+            <form onSubmit={handleAddFamilyMemberSubmit}>
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.9rem' }}>
+                <label style={{ gridColumn: 'span 2' }}>
+                  Full Name *
+                  <input
+                    type="text"
+                    required
+                    placeholder="e.g. Sunita Rao"
+                    value={fmName}
+                    onChange={(e) => setFmName(e.target.value)}
+                    style={{ marginTop: '0.3rem' }}
+                  />
+                </label>
+
+                <label>
+                  Relationship to Resident *
+                  <select value={fmRelationship} onChange={(e) => setFmRelationship(e.target.value)} style={{ marginTop: '0.3rem', fontWeight: 'bold' }}>
+                    <option value="Spouse">Spouse (Wife / Husband)</option>
+                    <option value="Son">Son</option>
+                    <option value="Daughter">Daughter</option>
+                    <option value="Father">Father</option>
+                    <option value="Mother">Mother</option>
+                    <option value="Brother">Brother</option>
+                    <option value="Sister">Sister</option>
+                    <option value="Dependent">Other Dependent</option>
+                  </select>
+                </label>
+
+                <label>
+                  Phone Number
+                  <input
+                    type="text"
+                    placeholder="+91 9876543210"
+                    value={fmPhone}
+                    onChange={(e) => setFmPhone(e.target.value)}
+                    style={{ marginTop: '0.3rem' }}
+                  />
+                </label>
+
+                <label style={{ gridColumn: 'span 2' }}>
+                  Login Email Address * (Family Member Host Login)
+                  <input
+                    type="email"
+                    required
+                    placeholder="e.g. sunita@ashram.org"
+                    value={fmEmail}
+                    onChange={(e) => setFmEmail(e.target.value)}
+                    style={{ marginTop: '0.3rem' }}
+                  />
+                </label>
+
+                <label>
+                  Default Login Password
+                  <input
+                    type="text"
+                    value={fmPassword}
+                    onChange={(e) => setFmPassword(e.target.value)}
+                    style={{ marginTop: '0.3rem' }}
+                  />
+                </label>
+
+                <label>
+                  Gender
+                  <select value={fmGender} onChange={(e) => setFmGender(e.target.value)} style={{ marginTop: '0.3rem' }}>
+                    <option value="Female">Female</option>
+                    <option value="Male">Male</option>
+                    <option value="Other">Other</option>
+                  </select>
+                </label>
+              </div>
+
+              <div style={{ display: 'flex', gap: '0.6rem', marginTop: '1.2rem' }}>
+                <button
+                  type="submit"
+                  style={{ flex: 1, background: '#0d9488', borderColor: '#0d9488', color: 'white', fontWeight: 'bold', padding: '0.6rem' }}
+                >
+                  ✓ Add Family Member & Create Host Account
+                </button>
+                <button
+                  type="button"
+                  className="secondary"
+                  onClick={() => setShowAddFamilyModal(false)}
+                  style={{ padding: '0.6rem 1rem' }}
+                >
+                  Cancel
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
 
       {/* Share Guest Invite Link Modal */}
       {showShareModal && (

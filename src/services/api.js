@@ -251,4 +251,14 @@ export const getResidentFamilyMembers = async () => {
   return res.data;
 };
 
+export const addResidentFamilyMember = async (data) => {
+  const res = await api.post('/visitors/family-members', data);
+  return res.data;
+};
+
+export const deleteResidentFamilyMember = async (id) => {
+  const res = await api.delete(`/visitors/family-members/${id}`);
+  return res.data;
+};
+
 export default api;
