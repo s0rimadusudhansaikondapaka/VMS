@@ -73,6 +73,16 @@ export const toggleGateCategoryRule = async (gate_name, visitor_category, is_all
   return res.data;
 };
 
+export const getGateDirectionConfig = async () => {
+  const res = await api.get('/admin/gate-direction-config');
+  return res.data;
+};
+
+export const updateGateDirectionConfig = async (gate_name, direction_mode) => {
+  const res = await api.post('/admin/gate-direction-config/update', { gate_name, direction_mode });
+  return res.data;
+};
+
 export const getL2MatrixRules = async () => {
   const res = await api.get('/admin/l2-matrix-rules');
   return res.data;
@@ -175,6 +185,11 @@ export const getDepartments = async () => {
 
 export const getAdminUsers = async () => {
   const res = await api.get('/admin/users');
+  return res.data;
+};
+
+export const updateAdminUser = async (id, data) => {
+  const res = await api.put(`/admin/users/${id}`, data);
   return res.data;
 };
 

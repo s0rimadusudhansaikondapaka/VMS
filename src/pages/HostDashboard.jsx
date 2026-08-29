@@ -124,6 +124,24 @@ export default function HostDashboard({ user }) {
   const isUserResident = user?.role === 'RESIDENT' || user?.residency_status === 'Resident' || user?.role === 'ADMIN';
   const isUserEmployee = user?.role === 'EMPLOYEE' || user?.role === 'HOD' || user?.residency_status === 'Employee' || user?.role === 'ADMIN';
 
+  // Personal Host Gate Pass & QR Code calculation for bottom of screen
+  const hostPassCode = user?.pass_code || (
+    user?.role === 'RESIDENT' ? `RESIDENT-${1000 + (parseInt(user?.id) || 1)}` :
+    user?.role === 'EMPLOYEE' || user?.role === 'HOD' ? `EMP-${1000 + (parseInt(user?.id) || 1)}` :
+    `HOST-${1000 + (parseInt(user?.id) || 1)}`
+  );
+
+  const hostQrPayload = JSON.stringify({
+    passCode: hostPassCode,
+    userId: user?.id,
+    name: user?.name,
+    role: user?.role,
+    residency: user?.residency_status || 'RESIDENT',
+    type: 'HOST_PERMANENT_PASS'
+  });
+
+  const hostQrImageUrl = `https://api.qrserver.com/v1/create-qr-code/?size=250x250&data=${encodeURIComponent(hostQrPayload)}`;
+
   // Referrer Review & Approval Modal State (Screenshot 2)
   const [reviewModalData, setReviewModalData] = useState(null);
   const [reviewVisitType, setReviewVisitType] = useState('HOME');
@@ -1080,6 +1098,101 @@ export default function HostDashboard({ user }) {
             </table>
           </div>
         )}
+      </div>
+
+      {/* Personal Host Gate Pass & QR Code Section (Bottom of Screen) */}
+      <div className="card" style={{ marginTop: '1.5rem', border: '2px solid #7c3aed', background: 'linear-gradient(to bottom, #ffffff, #faf5ff)', borderRadius: '12px', padding: '1.5rem' }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '1rem', borderBottom: '1px solid #e9d5ff', paddingBottom: '1rem', marginBottom: '1.2rem' }}>
+          <div>
+            <h3 style={{ margin: 0, color: '#4c1d95', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+              <QrCode size={22} color="#7c3aed" /> My Personal Host Gate Pass & QR Code
+            </h3>
+            <p style={{ margin: '0.2rem 0 0 0', fontSize: '0.85rem', color: '#6b21a8' }}>
+              Your active permanent digital pass for Sathya Sai Grama campus entry and gate verification.
+            </p>
+          </div>
+          <span style={{ background: '#7c3aed', color: 'white', padding: '0.35rem 0.8rem', borderRadius: '9999px', fontSize: '0.78rem', fontWeight: 'bold' }}>
+            ✓ ACTIVE PERMANENT HOST PASS
+          </span>
+        </div>
+
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: '1.5rem', alignItems: 'center' }}>
+          {/* Left Side: Host Identity Card Details */}
+          <div style={{ background: 'white', padding: '1.2rem', borderRadius: '10px', border: '1px solid #e9d5ff', boxShadow: '0 2px 4px rgba(0,0,0,0.02)' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '0.8rem', marginBottom: '1rem' }}>
+              <div style={{ width: '48px', height: '48px', borderRadius: '50%', background: '#f3e8ff', color: '#7c3aed', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 'bold', fontSize: '1.2rem' }}>
+                {user?.name ? user.name.charAt(0).toUpperCase() : 'H'}
+              </div>
+              <div>
+                <h4 style={{ margin: 0, color: '#1e293b', fontSize: '1.1rem' }}>{user?.name || 'Host User'}</h4>
+                <span style={{ fontSize: '0.8rem', color: '#64748b', fontWeight: '500' }}>
+                  {user?.role || 'RESIDENT'} • {user?.residency_status || 'Resident'}
+                </span>
+              </div>
+            </div>
+
+            <table style={{ width: '100%', fontSize: '0.85rem', borderCollapse: 'collapse' }}>
+              <tbody>
+                <tr>
+                  <td style={{ padding: '0.4rem 0', color: '#64748b', fontWeight: '600' }}>Permanent Passcode:</td>
+                  <td style={{ padding: '0.4rem 0', fontWeight: '800', color: '#7c3aed', fontSize: '1rem', textAlign: 'right' }}>{hostPassCode}</td>
+                </tr>
+                <tr>
+                  <td style={{ padding: '0.4rem 0', color: '#64748b', fontWeight: '600' }}>Department / Residence:</td>
+                  <td style={{ padding: '0.4rem 0', color: '#334155', fontWeight: '500', textAlign: 'right' }}>{user?.department_name || user?.flat_info || 'Sathya Sai Grama'}</td>
+                </tr>
+                <tr>
+                  <td style={{ padding: '0.4rem 0', color: '#64748b', fontWeight: '600' }}>Registered Mobile:</td>
+                  <td style={{ padding: '0.4rem 0', color: '#334155', fontWeight: '500', textAlign: 'right' }}>{user?.phone || 'Registered Phone'}</td>
+                </tr>
+                <tr>
+                  <td style={{ padding: '0.4rem 0', color: '#64748b', fontWeight: '600' }}>Pass Validity:</td>
+                  <td style={{ padding: '0.4rem 0', color: '#057a55', fontWeight: 'bold', textAlign: 'right' }}>Unlimited / Lifetime</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+
+          {/* Right Side: QR Code Image & Actions */}
+          <div style={{ textAlign: 'center', background: 'white', padding: '1.2rem', borderRadius: '10px', border: '1px solid #e9d5ff' }}>
+            <img
+              src={hostQrImageUrl}
+              alt="Personal Host QR Code Pass"
+              style={{ width: '180px', height: '180px', margin: '0 auto 0.8rem auto', display: 'block', borderRadius: '8px', border: '2px solid #7c3aed', padding: '4px', background: 'white' }}
+            />
+            <span style={{ fontSize: '0.78rem', color: '#6b21a8', fontWeight: 'bold', display: 'block', marginBottom: '0.8rem' }}>
+              SCAN AT GATE TERMINAL FOR INGRESS / EGRESS
+            </span>
+
+            <div style={{ display: 'flex', gap: '0.5rem', justifyContent: 'center', flexWrap: 'wrap' }}>
+              <a
+                href={`https://wa.me/?text=${encodeURIComponent(`Jay Sai Ram! Here is my official Sathya Sai Grama Personal Host Gate Pass:\n\nHost: ${user?.name}\nRole: ${user?.role}\nPasscode: ${hostPassCode}\nStatus: Active Permanent Pass`)}`}
+                target="_blank"
+                rel="noreferrer"
+                style={{ textDecoration: 'none' }}
+              >
+                <button type="button" style={{ background: '#25d366', borderColor: '#25d366', color: 'white', fontWeight: 'bold', fontSize: '0.8rem', padding: '0.45rem 0.8rem' }}>
+                  📲 Share WhatsApp
+                </button>
+              </a>
+
+              <button
+                type="button"
+                onClick={() => {
+                  const link = document.createElement('a');
+                  link.href = hostQrImageUrl;
+                  link.download = `HostPass_${hostPassCode}.png`;
+                  document.body.appendChild(link);
+                  link.click();
+                  document.body.removeChild(link);
+                }}
+                style={{ background: '#7c3aed', borderColor: '#7c3aed', color: 'white', fontWeight: 'bold', fontSize: '0.8rem', padding: '0.45rem 0.8rem' }}
+              >
+                ⬇️ Download QR
+              </button>
+            </div>
+          </div>
+        </div>
       </div>
 
       {/* Share Guest Invite Link Modal */}

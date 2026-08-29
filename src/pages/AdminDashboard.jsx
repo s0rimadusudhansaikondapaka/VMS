@@ -1,19 +1,31 @@
-import React, { useState, useEffect } from 'react';
-import { getReportData, adminBypassApprove, adminEmergencyPass, toggleL2Approval, getSystemSettings, getAdminUsers, getGateCategoryRules, toggleGateCategoryRule, getL2MatrixRules, updateL2MatrixRule, getAllPendingL2Approvals, processL2ApprovalByAdmin } from '../services/api';
+import { getReportData, adminBypassApprove, adminEmergencyPass, toggleL2Approval, getSystemSettings, getAdminUsers, getGateCategoryRules, toggleGateCategoryRule, getL2MatrixRules, updateL2MatrixRule, getAllPendingL2Approvals, processL2ApprovalByAdmin, getGateDirectionConfig, updateGateDirectionConfig, getDepartments, updateAdminUser } from '../services/api';
 import DashboardHeader from '../components/DashboardHeader';
 import UserAddWizardModal from '../components/UserAddWizardModal';
 import BulkUploadModal from '../components/BulkUploadModal';
 import { useTablePagination, PaginationControls } from '../components/TablePagination';
-import { KeyRound, Zap, ShieldAlert, CheckCircle, Lock, Unlock, AlertTriangle, FileSpreadsheet, UserPlus, Users, UploadCloud, Shield, Check, X } from 'lucide-react';
+import { KeyRound, Zap, ShieldAlert, CheckCircle, Lock, Unlock, AlertTriangle, FileSpreadsheet, UserPlus, Users, UploadCloud, Shield, Check, X, Sliders, ArrowRightLeft, Pencil } from 'lucide-react';
 
 export default function AdminDashboard({ user }) {
   const [registrations, setRegistrations] = useState([]);
   const [auditLogs, setAuditLogs] = useState([]);
   const [usersList, setUsersList] = useState([]);
   const [gateRules, setGateRules] = useState([]);
+  const [gateDirections, setGateDirections] = useState([]);
   const [l2Enabled, setL2Enabled] = useState(true);
   const [msg, setMsg] = useState('');
   const [error, setError] = useState('');
+
+  // Edit User Details & Status Modal State (Super Admin)
+  const [departments, setDepartments] = useState([]);
+  const [editUserModalData, setEditUserModalData] = useState(null);
+  const [editName, setEditName] = useState('');
+  const [editEmail, setEditEmail] = useState('');
+  const [editPhone, setEditPhone] = useState('');
+  const [editRole, setEditRole] = useState('RESIDENT');
+  const [editResidency, setEditResidency] = useState('RESIDENT');
+  const [editStatus, setEditStatus] = useState('ACTIVE');
+  const [editFlatInfo, setEditFlatInfo] = useState('');
+  const [editDeptId, setEditDeptId] = useState('');
 
   const {
     searchTerm: userSearch,
@@ -73,6 +85,7 @@ export default function AdminDashboard({ user }) {
     fetchData();
     fetchUsers();
     fetchGateRules();
+    fetchGateDirections();
     fetchL2MatrixRules();
     fetchPendingL2();
 
@@ -81,6 +94,7 @@ export default function AdminDashboard({ user }) {
       fetchData();
       fetchUsers();
       fetchGateRules();
+      fetchGateDirections();
       fetchL2MatrixRules();
       fetchPendingL2();
     };
@@ -119,6 +133,74 @@ export default function AdminDashboard({ user }) {
       if (res.success) setGateRules(res.rules);
     } catch (err) {
       console.error('Failed to fetch gate rules:', err);
+    }
+  };
+
+  const fetchDepartmentsList = async () => {
+    try {
+      const res = await getDepartments();
+      if (res.success) setDepartments(res.departments || []);
+    } catch (err) {
+      console.error('Failed to fetch departments:', err);
+    }
+  };
+
+  const openEditUserModal = (u) => {
+    setEditUserModalData(u);
+    setEditName(u.name || '');
+    setEditEmail(u.email || '');
+    setEditPhone(u.phone || '');
+    setEditRole(u.role || 'RESIDENT');
+    setEditResidency(u.residency_status || 'RESIDENT');
+    setEditStatus(u.registration_status || 'ACTIVE');
+    setEditFlatInfo(u.flat_info || u.address || '');
+    setEditDeptId(u.department_id ? String(u.department_id) : '');
+    fetchDepartmentsList();
+  };
+
+  const handleSaveUserEdit = async (e) => {
+    e.preventDefault();
+    if (!editUserModalData) return;
+    try {
+      const res = await updateAdminUser(editUserModalData.id, {
+        name: editName,
+        email: editEmail,
+        phone: editPhone,
+        role: editRole,
+        residency_status: editResidency,
+        registration_status: editStatus,
+        flat_info: editFlatInfo,
+        department_id: editDeptId ? parseInt(editDeptId) : null,
+      });
+
+      if (res.success) {
+        alert(res.message);
+        setEditUserModalData(null);
+        fetchUsers();
+      }
+    } catch (err) {
+      alert(err.response?.data?.message || 'Failed to update user details.');
+    }
+  };
+
+  const fetchGateDirections = async () => {
+    try {
+      const res = await getGateDirectionConfig();
+      if (res.success) setGateDirections(res.configs);
+    } catch (err) {
+      console.error('Failed to fetch gate direction configs:', err);
+    }
+  };
+
+  const handleUpdateGateDirection = async (gateName, newMode) => {
+    try {
+      const res = await updateGateDirectionConfig(gateName, newMode);
+      if (res.success) {
+        setMsg(res.message);
+        fetchGateDirections();
+      }
+    } catch (err) {
+      alert(err.response?.data?.message || 'Failed to update gate direction state.');
     }
   };
 
@@ -337,6 +419,79 @@ export default function AdminDashboard({ user }) {
         </div>
       </div>
 
+      {/* Gate In/Out Direction State Management Console (Super Admin) */}
+      <div className="card" style={{ marginBottom: '1.5rem', borderTop: '4px solid #16a34a' }}>
+        <div style={{ marginBottom: '0.8rem' }}>
+          <h3 style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', color: '#15803d', margin: 0 }}>
+            <Sliders size={22} color="#16a34a" /> Gate In/Out Direction State Management Console
+          </h3>
+          <p style={{ fontSize: '0.85rem', color: '#64748b', margin: '0.2rem 0 0 0' }}>
+            Super Admin can configure active movement direction states for each campus entry gate (Two-Way IN & OUT, INGRESS ONLY, EGRESS ONLY, or CLOSED).
+          </p>
+        </div>
+
+        <div style={{ overflowX: 'auto' }}>
+          <table role="grid" style={{ fontSize: '0.85rem' }}>
+            <thead>
+              <tr style={{ background: '#f0fdf4' }}>
+                <th>Gate Identifier</th>
+                <th>Current State Mode</th>
+                <th>Configured Traffic Direction</th>
+                <th>Super Admin Control Action</th>
+              </tr>
+            </thead>
+            <tbody>
+              {['NORTH_GATE', 'SOUTH_GATE', 'EAST_GATE', 'WEST_GATE', 'STAFF_GATE'].map((gate) => {
+                const config = gateDirections.find((c) => c.gate_name === gate);
+                const currentMode = config ? config.direction_mode : 'BOTH';
+
+                return (
+                  <tr key={gate}>
+                    <td>
+                      <strong>{gate.replace('_', ' ')}</strong>
+                    </td>
+                    <td>
+                      <span style={{
+                        padding: '0.25rem 0.65rem',
+                        borderRadius: '20px',
+                        fontSize: '0.75rem',
+                        fontWeight: 'bold',
+                        background: currentMode === 'BOTH' ? '#dcfce7' : currentMode === 'IN_ONLY' ? '#dbeafe' : currentMode === 'OUT_ONLY' ? '#ffedd5' : '#fee2e2',
+                        color: currentMode === 'BOTH' ? '#15803d' : currentMode === 'IN_ONLY' ? '#1d4ed8' : currentMode === 'OUT_ONLY' ? '#c2410c' : '#b91c1c',
+                        border: `1px solid ${currentMode === 'BOTH' ? '#86efac' : currentMode === 'IN_ONLY' ? '#93c5fd' : currentMode === 'OUT_ONLY' ? '#fdba74' : '#fca5a5'}`
+                      }}>
+                        {currentMode === 'BOTH' && '🟢 IN & OUT (Two-Way)'}
+                        {currentMode === 'IN_ONLY' && '🔵 INGRESS ONLY (Entry)'}
+                        {currentMode === 'OUT_ONLY' && '🟠 EGRESS ONLY (Exit)'}
+                        {currentMode === 'CLOSED' && '🔴 GATE CLOSED'}
+                      </span>
+                    </td>
+                    <td style={{ fontSize: '0.8rem', color: '#475569' }}>
+                      {currentMode === 'BOTH' && 'Allows both Entry (Check-In) and Exit (Check-Out)'}
+                      {currentMode === 'IN_ONLY' && 'Allows Entry only. Exit movements strictly blocked.'}
+                      {currentMode === 'OUT_ONLY' && 'Allows Exit only. Entry movements strictly blocked.'}
+                      {currentMode === 'CLOSED' && 'Gate completely locked. All movements blocked.'}
+                    </td>
+                    <td>
+                      <select
+                        value={currentMode}
+                        onChange={(e) => handleUpdateGateDirection(gate, e.target.value)}
+                        style={{ fontSize: '0.8rem', padding: '0.35rem 0.6rem', margin: 0, fontWeight: 'bold', borderRadius: '6px' }}
+                      >
+                        <option value="BOTH">🟢 BOTH (In & Out Allowed)</option>
+                        <option value="IN_ONLY">🔵 IN ONLY (Ingress Gate)</option>
+                        <option value="OUT_ONLY">🟠 OUT ONLY (Egress Gate)</option>
+                        <option value="CLOSED">🔴 CLOSED (Gate Locked)</option>
+                      </select>
+                    </td>
+                  </tr>
+                );
+              })}
+            </tbody>
+          </table>
+        </div>
+      </div>
+
       {/* Gatewise Visitor Category Access Matrix (Super Admin) */}
       <div className="card" style={{ marginBottom: '1.5rem', borderTop: '4px solid #0284c7' }}>
         <div style={{ marginBottom: '0.8rem' }}>
@@ -521,12 +676,13 @@ export default function AdminDashboard({ user }) {
               <th>Ashram Address / Location</th>
               <th>Department</th>
               <th>Status</th>
+              <th>Actions</th>
             </tr>
           </thead>
           <tbody>
             {paginatedUsers.length === 0 ? (
               <tr>
-                <td colSpan="9" style={{ textAlign: 'center', color: '#64748b' }}>No users found.</td>
+                <td colSpan="10" style={{ textAlign: 'center', color: '#64748b' }}>No users found.</td>
               </tr>
             ) : (
               paginatedUsers.map((u) => (
@@ -544,9 +700,26 @@ export default function AdminDashboard({ user }) {
                   <td style={{ fontSize: '0.8rem', color: '#475569' }}>{u.address || u.flat_info || 'Ashram Campus'}</td>
                   <td>{u.department_name || 'N/A'}</td>
                   <td>
-                    <span style={{ color: u.registration_status === 'ACTIVE' ? '#057a55' : '#dc2626', fontWeight: 'bold', fontSize: '0.8rem' }}>
-                      ● {u.registration_status}
+                    <span style={{
+                      color: u.registration_status === 'ACTIVE' ? '#057a55' : u.registration_status === 'PENDING_APPROVAL' ? '#d97706' : '#dc2626',
+                      fontWeight: 'bold',
+                      fontSize: '0.78rem',
+                      background: u.registration_status === 'ACTIVE' ? '#dcfce7' : u.registration_status === 'PENDING_APPROVAL' ? '#fef3c7' : '#fee2e2',
+                      padding: '0.2rem 0.55rem',
+                      borderRadius: '12px',
+                      border: `1px solid ${u.registration_status === 'ACTIVE' ? '#86efac' : u.registration_status === 'PENDING_APPROVAL' ? '#fde68a' : '#fca5a5'}`
+                    }}>
+                      ● {u.registration_status || 'ACTIVE'}
                     </span>
+                  </td>
+                  <td>
+                    <button
+                      type="button"
+                      onClick={() => openEditUserModal(u)}
+                      style={{ fontSize: '0.75rem', padding: '0.25rem 0.65rem', background: '#2563eb', borderColor: '#2563eb', color: 'white', fontWeight: 'bold', display: 'inline-flex', alignItems: 'center', gap: '0.3rem' }}
+                    >
+                      <Pencil size={13} /> Edit User & Status
+                    </button>
                   </td>
                 </tr>
               ))
@@ -818,6 +991,161 @@ export default function AdminDashboard({ user }) {
           </table>
         </div>
       </div>
+
+      {/* Edit User Details & Registration Status Modal (Super Admin) */}
+      {editUserModalData && (
+        <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, background: 'rgba(0,0,0,0.6)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 9999, padding: '1rem' }}>
+          <div style={{ background: '#ffffff', padding: '1.8rem', borderRadius: '12px', maxWidth: '650px', width: '100%', maxHeight: '90vh', overflowY: 'auto', boxShadow: '0 20px 25px -5px rgba(0,0,0,0.3)' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.2rem', borderBottom: '2px solid #e2e8f0', paddingBottom: '0.8rem' }}>
+              <h3 style={{ margin: 0, color: '#1e293b', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                <Pencil size={20} color="#2563eb" /> Edit User Profile & Status (User #{editUserModalData.id})
+              </h3>
+              <button type="button" onClick={() => setEditUserModalData(null)} style={{ background: 'transparent', border: 'none', fontSize: '1.2rem', cursor: 'pointer', color: '#64748b' }}>
+                ✕
+              </button>
+            </div>
+
+            <form onSubmit={handleSaveUserEdit}>
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem', marginBottom: '1rem' }}>
+                <div>
+                  <label style={{ fontSize: '0.85rem', fontWeight: 'bold', color: '#334155' }}>
+                    Full Name *
+                    <input
+                      type="text"
+                      required
+                      value={editName}
+                      onChange={(e) => setEditName(e.target.value)}
+                      style={{ marginTop: '0.3rem' }}
+                    />
+                  </label>
+                </div>
+
+                <div>
+                  <label style={{ fontSize: '0.85rem', fontWeight: 'bold', color: '#334155' }}>
+                    Email Address *
+                    <input
+                      type="email"
+                      required
+                      value={editEmail}
+                      onChange={(e) => setEditEmail(e.target.value)}
+                      style={{ marginTop: '0.3rem' }}
+                    />
+                  </label>
+                </div>
+
+                <div>
+                  <label style={{ fontSize: '0.85rem', fontWeight: 'bold', color: '#334155' }}>
+                    Phone Number
+                    <input
+                      type="text"
+                      value={editPhone}
+                      onChange={(e) => setEditPhone(e.target.value)}
+                      style={{ marginTop: '0.3rem' }}
+                    />
+                  </label>
+                </div>
+
+                <div>
+                  <label style={{ fontSize: '0.85rem', fontWeight: 'bold', color: '#334155' }}>
+                    System Role *
+                    <select
+                      value={editRole}
+                      onChange={(e) => setEditRole(e.target.value)}
+                      style={{ marginTop: '0.3rem', fontWeight: 'bold' }}
+                    >
+                      <option value="RESIDENT">RESIDENT (Ashram Resident Host)</option>
+                      <option value="EMPLOYEE">EMPLOYEE (Ashram Staff Host)</option>
+                      <option value="HOD">HOD (Department Head)</option>
+                      <option value="PRO">PRO (Public Relations Officer)</option>
+                      <option value="GUARD">GUARD (Security Guard)</option>
+                      <option value="SUPERVISOR">SUPERVISOR (Gate Supervisor)</option>
+                      <option value="SECURITY_HEAD">SECURITY_HEAD (Security Chief)</option>
+                      <option value="ADMIN">ADMIN (Super Administrator)</option>
+                    </select>
+                  </label>
+                </div>
+
+                <div>
+                  <label style={{ fontSize: '0.85rem', fontWeight: 'bold', color: '#334155' }}>
+                    Residency Category *
+                    <select
+                      value={editResidency}
+                      onChange={(e) => setEditResidency(e.target.value)}
+                      style={{ marginTop: '0.3rem', fontWeight: 'bold' }}
+                    >
+                      <option value="RESIDENT">RESIDENT (Ashram Resident)</option>
+                      <option value="NON_RESIDENT">NON_RESIDENT (Staff Commuter / External)</option>
+                    </select>
+                  </label>
+                </div>
+
+                <div>
+                  <label style={{ fontSize: '0.85rem', fontWeight: 'bold', color: '#7c3aed' }}>
+                    Account Registration Status *
+                    <select
+                      value={editStatus}
+                      onChange={(e) => setEditStatus(e.target.value)}
+                      style={{ marginTop: '0.3rem', fontWeight: 'bold', border: '2px solid #7c3aed', background: '#faf5ff', color: '#4c1d95' }}
+                    >
+                      <option value="ACTIVE">🟢 ACTIVE (Full Access & Login Permitted)</option>
+                      <option value="PENDING_APPROVAL">🟡 PENDING_APPROVAL (Awaiting Admin Review)</option>
+                      <option value="REJECTED">🔴 REJECTED (Registration Denied)</option>
+                      <option value="SUSPENDED">⛔ SUSPENDED (Login & Access Revoked)</option>
+                    </select>
+                  </label>
+                </div>
+
+                <div>
+                  <label style={{ fontSize: '0.85rem', fontWeight: 'bold', color: '#334155' }}>
+                    Flat Info / Residence Location
+                    <input
+                      type="text"
+                      placeholder="e.g. Anand Bhavan Flat 302"
+                      value={editFlatInfo}
+                      onChange={(e) => setEditFlatInfo(e.target.value)}
+                      style={{ marginTop: '0.3rem' }}
+                    />
+                  </label>
+                </div>
+
+                <div>
+                  <label style={{ fontSize: '0.85rem', fontWeight: 'bold', color: '#334155' }}>
+                    Assigned Department
+                    <select
+                      value={editDeptId}
+                      onChange={(e) => setEditDeptId(e.target.value)}
+                      style={{ marginTop: '0.3rem' }}
+                    >
+                      <option value="">-- No Specific Department --</option>
+                      {departments.map((d) => (
+                        <option key={d.id} value={d.id}>
+                          {d.name} ({d.code || 'DEPT'})
+                        </option>
+                      ))}
+                    </select>
+                  </label>
+                </div>
+              </div>
+
+              <div style={{ display: 'flex', gap: '0.8rem', justifyContent: 'flex-end', marginTop: '1.5rem', borderTop: '1px solid #e2e8f0', paddingTop: '1rem' }}>
+                <button
+                  type="button"
+                  onClick={() => setEditUserModalData(null)}
+                  style={{ background: '#94a3b8', borderColor: '#94a3b8', color: 'white', fontWeight: 'bold' }}
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  style={{ background: '#2563eb', borderColor: '#2563eb', color: 'white', fontWeight: 'bold' }}
+                >
+                  💾 Save Profile & Status Changes
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
