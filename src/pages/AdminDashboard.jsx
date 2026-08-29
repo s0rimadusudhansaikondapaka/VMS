@@ -226,9 +226,12 @@ export default function AdminDashboard({ user }) {
     }
   };
 
-  const handleToggleGateRule = async (gateName, catName, currentAllowed) => {
+  const handleToggleGateRule = async (gateName, catName, modeOrAllowed) => {
     try {
-      const res = await toggleGateCategoryRule(gateName, catName, !currentAllowed);
+      const payload = typeof modeOrAllowed === 'string'
+        ? { direction_mode: modeOrAllowed }
+        : { is_allowed: !modeOrAllowed };
+      const res = await toggleGateCategoryRule(gateName, catName, payload);
       if (res.success) {
         setMsg(res.message);
         fetchGateRules();
@@ -493,14 +496,14 @@ export default function AdminDashboard({ user }) {
         </div>
       </div>
 
-      {/* Gatewise Visitor Category Access Matrix (Super Admin) */}
+      {/* Gatewise Visitor Category Access Matrix (Super Admin IN & OUT Controls) */}
       <div className="card" style={{ marginBottom: '1.5rem', borderTop: '4px solid #0284c7' }}>
         <div style={{ marginBottom: '0.8rem' }}>
           <h3 style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', color: '#0369a1', margin: 0 }}>
-            <Shield size={22} color="#0284c7" /> Gatewise Visitor Category Access Matrix
+            <Shield size={22} color="#0284c7" /> Gatewise Visitor Category Access Matrix (IN & OUT Controls)
           </h3>
           <p style={{ fontSize: '0.85rem', color: '#64748b', margin: '0.2rem 0 0 0' }}>
-            Super Admin can allow or disable specific visitor categories at each gate. Guards scanning passes at gates will automatically block ingress for disabled categories.
+            Super Admin can configure granular IN (Ingress Check-In) and OUT (Egress Check-Out) movement controls for each visitor category at every gate.
           </p>
         </div>
 
@@ -510,7 +513,7 @@ export default function AdminDashboard({ user }) {
               <tr style={{ background: '#f0f9ff' }}>
                 <th style={{ minWidth: '150px' }}>Visitor Category</th>
                 {['NORTH_GATE', 'SOUTH_GATE', 'EAST_GATE', 'WEST_GATE', 'STAFF_GATE'].map((gate) => (
-                  <th key={gate} style={{ textAlign: 'center', minWidth: '120px' }}>
+                  <th key={gate} style={{ textAlign: 'center', minWidth: '145px' }}>
                     {gate.replace('_', ' ')}
                   </th>
                 ))}
@@ -522,31 +525,32 @@ export default function AdminDashboard({ user }) {
                   <td><strong>{cat}</strong></td>
                   {['NORTH_GATE', 'SOUTH_GATE', 'EAST_GATE', 'WEST_GATE', 'STAFF_GATE'].map((gate) => {
                     const rule = gateRules.find((r) => r.gate_name === gate && r.visitor_category === cat);
-                    const isAllowed = rule ? rule.is_allowed : true;
+                    const currentMode = rule ? (rule.direction_mode || (rule.is_allowed ? 'BOTH' : 'DISABLED')) : 'BOTH';
+
                     return (
-                      <td key={gate} style={{ textAlign: 'center' }}>
-                        <button
-                          type="button"
-                          onClick={() => handleToggleGateRule(gate, cat, isAllowed)}
+                      <td key={gate} style={{ textAlign: 'center', padding: '0.4rem 0.2rem' }}>
+                        <select
+                          value={currentMode}
+                          onChange={(e) => handleToggleGateRule(gate, cat, e.target.value)}
                           style={{
-                            fontSize: '0.72rem',
-                            padding: '0.25rem 0.55rem',
+                            fontSize: '0.75rem',
+                            padding: '0.3rem 0.45rem',
                             margin: 0,
-                            borderRadius: '20px',
+                            borderRadius: '16px',
                             fontWeight: 'bold',
                             cursor: 'pointer',
-                            background: isAllowed ? '#dcfce7' : '#fee2e2',
-                            color: isAllowed ? '#15803d' : '#b91c1c',
-                            border: `1px solid ${isAllowed ? '#86efac' : '#fca5a5'}`,
-                            display: 'inline-flex',
-                            alignItems: 'center',
-                            gap: '0.3rem',
+                            textAlign: 'center',
+                            background: currentMode === 'BOTH' ? '#dcfce7' : currentMode === 'IN_ONLY' ? '#dbeafe' : currentMode === 'OUT_ONLY' ? '#ffedd5' : '#fee2e2',
+                            color: currentMode === 'BOTH' ? '#15803d' : currentMode === 'IN_ONLY' ? '#1d4ed8' : currentMode === 'OUT_ONLY' ? '#c2410c' : '#b91c1c',
+                            border: `1px solid ${currentMode === 'BOTH' ? '#86efac' : currentMode === 'IN_ONLY' ? '#93c5fd' : currentMode === 'OUT_ONLY' ? '#fdba74' : '#fca5a5'}`
                           }}
-                          title={`Click to ${isAllowed ? 'Disable' : 'Allow'} ${cat} at ${gate}`}
+                          title={`Configure IN/OUT direction controls for ${cat} at ${gate}`}
                         >
-                          {isAllowed ? <Check size={12} /> : <X size={12} />}
-                          {isAllowed ? 'ALLOWED' : 'DISABLED'}
-                        </button>
+                          <option value="BOTH">🟢 BOTH (In & Out)</option>
+                          <option value="IN_ONLY">🔵 IN ONLY (Entry)</option>
+                          <option value="OUT_ONLY">🟠 OUT ONLY (Exit)</option>
+                          <option value="DISABLED">🔴 DISABLED (Block)</option>
+                        </select>
                       </td>
                     );
                   })}

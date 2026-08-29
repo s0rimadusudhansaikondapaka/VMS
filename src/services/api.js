@@ -68,8 +68,11 @@ export const getGatewiseStatsAndSelfRegistered = async (gateName) => {
   return res.data;
 };
 
-export const toggleGateCategoryRule = async (gate_name, visitor_category, is_allowed) => {
-  const res = await api.post('/admin/gate-rules/toggle', { gate_name, visitor_category, is_allowed });
+export const toggleGateCategoryRule = async (gate_name, visitor_category, payload) => {
+  const body = typeof payload === 'object'
+    ? { gate_name, visitor_category, ...payload }
+    : { gate_name, visitor_category, is_allowed: payload };
+  const res = await api.post('/admin/gate-rules/toggle', body);
   return res.data;
 };
 
