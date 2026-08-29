@@ -902,9 +902,27 @@ export default function GuardGateTerminal({ user }) {
 
               <p style={{ margin: '0.4rem 0' }}><strong>Purpose:</strong> {passData.purpose}</p>
               <p style={{ margin: '0.4rem 0' }}><strong>Designated Host:</strong> {passData.host_name || 'N/A'}</p>
-              <p style={{ margin: '0.4rem 0', fontSize: '0.85rem', color: '#64748b' }}>
-                <strong>Host Phone (Masked):</strong> {passData.host_phone_masked}
-              </p>
+
+              {/* Primary Contact Person Attribution Card */}
+              <div style={{ marginTop: '0.8rem', background: '#eff6ff', border: '1px solid #bfdbfe', borderRadius: '8px', padding: '0.65rem 0.85rem' }}>
+                <h4 style={{ margin: '0 0 0.3rem 0', color: '#1e40af', fontSize: '0.85rem', display: 'flex', alignItems: 'center', gap: '0.35rem' }}>
+                  <Users size={15} color="#2563eb" /> Primary Contact Person & Resident Info
+                </h4>
+                <p style={{ margin: '0.2rem 0', fontSize: '0.82rem', color: '#1e293b' }}>
+                  <strong>Resident Contact Person:</strong> {passData.host_name || 'N/A'} {passData.host_role ? `(${passData.host_role})` : ''}
+                </p>
+                {passData.family_relationship && (
+                  <p style={{ margin: '0.2rem 0', fontSize: '0.82rem', color: '#7c3aed', fontWeight: 'bold' }}>
+                    🔗 Relationship to Resident: {passData.family_relationship}
+                  </p>
+                )}
+                <p style={{ margin: '0.2rem 0', fontSize: '0.82rem', color: '#1e293b' }}>
+                  <strong>Residence / Flat Location:</strong> {passData.host_flat_info || 'Ashram Campus'}
+                </p>
+                <p style={{ margin: '0.2rem 0', fontSize: '0.82rem', color: '#1e293b' }}>
+                  <strong>Resident Mobile (Masked):</strong> {passData.host_phone_masked || 'N/A'}
+                </p>
+              </div>
             </div>
 
             {/* Editable Fields & Vehicle Selection */}
@@ -978,7 +996,7 @@ export default function GuardGateTerminal({ user }) {
           <div style={{ display: 'flex', gap: '1rem', marginTop: '1.5rem' }}>
             <button
               onClick={() => handleMovement('IN')}
-              disabled={passData.status === 'INSIDE_CAMPUS' || passData.is_current_gate_allowed === false}
+              disabled={passData.is_current_gate_allowed === false || passData.arrival_status === 'TOO_EARLY'}
               className="gate-btn-in"
               data-tooltip={passData.is_current_gate_allowed === false ? `Category ${passData.visitor_category} disabled at ${activeGate}` : 'Record visitor entry IN at gate'}
               style={{
@@ -987,39 +1005,41 @@ export default function GuardGateTerminal({ user }) {
                 alignItems: 'center',
                 justifyContent: 'center',
                 gap: '0.5rem',
-                opacity: (passData.status === 'INSIDE_CAMPUS' || passData.is_current_gate_allowed === false) ? 0.55 : 1,
-                cursor: (passData.status === 'INSIDE_CAMPUS' || passData.is_current_gate_allowed === false) ? 'not-allowed' : 'pointer',
-                background: (passData.status === 'INSIDE_CAMPUS' || passData.is_current_gate_allowed === false) ? '#64748b' : undefined,
-                borderColor: (passData.status === 'INSIDE_CAMPUS' || passData.is_current_gate_allowed === false) ? '#64748b' : undefined,
+                opacity: (passData.is_current_gate_allowed === false || passData.arrival_status === 'TOO_EARLY') ? 0.55 : 1,
+                cursor: (passData.is_current_gate_allowed === false || passData.arrival_status === 'TOO_EARLY') ? 'not-allowed' : 'pointer',
+                background: (passData.is_current_gate_allowed === false || passData.arrival_status === 'TOO_EARLY') ? '#64748b' : undefined,
+                borderColor: (passData.is_current_gate_allowed === false || passData.arrival_status === 'TOO_EARLY') ? '#64748b' : undefined,
               }}
             >
               <LogIn size={20} />
               {passData.is_current_gate_allowed === false 
                 ? '⛔ Restricted at this Gate' 
+                : passData.arrival_status === 'TOO_EARLY'
+                ? '⛔ Entry Window Not Open'
                 : passData.status === 'INSIDE_CAMPUS' 
-                ? '✓ Already Inside Campus (IN)' 
+                ? '➔ Record Entry IN (Multi-Entry Active)' 
                 : passData.status === 'CHECKED_OUT' 
                 ? '➔ Re-Entry IN (Multi-Entry Active)' 
-                : 'Record Ingress (IN)'}
+                : '➔ Record Entry IN'}
             </button>
             <button
               onClick={() => handleMovement('OUT')}
-              disabled={passData.status === 'CHECKED_OUT'}
+              disabled={passData.is_current_gate_allowed === false}
               className="gate-btn-out"
               style={{
                 flex: 1,
                 display: 'flex',
                 alignItems: 'center',
-                justify: 'center',
+                justifyContent: 'center',
                 gap: '0.5rem',
-                opacity: passData.status === 'CHECKED_OUT' ? 0.55 : 1,
-                cursor: passData.status === 'CHECKED_OUT' ? 'not-allowed' : 'pointer',
-                background: passData.status === 'CHECKED_OUT' ? '#475569' : undefined,
-                borderColor: passData.status === 'CHECKED_OUT' ? '#475569' : undefined,
+                opacity: passData.is_current_gate_allowed === false ? 0.55 : 1,
+                cursor: passData.is_current_gate_allowed === false ? 'not-allowed' : 'pointer',
+                background: passData.is_current_gate_allowed === false ? '#475569' : undefined,
+                borderColor: passData.is_current_gate_allowed === false ? '#475569' : undefined,
               }}
             >
               <LogOut size={20} />
-              {passData.status === 'CHECKED_OUT' ? '✓ Already Checked OUT' : 'Record Egress (OUT)'}
+              {passData.status === 'CHECKED_OUT' ? '⬅ Record Exit OUT (Multi-Exit Active)' : '⬅ Record Egress (OUT)'}
             </button>
           </div>
 

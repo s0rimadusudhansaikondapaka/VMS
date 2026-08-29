@@ -117,6 +117,7 @@ export default function HostDashboard({ user }) {
 
   const [validFrom, setValidFrom] = useState(getDefaultFrom());
   const [validUntil, setValidUntil] = useState(getDefaultUntil());
+  const [relationship, setRelationship] = useState('Spouse');
 
   // Role capability checks for visit_type filtering
   const isUserResident = user?.role === 'RESIDENT' || user?.residency_status === 'Resident' || user?.role === 'ADMIN';
@@ -314,6 +315,8 @@ export default function HostDashboard({ user }) {
         phone,
         email,
         gender,
+        relationship: category === 'FAMILY_MEMBER' ? relationship : null,
+        is_family_member: category === 'FAMILY_MEMBER',
         photo_url: photoUrl,
         id_type: idType,
         id_number: idCardNumber,
@@ -326,7 +329,7 @@ export default function HostDashboard({ user }) {
         is_vvip: isVvip,
         registration_mode: registrationMode,
         registration_type: registrationType,
-        is_permanent_pass: isPermanentPass,
+        is_permanent_pass: category === 'FAMILY_MEMBER' || isPermanentPass,
         has_smartphone: hasSmartphone,
         valid_from: validFrom,
         valid_until: validUntil,
@@ -606,6 +609,7 @@ export default function HostDashboard({ user }) {
                   }}
                 >
                   <option value="GENERAL">General Guest</option>
+                  <option value="FAMILY_MEMBER">Resident Family Member (Pre-Approved)</option>
                   <option value="VIP">VIP</option>
                   <option value="VVIP">VVIP</option>
                   <option value="MAID">Domestic Helper / Maid</option>
@@ -615,6 +619,29 @@ export default function HostDashboard({ user }) {
                   <option value="FOREIGN_NATIONAL">Foreign National</option>
                 </select>
               </label>
+
+              {category === 'FAMILY_MEMBER' && (
+                <label style={{ marginTop: '0.6rem' }}>
+                  Relationship to Resident (Pre-Approved Family Member) *
+                  <select value={relationship} onChange={(e) => setRelationship(e.target.value)}>
+                    <option value="Spouse">Spouse</option>
+                    <option value="Son">Son</option>
+                    <option value="Daughter">Daughter</option>
+                    <option value="Father">Father</option>
+                    <option value="Mother">Mother</option>
+                    <option value="Son-in-law">Son-in-law</option>
+                    <option value="Daughter-in-law">Daughter-in-law</option>
+                    <option value="Brother">Brother</option>
+                    <option value="Sister">Sister</option>
+                    <option value="Brother-in-law">Brother-in-law</option>
+                    <option value="Sister-in-law">Sister-in-law</option>
+                    <option value="Grandfather">Grandfather</option>
+                    <option value="Grandmother">Grandmother</option>
+                    <option value="Grandchild">Grandchild</option>
+                    <option value="Dependent Relative">Dependent Relative</option>
+                  </select>
+                </label>
+              )}
             </div>
 
             {/* Section 2: Identity & Document Proof Attachment */}
