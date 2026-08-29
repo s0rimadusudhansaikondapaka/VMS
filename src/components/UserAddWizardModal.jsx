@@ -17,7 +17,8 @@ export default function UserAddWizardModal({ isOpen, onClose, onSuccess }) {
     email: '',
     phone: '',
     residency_status: 'RESIDENT',
-    role: 'RESIDENT',
+    user_type: 'RESIDENT',
+    role: 'HOST',
     department_id: '',
     password: 'password123',
   });
@@ -47,7 +48,8 @@ export default function UserAddWizardModal({ isOpen, onClose, onSuccess }) {
       email: '',
       phone: '',
       residency_status: 'RESIDENT',
-      role: 'RESIDENT',
+      user_type: 'RESIDENT',
+      role: 'HOST',
       department_id: '',
       password: 'password123',
     });
@@ -223,14 +225,27 @@ export default function UserAddWizardModal({ isOpen, onClose, onSuccess }) {
             {step === 2 && (
               <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
                 <div>
-                  <label style={labelStyle}>System Role *</label>
+                  <label style={labelStyle}>User Type / Category *</label>
+                  <select
+                    value={formData.user_type}
+                    onChange={(e) => handleChange('user_type', e.target.value)}
+                  >
+                    <option value="RESIDENT">RESIDENT (Ashram Resident Host)</option>
+                    <option value="EMPLOYEE">EMPLOYEE (Ashram Staff Member)</option>
+                    <option value="RESIDENT_EMPLOYEE">RESIDENT_EMPLOYEE (Resident + Staff Dual Profile)</option>
+                    <option value="VOLUNTEER">VOLUNTEER (Ashram Sevadal / Volunteer)</option>
+                    <option value="STUDENT">STUDENT (Campus Student)</option>
+                    <option value="GUEST">GUEST (Visiting Guest Host)</option>
+                  </select>
+                </div>
+
+                <div>
+                  <label style={labelStyle}>System Access Role *</label>
                   <select
                     value={formData.role}
                     onChange={(e) => handleChange('role', e.target.value)}
                   >
-                    <option value="RESIDENT">RESIDENT (Host Visitor Approver L1)</option>
-                    <option value="EMPLOYEE">EMPLOYEE (Ashram Staff)</option>
-                    <option value="RESIDENT_EMPLOYEE">RESIDENT_EMPLOYEE (Resident + Staff Member Dual Role)</option>
+                    <option value="HOST">HOST (Standard Host - L1 Visitor Approver)</option>
                     <option value="HOD">HOD (Department Head L2 Approver)</option>
                     <option value="PRO">PRO (Public Relations Officer L2 Approver)</option>
                     <option value="GUARD">GUARD (Security Gate Pass Terminal)</option>
@@ -272,9 +287,10 @@ export default function UserAddWizardModal({ isOpen, onClose, onSuccess }) {
                   <div><strong>Full Name:</strong> {formData.name}</div>
                   <div><strong>Email Address:</strong> {formData.email}</div>
                   <div><strong>Phone Number:</strong> {formData.phone}</div>
+                  <div><strong>User Type / Category:</strong> <span className="badge badge-vvip" style={{ background: '#0d9488' }}>{formData.user_type}</span></div>
+                  <div><strong>System Access Role:</strong> <span className="badge badge-vvip">{formData.role}</span></div>
                   <div><strong>Residency Status:</strong> {formData.residency_status}</div>
                   <div><strong>Ashram Address:</strong> {formData.address || 'Ashram Campus'}</div>
-                  <div><strong>Assigned System Role:</strong> <span className="badge badge-vvip">{formData.role}</span></div>
                   <div><strong>Department:</strong> {departments.find(d => String(d.id) === String(formData.department_id))?.name || 'None'}</div>
                 </div>
               </div>

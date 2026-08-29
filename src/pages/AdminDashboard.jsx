@@ -22,7 +22,8 @@ export default function AdminDashboard({ user }) {
   const [editName, setEditName] = useState('');
   const [editEmail, setEditEmail] = useState('');
   const [editPhone, setEditPhone] = useState('');
-  const [editRole, setEditRole] = useState('RESIDENT');
+  const [editRole, setEditRole] = useState('HOST');
+  const [editUserType, setEditUserType] = useState('RESIDENT');
   const [editResidency, setEditResidency] = useState('RESIDENT');
   const [editStatus, setEditStatus] = useState('ACTIVE');
   const [editFlatInfo, setEditFlatInfo] = useState('');
@@ -151,7 +152,8 @@ export default function AdminDashboard({ user }) {
     setEditName(u.name || '');
     setEditEmail(u.email || '');
     setEditPhone(u.phone || '');
-    setEditRole(u.role || 'RESIDENT');
+    setEditUserType(u.user_type || u.role || 'RESIDENT');
+    setEditRole(u.role || 'HOST');
     setEditResidency(u.residency_status || 'RESIDENT');
     setEditStatus(u.registration_status || 'ACTIVE');
     setEditFlatInfo(u.flat_info || u.address || '');
@@ -168,6 +170,7 @@ export default function AdminDashboard({ user }) {
         email: editEmail,
         phone: editPhone,
         role: editRole,
+        user_type: editUserType,
         residency_status: editResidency,
         registration_status: editStatus,
         flat_info: editFlatInfo,
@@ -676,7 +679,8 @@ export default function AdminDashboard({ user }) {
               <th>Name</th>
               <th>Email</th>
               <th>Phone</th>
-              <th>Role</th>
+              <th>User Category</th>
+              <th>System Role</th>
               <th>Residency</th>
               <th>Ashram Address / Location</th>
               <th>Department</th>
@@ -687,7 +691,7 @@ export default function AdminDashboard({ user }) {
           <tbody>
             {paginatedUsers.length === 0 ? (
               <tr>
-                <td colSpan="10" style={{ textAlign: 'center', color: '#64748b' }}>No users found.</td>
+                <td colSpan="11" style={{ textAlign: 'center', color: '#64748b' }}>No users found.</td>
               </tr>
             ) : (
               paginatedUsers.map((u) => (
@@ -697,8 +701,13 @@ export default function AdminDashboard({ user }) {
                   <td>{u.email}</td>
                   <td>{u.phone}</td>
                   <td>
-                    <span className="badge badge-vvip" style={{ background: u.role === 'ADMIN' ? '#9333ea' : u.role === 'HOD' ? '#2563eb' : u.role === 'RESIDENT_EMPLOYEE' ? '#0d9488' : u.role === 'GUARD' ? '#d97706' : '#475569' }}>
-                      {u.role === 'RESIDENT_EMPLOYEE' ? 'RESIDENT + EMPLOYEE' : u.role}
+                    <span className="badge badge-vvip" style={{ background: '#0d9488' }}>
+                      {u.user_type || 'RESIDENT'}
+                    </span>
+                  </td>
+                  <td>
+                    <span className="badge badge-vvip" style={{ background: u.role === 'ADMIN' ? '#9333ea' : u.role === 'HOD' ? '#2563eb' : u.role === 'GUARD' ? '#d97706' : '#475569' }}>
+                      {u.role}
                     </span>
                   </td>
                   <td>{u.residency_status}</td>
@@ -1052,20 +1061,36 @@ export default function AdminDashboard({ user }) {
 
                 <div>
                   <label style={{ fontSize: '0.85rem', fontWeight: 'bold', color: '#334155' }}>
-                    System Role *
+                    User Category / Type *
+                    <select
+                      value={editUserType}
+                      onChange={(e) => setEditUserType(e.target.value)}
+                      style={{ marginTop: '0.3rem', fontWeight: 'bold' }}
+                    >
+                      <option value="RESIDENT">RESIDENT (Ashram Resident Host)</option>
+                      <option value="EMPLOYEE">EMPLOYEE (Ashram Staff Member)</option>
+                      <option value="RESIDENT_EMPLOYEE">RESIDENT_EMPLOYEE (Resident + Staff Dual Profile)</option>
+                      <option value="VOLUNTEER">VOLUNTEER (Ashram Sevadal / Volunteer)</option>
+                      <option value="STUDENT">STUDENT (Campus Student)</option>
+                      <option value="GUEST">GUEST (Visiting Guest Host)</option>
+                    </select>
+                  </label>
+                </div>
+
+                <div>
+                  <label style={{ fontSize: '0.85rem', fontWeight: 'bold', color: '#334155' }}>
+                    System Access Role *
                     <select
                       value={editRole}
                       onChange={(e) => setEditRole(e.target.value)}
                       style={{ marginTop: '0.3rem', fontWeight: 'bold' }}
                     >
-                      <option value="RESIDENT">RESIDENT (Ashram Resident Host)</option>
-                      <option value="EMPLOYEE">EMPLOYEE (Ashram Staff Host)</option>
-                      <option value="RESIDENT_EMPLOYEE">RESIDENT_EMPLOYEE (Resident + Staff Dual Role)</option>
-                      <option value="HOD">HOD (Department Head)</option>
-                      <option value="PRO">PRO (Public Relations Officer)</option>
-                      <option value="GUARD">GUARD (Security Guard)</option>
-                      <option value="SUPERVISOR">SUPERVISOR (Gate Supervisor)</option>
-                      <option value="SECURITY_HEAD">SECURITY_HEAD (Security Chief)</option>
+                      <option value="HOST">HOST (Standard Host - L1 Visitor Approver)</option>
+                      <option value="HOD">HOD (Department Head L2 Approver)</option>
+                      <option value="PRO">PRO (Public Relations Officer L2 Approver)</option>
+                      <option value="GUARD">GUARD (Security Gate Pass Terminal Guard)</option>
+                      <option value="SUPERVISOR">SUPERVISOR (Security Officer Override)</option>
+                      <option value="SECURITY_HEAD">SECURITY_HEAD (Chief Security Officer)</option>
                       <option value="ADMIN">ADMIN (Super Administrator)</option>
                     </select>
                   </label>
