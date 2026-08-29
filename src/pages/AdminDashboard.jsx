@@ -37,7 +37,7 @@ export default function AdminDashboard({ user }) {
     totalPages: userTotalPages,
     totalItems: userTotalItems,
     paginatedData: paginatedUsers,
-  } = useTablePagination(usersList, ['name', 'email', 'phone', 'role', 'department'], 10);
+  } = useTablePagination(usersList, ['guid', 'name', 'email', 'phone', 'role', 'user_type', 'department_name', 'department', 'id'], 10);
 
   const {
     searchTerm: masterSearch,
