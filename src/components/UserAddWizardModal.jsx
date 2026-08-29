@@ -230,7 +230,9 @@ export default function UserAddWizardModal({ isOpen, onClose, onSuccess }) {
                   >
                     <option value="RESIDENT">RESIDENT (Host Visitor Approver L1)</option>
                     <option value="EMPLOYEE">EMPLOYEE (Ashram Staff)</option>
+                    <option value="RESIDENT_EMPLOYEE">RESIDENT_EMPLOYEE (Resident + Staff Member Dual Role)</option>
                     <option value="HOD">HOD (Department Head L2 Approver)</option>
+                    <option value="PRO">PRO (Public Relations Officer L2 Approver)</option>
                     <option value="GUARD">GUARD (Security Gate Pass Terminal)</option>
                     <option value="SUPERVISOR">SUPERVISOR (Security Officer Override)</option>
                     <option value="SECURITY_HEAD">SECURITY_HEAD (Chief Security Officer)</option>

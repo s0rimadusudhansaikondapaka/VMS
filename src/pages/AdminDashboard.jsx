@@ -697,8 +697,8 @@ export default function AdminDashboard({ user }) {
                   <td>{u.email}</td>
                   <td>{u.phone}</td>
                   <td>
-                    <span className="badge badge-vvip" style={{ background: u.role === 'ADMIN' ? '#9333ea' : u.role === 'HOD' ? '#2563eb' : u.role === 'GUARD' ? '#d97706' : '#475569' }}>
-                      {u.role}
+                    <span className="badge badge-vvip" style={{ background: u.role === 'ADMIN' ? '#9333ea' : u.role === 'HOD' ? '#2563eb' : u.role === 'RESIDENT_EMPLOYEE' ? '#0d9488' : u.role === 'GUARD' ? '#d97706' : '#475569' }}>
+                      {u.role === 'RESIDENT_EMPLOYEE' ? 'RESIDENT + EMPLOYEE' : u.role}
                     </span>
                   </td>
                   <td>{u.residency_status}</td>
@@ -1060,6 +1060,7 @@ export default function AdminDashboard({ user }) {
                     >
                       <option value="RESIDENT">RESIDENT (Ashram Resident Host)</option>
                       <option value="EMPLOYEE">EMPLOYEE (Ashram Staff Host)</option>
+                      <option value="RESIDENT_EMPLOYEE">RESIDENT_EMPLOYEE (Resident + Staff Dual Role)</option>
                       <option value="HOD">HOD (Department Head)</option>
                       <option value="PRO">PRO (Public Relations Officer)</option>
                       <option value="GUARD">GUARD (Security Guard)</option>
