@@ -1,13 +1,14 @@
 import React, { useState, useEffect } from 'react';
-import { createRegistration, updateRegistration, getHostRegistrations, updateApproval, getVisitHistory, generateQrCode, generateInviteToken } from '../services/api';
+import { createRegistration, updateRegistration, getHostRegistrations, updateApproval, getVisitHistory, generateQrCode, generateInviteToken, getResidentFamilyMembers } from '../services/api';
 import CameraCaptureModal from '../components/CameraCaptureModal';
 import DashboardHeader from '../components/DashboardHeader';
 import FormFieldGuide from '../components/FormFieldGuide';
 import { useTablePagination, PaginationControls } from '../components/TablePagination';
-import { UserPlus, CheckCircle, XCircle, Clock, Plus, Trash2, Camera, CreditCard, Users, Car, Calendar, ShieldCheck, KeyRound, Pencil, History, QrCode, Share2, Copy, Upload } from 'lucide-react';
+import { UserPlus, CheckCircle, XCircle, Clock, Plus, Trash2, Camera, CreditCard, Users, Car, Calendar, ShieldCheck, KeyRound, Pencil, History, QrCode, Share2, Copy, Upload, RefreshCw } from 'lucide-react';
 
 export default function HostDashboard({ user }) {
   const [registrations, setRegistrations] = useState([]);
+  const [familyMembers, setFamilyMembers] = useState([]);
   const [showModal, setShowModal] = useState(false);
   const [activeField, setActiveField] = useState('');
   const [showCameraModal, setShowCameraModal] = useState(false);
@@ -183,16 +184,27 @@ export default function HostDashboard({ user }) {
   useEffect(() => {
     fetchRegistrations();
     fetchVisitHistory();
+    fetchFamilyMembers();
 
     const handleRealtimeSync = (e) => {
       console.log('[HostDashboard] Realtime Sync Event received:', e.detail);
       fetchRegistrations();
       fetchVisitHistory();
+      fetchFamilyMembers();
     };
 
     window.addEventListener('vms_realtime_sync', handleRealtimeSync);
     return () => window.removeEventListener('vms_realtime_sync', handleRealtimeSync);
   }, []);
+
+  const fetchFamilyMembers = async () => {
+    try {
+      const res = await getResidentFamilyMembers();
+      if (res.success) setFamilyMembers(res.family_members || []);
+    } catch (err) {
+      console.error('Failed to fetch resident family members:', err);
+    }
+  };
 
   const fetchRegistrations = async () => {
     try {
@@ -783,6 +795,117 @@ export default function HostDashboard({ user }) {
           <FormFieldGuide activeField={activeField} />
         </div>
       </div>
+      )}
+
+      {/* My Linked Family Members & Pass Statuses Card */}
+      {isUserResident && (
+        <div className="card" style={{ borderTop: '4px solid #7c3aed', marginBottom: '1.5rem' }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.8rem' }}>
+            <div>
+              <h3 style={{ margin: 0, color: '#6d28d9', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                <Users size={20} color="#7c3aed" /> My Linked Family Members & Pass Statuses ({familyMembers.length})
+              </h3>
+              <p style={{ margin: '0.2rem 0 0 0', fontSize: '0.8rem', color: '#64748b' }}>
+                First-time family member passes require one-time PRO Team verification (`PENDING_L2`). Once approved, Resident Hosts enjoy direct 1-click renewals (`APPROVED`).
+              </p>
+            </div>
+            <button
+              onClick={() => {
+                setCategory('FAMILY_MEMBER');
+                setIsPermanentPass(true);
+                setShowModal(true);
+              }}
+              style={{ fontSize: '0.8rem', padding: '0.35rem 0.8rem', background: '#7c3aed', borderColor: '#7c3aed', color: '#ffffff', display: 'flex', alignItems: 'center', gap: '0.4rem', fontWeight: 'bold' }}
+            >
+              <UserPlus size={16} /> Add Family Member Pass
+            </button>
+          </div>
+
+          <div style={{ overflowX: 'auto' }}>
+            <table role="grid" style={{ fontSize: '0.83rem', margin: 0 }}>
+              <thead>
+                <tr style={{ background: '#4c1d95', color: '#ffffff' }}>
+                  <th>Family Member Name</th>
+                  <th>Relationship to Resident</th>
+                  <th>Phone / Identity</th>
+                  <th>PRO Verification Status</th>
+                  <th>Active Pass Code & Window</th>
+                  <th>Action</th>
+                </tr>
+              </thead>
+              <tbody>
+                {familyMembers.length === 0 ? (
+                  <tr>
+                    <td colSpan="6" style={{ textAlign: 'center', color: '#64748b', padding: '1rem' }}>
+                      No linked family members registered yet. Click <strong>"Add Family Member Pass"</strong> to register your spouse, children, or relatives.
+                    </td>
+                  </tr>
+                ) : (
+                  familyMembers.map((fam) => (
+                    <tr key={fam.id}>
+                      <td>
+                        <strong>{fam.full_name}</strong>
+                      </td>
+                      <td>
+                        <span className="badge badge-inside" style={{ background: '#f3e8ff', color: '#6b21a8', border: '1px solid #d8b4fe' }}>
+                          🔗 {fam.relationship}
+                        </span>
+                      </td>
+                      <td>
+                        <div>{fam.phone || 'N/A'}</div>
+                        {fam.id_card_number && <div style={{ fontSize: '0.72rem', color: '#64748b' }}>ID: {fam.id_card_number}</div>}
+                      </td>
+                      <td>
+                        {fam.is_pro_approved ? (
+                          <span style={{ color: '#15803d', fontWeight: 'bold', display: 'inline-flex', alignItems: 'center', gap: '0.3rem', fontSize: '0.78rem', background: '#dcfce7', padding: '0.2rem 0.6rem', borderRadius: '12px', border: '1px solid #86efac' }}>
+                            <CheckCircle size={14} /> Verified (Direct Renewals Active)
+                          </span>
+                        ) : (
+                          <span style={{ color: '#c2410c', fontWeight: 'bold', display: 'inline-flex', alignItems: 'center', gap: '0.3rem', fontSize: '0.78rem', background: '#fff7ed', padding: '0.2rem 0.6rem', borderRadius: '12px', border: '1px solid #fed7aa' }}>
+                            <Clock size={14} /> ⏳ First-Time: Pending PRO Team Approval
+                          </span>
+                        )}
+                      </td>
+                      <td>
+                        {fam.latest_pass_code ? (
+                          <div>
+                            <strong style={{ color: '#4c1d95' }}>{fam.latest_pass_code}</strong>{' '}
+                            <span className={`badge badge-${(fam.latest_pass_status || 'PENDING').toLowerCase()}`}>
+                              {fam.latest_pass_status}
+                            </span>
+                            {fam.latest_valid_until && (
+                              <div style={{ fontSize: '0.72rem', color: '#64748b' }}>
+                                Valid Until: {new Date(fam.latest_valid_until).toLocaleDateString()}
+                              </div>
+                            )}
+                          </div>
+                        ) : (
+                          <span style={{ color: '#94a3b8' }}>No Pass Issued Yet</span>
+                        )}
+                      </td>
+                      <td>
+                        <button
+                          onClick={() => {
+                            setFullName(fam.full_name);
+                            setPhone(fam.phone || '');
+                            setCategory('FAMILY_MEMBER');
+                            setRelationship(fam.relationship);
+                            setIdCardNumber(fam.id_card_number || '');
+                            setIsPermanentPass(true);
+                            setShowModal(true);
+                          }}
+                          style={{ fontSize: '0.72rem', padding: '0.25rem 0.55rem', background: '#6d28d9', borderColor: '#6d28d9', color: '#fff', display: 'inline-flex', alignItems: 'center', gap: '0.3rem' }}
+                        >
+                          <RefreshCw size={12} /> {fam.is_pro_approved ? '🔄 Renew Family Pass' : 'Re-Submit Request'}
+                        </button>
+                      </td>
+                    </tr>
+                  ))
+                )}
+              </tbody>
+            </table>
+          </div>
+        </div>
       )}
 
       {/* Invited Visitors List */}

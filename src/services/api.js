@@ -228,4 +228,9 @@ export const processL2ApprovalByAdmin = async (registration_id, action, remarks)
   return res.data;
 };
 
+export const getResidentFamilyMembers = async () => {
+  const res = await api.get('/visitors/family-members');
+  return res.data;
+};
+
 export default api;
