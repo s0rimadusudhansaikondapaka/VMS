@@ -20,6 +20,7 @@ export default function HostDashboard({ user }) {
   const [showShareModal, setShowShareModal] = useState(false);
   const [activeShareToken, setActiveShareToken] = useState('');
   const [qrModalData, setQrModalData] = useState(null);
+  const [isExpandedQr, setIsExpandedQr] = useState(false);
 
   // Family Members Management state
   const [showAddFamilyModal, setShowAddFamilyModal] = useState(false);
@@ -1212,12 +1213,21 @@ export default function HostDashboard({ user }) {
 
           {/* Right Column: QR Code & Share Buttons */}
           <div style={{ flex: '1 1 300px', minWidth: 0, background: 'white', padding: '1.4rem', borderRadius: '12px', border: '1px solid #e9d5ff', boxShadow: '0 2px 8px rgba(0,0,0,0.03)', textAlign: 'center', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center' }}>
-            <div style={{ background: '#faf5ff', padding: '0.8rem', borderRadius: '12px', border: '1px solid #ddd6fe', display: 'inline-block', marginBottom: '0.8rem' }}>
+            <div
+              onClick={() => setIsExpandedQr(true)}
+              title="Click to expand QR Code for easy gate scanning"
+              style={{ background: '#faf5ff', padding: '0.8rem', borderRadius: '14px', border: '2px solid #7c3aed', display: 'inline-block', marginBottom: '0.8rem', cursor: 'pointer', boxShadow: '0 4px 12px rgba(124, 58, 237, 0.15)', transition: 'transform 0.2s ease' }}
+              onMouseEnter={(e) => e.currentTarget.style.transform = 'scale(1.03)'}
+              onMouseLeave={(e) => e.currentTarget.style.transform = 'scale(1)'}
+            >
               <img
                 src={hostQrImageUrl}
                 alt="Personal Host QR Code Pass"
-                style={{ width: '180px', height: '180px', display: 'block', borderRadius: '8px', border: '2px solid #7c3aed', background: 'white' }}
+                style={{ width: '180px', height: '180px', display: 'block', borderRadius: '8px', border: '1px solid #7c3aed', background: 'white' }}
               />
+              <span style={{ fontSize: '0.75rem', color: '#7c3aed', fontWeight: '800', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.3rem', marginTop: '0.5rem' }}>
+                🔍 Click to Expand for Scanning
+              </span>
             </div>
 
             <span style={{ fontSize: '0.78rem', color: '#6b21a8', fontWeight: '800', letterSpacing: '0.05em', display: 'block', marginBottom: '1rem' }}>
@@ -1651,6 +1661,85 @@ export default function HostDashboard({ user }) {
               )}
 
               <button type="button" className="secondary outline" onClick={() => setQrModalData(null)} style={{ fontSize: '0.8rem', padding: '0.5rem 0.8rem' }}>
+                Close
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Expanded Lightbox Modal for High-Contrast Mobile Scanning */}
+      {isExpandedQr && (
+        <div 
+          onClick={() => setIsExpandedQr(false)}
+          style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, background: 'rgba(15, 23, 42, 0.92)', backdropFilter: 'blur(8px)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 99999, padding: '1.5rem', cursor: 'pointer' }}
+        >
+          <div 
+            onClick={(e) => e.stopPropagation()}
+            style={{ maxWidth: '480px', width: '100%', background: '#ffffff', borderRadius: '20px', padding: '1.8rem', textAlign: 'center', boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.5), 0 0 40px rgba(124, 58, 237, 0.3)', border: '3px solid #7c3aed', cursor: 'default' }}
+          >
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem', borderBottom: '1px solid #f1f5f9', paddingBottom: '0.8rem' }}>
+              <div>
+                <span style={{ fontSize: '0.72rem', background: '#7c3aed', color: 'white', padding: '0.25rem 0.75rem', borderRadius: '9999px', fontWeight: '800', letterSpacing: '0.04em' }}>
+                  ✓ ACTIVE PERMANENT HOST PASS
+                </span>
+                <h3 style={{ margin: '0.4rem 0 0 0', color: '#1e293b', fontSize: '1.25rem', fontWeight: '800' }}>{user?.name || 'Host User'}</h3>
+              </div>
+              <button 
+                type="button"
+                onClick={() => setIsExpandedQr(false)}
+                style={{ background: '#f1f5f9', borderColor: '#cbd5e1', color: '#475569', borderRadius: '50%', width: '36px', height: '36px', padding: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 'bold', fontSize: '1.1rem', cursor: 'pointer' }}
+              >
+                ✕
+              </button>
+            </div>
+
+            <div style={{ background: '#ffffff', padding: '1.2rem', borderRadius: '16px', border: '3px solid #7c3aed', boxShadow: '0 8px 24px rgba(124, 58, 237, 0.15)', display: 'inline-block', margin: '0.5rem 0 1.2rem 0' }}>
+              <img
+                src={hostQrImageUrl}
+                alt="Expanded Host Pass QR Code"
+                style={{ width: '320px', height: '320px', maxWidth: '75vw', maxHeight: '75vw', display: 'block', borderRadius: '10px', background: 'white' }}
+              />
+            </div>
+
+            <div style={{ background: '#faf5ff', padding: '0.6rem 1rem', borderRadius: '8px', border: '1px solid #e9d5ff', marginBottom: '1.2rem' }}>
+              <span style={{ fontSize: '0.75rem', color: '#64748b', fontWeight: 'bold', display: 'block' }}>AUTHORIZED PERMANENT PASSCODE</span>
+              <h2 style={{ fontSize: '2.2rem', color: '#7c3aed', margin: '0.1rem 0', fontWeight: '900', letterSpacing: '0.08em' }}>{hostPassCode}</h2>
+              <span style={{ fontSize: '0.75rem', color: '#057a55', fontWeight: 'bold' }}>✓ Maximum Brightness Mode for Gate Terminal Scanning</span>
+            </div>
+
+            <div style={{ display: 'flex', gap: '0.6rem', justifyContent: 'center', flexWrap: 'wrap' }}>
+              <a
+                href={`https://wa.me/?text=${encodeURIComponent(`Jay Sai Ram! Here is my official Sathya Sai Grama Personal Host Gate Pass:\n\nHost: ${user?.name}\nRole: ${user?.role}\nPasscode: ${hostPassCode}\nStatus: Active Permanent Pass`)}`}
+                target="_blank"
+                rel="noreferrer"
+                style={{ flex: 1, textDecoration: 'none', minWidth: '130px' }}
+              >
+                <button type="button" style={{ width: '100%', background: '#25d366', borderColor: '#25d366', color: 'white', fontWeight: 'bold', fontSize: '0.85rem', padding: '0.6rem 0.8rem', borderRadius: '8px' }}>
+                  📲 Share WhatsApp
+                </button>
+              </a>
+
+              <button
+                type="button"
+                onClick={() => {
+                  const link = document.createElement('a');
+                  link.href = hostQrImageUrl;
+                  link.download = `HostPass_${hostPassCode}.png`;
+                  document.body.appendChild(link);
+                  link.click();
+                  document.body.removeChild(link);
+                }}
+                style={{ flex: 1, background: '#7c3aed', borderColor: '#7c3aed', color: 'white', fontWeight: 'bold', fontSize: '0.85rem', padding: '0.6rem 0.8rem', borderRadius: '8px', minWidth: '130px' }}
+              >
+                ⬇️ Download QR
+              </button>
+
+              <button
+                type="button"
+                onClick={() => setIsExpandedQr(false)}
+                style={{ background: '#475569', borderColor: '#475569', color: 'white', fontWeight: 'bold', fontSize: '0.85rem', padding: '0.6rem 1rem', borderRadius: '8px' }}
+              >
                 Close
               </button>
             </div>
