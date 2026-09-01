@@ -775,9 +775,9 @@ export default function GuardGateTerminal({ user }) {
                 gap: '0.4rem',
               }}>
                 {passData.is_current_gate_allowed === false ? (
-                  <>⛔ Category Restricted at Current Gate ({activeGate.replace('_', ' ')})</>
+                  <>⛔ Category Restricted at Current Gate ({gateName.replace('_', ' ')})</>
                 ) : (
-                  <>✅ Category Allowed at Current Gate ({activeGate.replace('_', ' ')})</>
+                  <>✅ Category Allowed at Current Gate ({gateName.replace('_', ' ')})</>
                 )}
               </h4>
               <span className="badge" style={{
@@ -791,7 +791,7 @@ export default function GuardGateTerminal({ user }) {
 
             {passData.is_current_gate_allowed === false && (
               <p style={{ margin: '0 0 0.5rem 0', fontSize: '0.85rem', color: '#991b1b', fontWeight: 'bold' }}>
-                ⚠️ Visitor category '{passData.visitor_category}' is NOT ALLOWED at {activeGate.replace('_', ' ')}. Please direct visitor to one of the authorized gates listed below.
+                ⚠️ Visitor category '{passData.visitor_category}' is NOT ALLOWED at {gateName.replace('_', ' ')}. Please direct visitor to one of the authorized gates listed below.
               </p>
             )}
 
@@ -805,7 +805,7 @@ export default function GuardGateTerminal({ user }) {
                     <span
                       key={g}
                       style={{
-                        background: g === activeGate ? '#15803d' : '#2563eb',
+                        background: g === gateName ? '#15803d' : '#2563eb',
                         color: 'white',
                         fontSize: '0.75rem',
                         padding: '0.22rem 0.65rem',
@@ -814,10 +814,10 @@ export default function GuardGateTerminal({ user }) {
                         display: 'inline-flex',
                         alignItems: 'center',
                         gap: '0.3rem',
-                        boxShadow: g === activeGate ? '0 0 0 2px #bbf7d0' : 'none',
+                        boxShadow: g === gateName ? '0 0 0 2px #bbf7d0' : 'none',
                       }}
                     >
-                      ✓ {g.replace('_', ' ')} {g === activeGate ? '(Current Gate)' : ''}
+                      ✓ {g.replace('_', ' ')} {g === gateName ? '(Current Gate)' : ''}
                     </span>
                   ))
                 ) : (
@@ -998,7 +998,7 @@ export default function GuardGateTerminal({ user }) {
               onClick={() => handleMovement('IN')}
               disabled={passData.is_current_gate_allowed === false || passData.arrival_status === 'TOO_EARLY'}
               className="gate-btn-in"
-              data-tooltip={passData.is_current_gate_allowed === false ? `Category ${passData.visitor_category} disabled at ${activeGate}` : 'Record visitor entry IN at gate'}
+              data-tooltip={passData.is_current_gate_allowed === false ? `Category ${passData.visitor_category} disabled at ${gateName}` : 'Record visitor entry IN at gate'}
               style={{
                 flex: 1,
                 display: 'flex',
@@ -1066,7 +1066,7 @@ export default function GuardGateTerminal({ user }) {
                         <td>{new Date(log.timestamp).toLocaleString()}</td>
                         <td>
                           <span style={{ fontWeight: 'bold', color: log.direction === 'IN' ? '#15803d' : '#b91c1c' }}>
-                            {log.direction === 'IN' ? '➔ IN (Ingress)' : '⬅ OUT (Egress)'} @ {log.gate_name ? log.gate_name.replace('_', ' ') : activeGate}
+                            {log.direction === 'IN' ? '➔ IN (Ingress)' : '⬅ OUT (Egress)'} @ {log.gate_name ? log.gate_name.replace('_', ' ') : gateName}
                           </span>
                         </td>
                         <td>
