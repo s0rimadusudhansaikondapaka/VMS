@@ -1155,77 +1155,83 @@ export default function HostDashboard({ user }) {
       </div>
 
       {/* Personal Host Gate Pass & QR Code Section (Bottom of Screen) */}
-      <div className="card" style={{ marginTop: '1.5rem', border: '2px solid #7c3aed', background: 'linear-gradient(to bottom, #ffffff, #faf5ff)', borderRadius: '12px', padding: '1.5rem' }}>
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '1rem', borderBottom: '1px solid #e9d5ff', paddingBottom: '1rem', marginBottom: '1.2rem' }}>
+      <div className="card" style={{ marginTop: '1.5rem', border: '2px solid #7c3aed', background: 'linear-gradient(135deg, #ffffff 0%, #faf5ff 100%)', borderRadius: '14px', padding: '1.5rem', boxShadow: '0 10px 25px -5px rgba(124, 58, 237, 0.1)' }}>
+        {/* Card Header */}
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '1rem', borderBottom: '2px solid #f3e8ff', paddingBottom: '1rem', marginBottom: '1.5rem' }}>
           <div>
-            <h3 style={{ margin: 0, color: '#4c1d95', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-              <QrCode size={22} color="#7c3aed" /> My Personal Host Gate Pass & QR Code
+            <h3 style={{ margin: 0, color: '#4c1d95', display: 'flex', alignItems: 'center', gap: '0.6rem', fontSize: '1.25rem', fontWeight: '800' }}>
+              <QrCode size={24} color="#7c3aed" /> My Personal Host Gate Pass & QR Code
             </h3>
-            <p style={{ margin: '0.2rem 0 0 0', fontSize: '0.85rem', color: '#6b21a8' }}>
+            <p style={{ margin: '0.25rem 0 0 0', fontSize: '0.85rem', color: '#6b21a8' }}>
               Your active permanent digital pass for Sathya Sai Grama campus entry and gate verification.
             </p>
           </div>
-          <span style={{ background: '#7c3aed', color: 'white', padding: '0.35rem 0.8rem', borderRadius: '9999px', fontSize: '0.78rem', fontWeight: 'bold' }}>
+          <span style={{ background: '#7c3aed', color: 'white', padding: '0.4rem 0.9rem', borderRadius: '9999px', fontSize: '0.78rem', fontWeight: '800', letterSpacing: '0.04em', boxShadow: '0 2px 6px rgba(124, 58, 237, 0.3)' }}>
             ✓ ACTIVE PERMANENT HOST PASS
           </span>
         </div>
 
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: '1.5rem', alignItems: 'center' }}>
-          {/* Left Side: Host Identity Card Details */}
-          <div style={{ background: 'white', padding: '1.2rem', borderRadius: '10px', border: '1px solid #e9d5ff', boxShadow: '0 2px 4px rgba(0,0,0,0.02)' }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '0.8rem', marginBottom: '1rem' }}>
-              <div style={{ width: '48px', height: '48px', borderRadius: '50%', background: '#f3e8ff', color: '#7c3aed', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 'bold', fontSize: '1.2rem' }}>
+        {/* Responsive Two-Column Layout */}
+        <div style={{ display: 'flex', flexWrap: 'wrap', gap: '1.5rem', alignItems: 'stretch' }}>
+          {/* Left Column: Host Details */}
+          <div style={{ flex: '1 1 340px', minWidth: 0, background: 'white', padding: '1.4rem', borderRadius: '12px', border: '1px solid #e9d5ff', boxShadow: '0 2px 8px rgba(0,0,0,0.03)', display: 'flex', flexDirection: 'column', justifyContent: 'space-between' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', paddingBottom: '1rem', borderBottom: '1px solid #f3e8ff', marginBottom: '1rem' }}>
+              <div style={{ width: '52px', height: '52px', borderRadius: '50%', background: '#7c3aed', color: 'white', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: '800', fontSize: '1.4rem', boxShadow: '0 4px 10px rgba(124, 58, 237, 0.25)', flexShrink: 0 }}>
                 {user?.name ? user.name.charAt(0).toUpperCase() : 'H'}
               </div>
-              <div>
-                <h4 style={{ margin: 0, color: '#1e293b', fontSize: '1.1rem' }}>{user?.name || 'Host User'}</h4>
-                <span style={{ fontSize: '0.8rem', color: '#64748b', fontWeight: '500' }}>
+              <div style={{ minWidth: 0 }}>
+                <h4 style={{ margin: 0, color: '#1e293b', fontSize: '1.15rem', fontWeight: '700', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{user?.name || 'Host User'}</h4>
+                <span style={{ fontSize: '0.8rem', color: '#6b21a8', fontWeight: '600', display: 'inline-block', marginTop: '0.15rem' }}>
                   {user?.role || 'RESIDENT'} • {user?.residency_status || 'Resident'}
                 </span>
               </div>
             </div>
 
-            <table style={{ width: '100%', fontSize: '0.85rem', borderCollapse: 'collapse' }}>
-              <tbody>
-                <tr>
-                  <td style={{ padding: '0.4rem 0', color: '#64748b', fontWeight: '600' }}>Permanent Passcode:</td>
-                  <td style={{ padding: '0.4rem 0', fontWeight: '800', color: '#7c3aed', fontSize: '1rem', textAlign: 'right' }}>{hostPassCode}</td>
-                </tr>
-                <tr>
-                  <td style={{ padding: '0.4rem 0', color: '#64748b', fontWeight: '600' }}>Department / Residence:</td>
-                  <td style={{ padding: '0.4rem 0', color: '#334155', fontWeight: '500', textAlign: 'right' }}>{user?.department_name || user?.flat_info || 'Sathya Sai Grama'}</td>
-                </tr>
-                <tr>
-                  <td style={{ padding: '0.4rem 0', color: '#64748b', fontWeight: '600' }}>Registered Mobile:</td>
-                  <td style={{ padding: '0.4rem 0', color: '#334155', fontWeight: '500', textAlign: 'right' }}>{user?.phone || 'Registered Phone'}</td>
-                </tr>
-                <tr>
-                  <td style={{ padding: '0.4rem 0', color: '#64748b', fontWeight: '600' }}>Pass Validity:</td>
-                  <td style={{ padding: '0.4rem 0', color: '#057a55', fontWeight: 'bold', textAlign: 'right' }}>Unlimited / Lifetime</td>
-                </tr>
-              </tbody>
-            </table>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem', fontSize: '0.88rem' }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '0.4rem 0.6rem', background: '#faf5ff', borderRadius: '6px' }}>
+                <span style={{ color: '#64748b', fontWeight: '600' }}>Permanent Passcode:</span>
+                <span style={{ fontWeight: '800', color: '#7c3aed', fontSize: '1.05rem', letterSpacing: '0.05em' }}>{hostPassCode}</span>
+              </div>
+
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '0.4rem 0.6rem' }}>
+                <span style={{ color: '#64748b', fontWeight: '600' }}>Department / Residence:</span>
+                <span style={{ color: '#1e293b', fontWeight: '600', textAlign: 'right', maxWidth: '60%', wordBreak: 'break-word' }}>{user?.department_name || user?.flat_info || 'Sathya Sai Grama'}</span>
+              </div>
+
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '0.4rem 0.6rem', background: '#faf5ff', borderRadius: '6px' }}>
+                <span style={{ color: '#64748b', fontWeight: '600' }}>Registered Mobile:</span>
+                <span style={{ color: '#1e293b', fontWeight: '600' }}>{user?.phone || 'Registered Phone'}</span>
+              </div>
+
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '0.4rem 0.6rem' }}>
+                <span style={{ color: '#64748b', fontWeight: '600' }}>Pass Validity:</span>
+                <span style={{ color: '#057a55', fontWeight: '800', background: '#dcfce7', padding: '0.15rem 0.5rem', borderRadius: '6px', fontSize: '0.8rem' }}>Unlimited / Lifetime</span>
+              </div>
+            </div>
           </div>
 
-          {/* Right Side: QR Code Image & Actions */}
-          <div style={{ textAlign: 'center', background: 'white', padding: '1.2rem', borderRadius: '10px', border: '1px solid #e9d5ff' }}>
-            <img
-              src={hostQrImageUrl}
-              alt="Personal Host QR Code Pass"
-              style={{ width: '180px', height: '180px', margin: '0 auto 0.8rem auto', display: 'block', borderRadius: '8px', border: '2px solid #7c3aed', padding: '4px', background: 'white' }}
-            />
-            <span style={{ fontSize: '0.78rem', color: '#6b21a8', fontWeight: 'bold', display: 'block', marginBottom: '0.8rem' }}>
+          {/* Right Column: QR Code & Share Buttons */}
+          <div style={{ flex: '1 1 300px', minWidth: 0, background: 'white', padding: '1.4rem', borderRadius: '12px', border: '1px solid #e9d5ff', boxShadow: '0 2px 8px rgba(0,0,0,0.03)', textAlign: 'center', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center' }}>
+            <div style={{ background: '#faf5ff', padding: '0.8rem', borderRadius: '12px', border: '1px solid #ddd6fe', display: 'inline-block', marginBottom: '0.8rem' }}>
+              <img
+                src={hostQrImageUrl}
+                alt="Personal Host QR Code Pass"
+                style={{ width: '180px', height: '180px', display: 'block', borderRadius: '8px', border: '2px solid #7c3aed', background: 'white' }}
+              />
+            </div>
+
+            <span style={{ fontSize: '0.78rem', color: '#6b21a8', fontWeight: '800', letterSpacing: '0.05em', display: 'block', marginBottom: '1rem' }}>
               SCAN AT GATE TERMINAL FOR INGRESS / EGRESS
             </span>
 
-            <div style={{ display: 'flex', gap: '0.5rem', justifyContent: 'center', flexWrap: 'wrap' }}>
+            <div style={{ display: 'flex', gap: '0.6rem', justifyContent: 'center', flexWrap: 'wrap', width: '100%' }}>
               <a
                 href={`https://wa.me/?text=${encodeURIComponent(`Jay Sai Ram! Here is my official Sathya Sai Grama Personal Host Gate Pass:\n\nHost: ${user?.name}\nRole: ${user?.role}\nPasscode: ${hostPassCode}\nStatus: Active Permanent Pass`)}`}
                 target="_blank"
                 rel="noreferrer"
-                style={{ textDecoration: 'none' }}
+                style={{ flex: 1, textDecoration: 'none', minWidth: '130px' }}
               >
-                <button type="button" style={{ background: '#25d366', borderColor: '#25d366', color: 'white', fontWeight: 'bold', fontSize: '0.8rem', padding: '0.45rem 0.8rem' }}>
+                <button type="button" style={{ width: '100%', background: '#25d366', borderColor: '#25d366', color: 'white', fontWeight: 'bold', fontSize: '0.82rem', padding: '0.55rem 0.8rem', borderRadius: '8px' }}>
                   📲 Share WhatsApp
                 </button>
               </a>
@@ -1240,7 +1246,7 @@ export default function HostDashboard({ user }) {
                   link.click();
                   document.body.removeChild(link);
                 }}
-                style={{ background: '#7c3aed', borderColor: '#7c3aed', color: 'white', fontWeight: 'bold', fontSize: '0.8rem', padding: '0.45rem 0.8rem' }}
+                style={{ flex: 1, background: '#7c3aed', borderColor: '#7c3aed', color: 'white', fontWeight: 'bold', fontSize: '0.82rem', padding: '0.55rem 0.8rem', borderRadius: '8px', minWidth: '130px' }}
               >
                 ⬇️ Download QR
               </button>
