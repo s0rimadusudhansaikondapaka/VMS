@@ -3,7 +3,7 @@ import { verifyGatePass, processGateMovement, createRegistration, getSpotRegistr
 import DashboardHeader from '../components/DashboardHeader';
 import QrScannerModal from '../components/QrScannerModal';
 import { useTablePagination, PaginationControls } from '../components/TablePagination';
-import { ShieldCheck, LogIn, LogOut, Search, UserCheck, AlertTriangle, Car, Users, Calendar, Camera, Phone, KeyRound, UserPlus, QrCode, Share2, CheckCircle, XCircle, Clock } from 'lucide-react';
+import { Shield, ShieldCheck, LogIn, LogOut, Search, UserCheck, AlertTriangle, Car, Users, Calendar, Camera, Phone, KeyRound, UserPlus, QrCode, Share2, CheckCircle, XCircle, Clock } from 'lucide-react';
 
 export default function GuardGateTerminal({ user }) {
   const [gateName, setGateName] = useState('NORTH_GATE');
