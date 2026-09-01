@@ -180,7 +180,7 @@ export default function GuardGateTerminal({ user }) {
     setMsg('');
     setLoading(true);
     try {
-      const res = await verifyGatePass(queryToVerify.trim(), activeGate);
+      const res = await verifyGatePass(queryToVerify.trim(), gateName);
       if (res.success) {
         setPassData(res.pass);
         setAdultMen(res.pass.adult_men_count || 1);
