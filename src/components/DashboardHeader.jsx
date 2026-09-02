@@ -1,4 +1,5 @@
 import React from 'react';
+import OneWorldOneFamilyLogo from './OneWorldOneFamilyLogo';
 
 export default function DashboardHeader({ title, subtitle, roleBadge, actionButton, user }) {
   return (
@@ -19,7 +20,7 @@ export default function DashboardHeader({ title, subtitle, roleBadge, actionButt
       }}
     >
       <div style={{ display: 'flex', alignItems: 'center', gap: '1.2rem', flex: '1 1 300px' }}>
-        {/* Sadguru Sri Madhusudan Sai Photo Frame */}
+        {/* Sadguru Sri Madhusudan Sai Portrait Frame */}
         <div style={{ position: 'relative', flexShrink: 0 }}>
           <img
             src="/madhu_sudhan_sai.jpg"
@@ -33,6 +34,7 @@ export default function DashboardHeader({ title, subtitle, roleBadge, actionButt
               boxShadow: '0 0 15px rgba(245, 158, 11, 0.4), 0 4px 8px rgba(0,0,0,0.1)',
               display: 'block'
             }}
+            title="Sadguru Sri Madhusudan Sai"
           />
           <span
             style={{
@@ -42,16 +44,16 @@ export default function DashboardHeader({ title, subtitle, roleBadge, actionButt
               transform: 'translateX(-50%)',
               background: '#d97706',
               color: '#ffffff',
-              fontSize: '0.6rem',
+              fontSize: '0.55rem',
               fontWeight: 'bold',
-              padding: '0.1rem 0.4rem',
+              padding: '0.1rem 0.5rem',
               borderRadius: '9999px',
               whiteSpace: 'nowrap',
               letterSpacing: '0.03em',
               boxShadow: '0 2px 4px rgba(0,0,0,0.15)'
             }}
           >
-            DIVINE GRACE
+            DIVINE GUIDANCE
           </span>
         </div>
 

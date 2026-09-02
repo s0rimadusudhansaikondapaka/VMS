@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { getPublicHostInfo, createPublicVisitorRegistration } from '../services/api';
 import CameraCaptureModal from '../components/CameraCaptureModal';
 import FormFieldGuide from '../components/FormFieldGuide';
+import OneWorldOneFamilyLogo from '../components/OneWorldOneFamilyLogo';
 import { Shield, User, Camera, Upload, CheckCircle, Calendar, Users, Car, AlertTriangle } from 'lucide-react';
 
 export default function GuestInviteForm() {
@@ -221,15 +222,12 @@ export default function GuestInviteForm() {
 
       {/* Header Banner */}
       <div className="card" style={{ borderLeft: '6px solid #d97706', background: 'linear-gradient(135deg, #ffffff 0%, #fffbf0 100%)' }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', marginBottom: '0.8rem' }}>
-          <img
-            src="/madhu_sudhan_sai.jpg"
-            alt="Sadguru Sri Madhusudan Sai"
-            style={{ width: '56px', height: '56px', borderRadius: '50%', border: '2px solid #f59e0b', objectFit: 'cover' }}
-          />
+        <div style={{ display: 'flex', alignItems: 'center', gap: '1.2rem', marginBottom: '0.8rem', flexWrap: 'wrap' }}>
+          {/* 360° Rotating Emblem */}
+          <OneWorldOneFamilyLogo size={56} showText={false} variant="navbar" speed="normal" />
           <div>
-            <h2 style={{ margin: 0, fontSize: '1.3rem', color: '#1e293b', fontWeight: '800' }}>Pre-Approval Guest Invitation</h2>
-            <span style={{ fontSize: '0.75rem', color: '#d97706', fontWeight: 'bold' }}>Sathya Sai Grama Visitor Management System</span>
+            <h2 style={{ margin: 0, fontSize: '1.35rem', color: '#1e293b', fontWeight: '900' }}>ONE WORLD ONE FAMILY</h2>
+            <span style={{ fontSize: '0.78rem', color: '#d97706', fontWeight: 'bold' }}>Sathya Sai Grama Visitor Pre-Approval</span>
           </div>
         </div>
 

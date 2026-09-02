@@ -3,9 +3,40 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Sathya Sai Grama - Visitor Management System</title>
-    <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🛡️</text></svg>" />
+    <title>One World One Family - Sathya Sai Grama</title>
+    <link rel="icon" type="image/jpeg" id="app-favicon" href="/one_world_one_family_logo.jpg" />
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@picocss/pico@2/css/pico.min.css" />
+    <script>
+      // Continuously 360-degree Rotating Browser Favicon Script
+      (function animateFavicon() {
+        const img = new Image();
+        img.src = '/one_world_one_family_logo.jpg';
+        const canvas = document.createElement('canvas');
+        canvas.width = 64;
+        canvas.height = 64;
+        const ctx = canvas.getContext('2d');
+        let angle = 0;
+
+        img.onload = function() {
+          const favicon = document.getElementById('app-favicon') || document.querySelector("link[rel*='icon']");
+          function spin() {
+            ctx.clearRect(0, 0, 64, 64);
+            ctx.save();
+            ctx.translate(32, 32);
+            ctx.rotate((angle * Math.PI) / 180);
+            ctx.beginPath();
+            ctx.arc(0, 0, 31, 0, Math.PI * 2);
+            ctx.clip();
+            ctx.drawImage(img, -32, -32, 64, 64);
+            ctx.restore();
+            if (favicon) favicon.href = canvas.toDataURL('image/png');
+            angle = (angle + 3) % 360;
+            setTimeout(spin, 45); // Smooth continuous 360° circular favicon rotation
+          }
+          spin();
+        };
+      })();
+    </script>
   </head>
   <body>
     <div id="root"></div>

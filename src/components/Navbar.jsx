@@ -2,37 +2,24 @@ import React from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { Shield, LogOut, User } from 'lucide-react';
 import NotificationBell from './NotificationBell';
+import OneWorldOneFamilyLogo from './OneWorldOneFamilyLogo';
 
 export default function Navbar({ user, onLogout }) {
   const navigate = useNavigate();
 
   return (
-    <nav className="container-fluid" style={{ background: '#4e081d', color: 'white', padding: '0.8rem 2rem', marginBottom: '1.5rem', boxShadow: '0 4px 15px rgba(78, 8, 29, 0.3)', borderBottom: '3px solid #df6f06' }}>
+    <nav className="container-fluid" style={{ background: '#4e081d', color: 'white', padding: '0.7rem 2rem', marginBottom: '1.5rem', boxShadow: '0 4px 15px rgba(78, 8, 29, 0.3)', borderBottom: '3px solid #df6f06' }}>
       <ul>
         <li>
-          <Link to="/" style={{ color: 'white', textDecoration: 'none', fontWeight: 'bold', fontSize: '1.2rem', display: 'flex', alignItems: 'center', gap: '0.9rem' }}>
-            <div style={{ position: 'relative' }}>
-              <img 
-                src="/madhu_sudhan_sai.jpg" 
-                alt="Sadguru Sri Madhusudan Sai" 
-                style={{
-                  width: '44px',
-                  height: '44px',
-                  borderRadius: '50%',
-                  border: '2px solid #fcb900',
-                  objectFit: 'cover',
-                  boxShadow: '0 0 10px rgba(252, 185, 0, 0.6)',
-                  display: 'block'
-                }} 
-                title="Sadguru Sri Madhusudan Sai"
-              />
-            </div>
+          <Link to="/" style={{ color: 'white', textDecoration: 'none', fontWeight: 'bold', fontSize: '1.2rem', display: 'flex', alignItems: 'center', gap: '1rem' }}>
+            {/* 360° Rotating One World One Family Emblem */}
+            <OneWorldOneFamilyLogo size={46} showText={false} variant="navbar" />
             <div style={{ display: 'flex', flexDirection: 'column' }}>
               <span style={{ fontSize: '1.15rem', fontWeight: 'bold', display: 'flex', alignItems: 'center', gap: '0.4rem', color: '#ffffff' }}>
-                <Shield size={20} color="#fcb900" /> Sathya Sai Grama VMS
+                <Shield size={20} color="#fcb900" /> Sathya Sai Grama
               </span>
               <span style={{ fontSize: '0.72rem', color: '#fcb900', fontStyle: 'italic', fontWeight: '500' }}>
-                Under the Divine Guidance of Sadguru Sri Madhusudan Sai
+                ONE WORLD ONE FAMILY • Under Guidance of Sadguru Sri Madhusudan Sai
               </span>
             </div>
           </Link>

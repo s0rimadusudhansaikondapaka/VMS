@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { loginUser, sendOtp as sendOtpApi, verifyOtp as verifyOtpApi, registerUser } from '../services/api';
 import { Phone, Mail, UserPlus, KeyRound, Shield, Building, Home, Star, Users, CheckCircle, Info, ChevronDown, ChevronUp } from 'lucide-react';
+import OneWorldOneFamilyLogo from '../components/OneWorldOneFamilyLogo';
 
 export default function Login({ onLoginSuccess }) {
   const [activeTab, setActiveTab] = useState('email');
@@ -110,8 +111,8 @@ export default function Login({ onLoginSuccess }) {
   };
 
   return (
-    <main className="container" style={{ maxWidth: '940px', marginTop: '2rem', marginBottom: '3rem' }}>
-      <div style={{ display: 'grid', gridTemplateColumns: 'minmax(0, 520px) minmax(0, 1fr)', gap: '1.5rem', alignItems: 'start' }}>
+    <main className="container" style={{ maxWidth: '960px', marginTop: '1.5rem', marginBottom: '3rem' }}>
+      <div style={{ display: 'grid', gridTemplateColumns: 'minmax(0, 530px) minmax(0, 1fr)', gap: '1.5rem', alignItems: 'start' }}>
         
         {/* Left Column: Login Card & Sample Persona Selectors */}
         <article
@@ -124,34 +125,22 @@ export default function Login({ onLoginSuccess }) {
             background: 'linear-gradient(180deg, #ffffff 0%, #fffbf0 100%)'
           }}
         >
+          {/* One World One Family 360° Emblem Header */}
           <div style={{ textAlign: 'center', marginBottom: '1.2rem' }}>
-            <div style={{ position: 'relative', display: 'inline-block', marginBottom: '0.6rem' }}>
-              <img
-                src="/madhu_sudhan_sai.jpg"
-                alt="Sadguru Sri Madhusudan Sai"
-                style={{
-                  width: '100px', height: '100px', borderRadius: '50%',
-                  border: '4px solid #f59e0b', objectFit: 'cover', margin: '0 auto', display: 'block',
-                  boxShadow: '0 0 20px rgba(245, 158, 11, 0.45), 0 4px 10px rgba(0, 0, 0, 0.12)'
-                }}
-              />
-              <span style={{
-                position: 'absolute', bottom: '-6px', left: '50%', transform: 'translateX(-50%)',
-                background: '#d97706', color: '#ffffff', fontSize: '0.62rem', fontWeight: 'bold',
-                padding: '0.12rem 0.55rem', borderRadius: '9999px', whiteSpace: 'nowrap',
-                letterSpacing: '0.04em', boxShadow: '0 2px 5px rgba(0,0,0,0.2)'
-              }}>
-                DIVINE GUIDANCE
-              </span>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: '0.8rem' }}>
+              <div>
+                <OneWorldOneFamilyLogo size={92} showText={false} variant="hero" speed="normal" />
+              </div>
             </div>
-            <h2 style={{ color: '#1e293b', marginBottom: '0.15rem', fontSize: '1.5rem', fontWeight: '800' }}>
-              Sathya Sai Grama VMS
+
+            <h2 style={{ color: '#1e293b', marginBottom: '0.15rem', fontSize: '1.55rem', fontWeight: '900', letterSpacing: '-0.5px' }}>
+              ONE WORLD ONE FAMILY
             </h2>
-            <p style={{ color: '#d97706', fontSize: '0.82rem', fontWeight: '700', textTransform: 'uppercase', letterSpacing: '0.06em', margin: '0 0 0.4rem 0' }}>
-              Sadguru Sri Madhusudan Sai Ashram • Muddenahalli
-            </p>
-            <div style={{ display: 'inline-block', background: '#fef3c7', color: '#b45309', padding: '0.15rem 0.75rem', borderRadius: '12px', fontSize: '0.75rem', fontWeight: '600', fontStyle: 'italic' }}>
-              "Love All, Serve All • Help Ever, Hurt Never"
+            <div style={{ color: '#d97706', fontSize: '0.9rem', fontWeight: '800', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: '0.4rem' }}>
+              SRI SATHYA SAI GRAMAM
+            </div>
+            <div style={{ display: 'inline-block', background: '#fef3c7', color: '#b45309', padding: '0.2rem 0.85rem', borderRadius: '12px', fontSize: '0.76rem', fontWeight: '700', letterSpacing: '0.5px', border: '1px solid #fde68a' }}>
+              "VASUDHAIVA KUTUMBAKAM"
             </div>
           </div>
 
