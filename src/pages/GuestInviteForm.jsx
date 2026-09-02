@@ -77,6 +77,9 @@ export default function GuestInviteForm() {
       const res = await getPublicHostInfo(hostId);
       if (res.success) {
         setHostInfo(res.host);
+        if (res.host?.user_type === 'VIP_HOST' || res.host?.role === 'VIP_HOST') {
+          setCategory('VIP');
+        }
         if (res.is_used) {
           setIsLinkUsed(true);
         }

@@ -178,6 +178,7 @@ export default function HostDashboard({ user }) {
   // Role capability checks for visit_type filtering
   const isUserResident = user?.role === 'RESIDENT' || user?.residency_status === 'Resident' || user?.role === 'ADMIN';
   const isUserEmployee = user?.role === 'EMPLOYEE' || user?.role === 'HOD' || user?.residency_status === 'Employee' || user?.role === 'ADMIN';
+  const isVipHostOnly = user?.user_type === 'VIP_HOST' || user?.role === 'VIP_HOST';
 
   // Personal Host Gate Pass & QR Code calculation for bottom of screen
   const hostPassCode = user?.pass_code || (
@@ -483,12 +484,154 @@ export default function HostDashboard({ user }) {
     setValidUntil(getDefaultUntil());
   };
 
+  const getHostTypeInfo = () => {
+    const type = user?.user_type || user?.role || 'RESIDENT';
+    switch (type) {
+      case 'RESIDENT':
+        return {
+          title: 'Resident Host',
+          desc: "Can invite guests to one's respective Residence",
+          badgeBg: '#e0f2fe', badgeColor: '#0369a1', borderColor: '#7dd3fc',
+          capabilities: ['🏠 Residence Invitations', '👨‍👩‍👧 Family Member Passes']
+        };
+      case 'EMPLOYEE':
+        return {
+          title: 'Employee Host',
+          desc: "Can invite guests to one's respective Office (PBMT, Annapoorna, etc.)",
+          badgeBg: '#dcfce7', badgeColor: '#15803d', borderColor: '#86efac',
+          capabilities: ['💼 Office & Departmental Invites', '📄 Institutional Meetings']
+        };
+      case 'VIP_HOST':
+        return {
+          title: 'VIP Host',
+          desc: "Can invite VIP Guests who are Ashram's guests and not specific to someone's office (e.g. CSR leaders from Hyd, Deepak brother)",
+          badgeBg: '#fef3c7', badgeColor: '#b45309', borderColor: '#fde68a',
+          capabilities: ['🌟 Ashram VIP Guest Invites', '🏆 Priority Escort Passes']
+        };
+      case 'PRO':
+        return {
+          title: 'Public Relations Office (PRO Host)',
+          desc: "Acts as Host for walk-in visitors, approves non-specific visitors & Ashram Tour visitors",
+          badgeBg: '#f3e8ff', badgeColor: '#7e22ce', borderColor: '#d8b4fe',
+          capabilities: ['🏛️ Walk-in Visitor Approval', '🚌 Ashram Tour Approval', '📋 Non-Specific Guest Host']
+        };
+      case 'RESIDENT_EMPLOYEE':
+        return {
+          title: 'Resident + Employee Host',
+          desc: "Dual host privileges: Residence & Office invitations",
+          badgeBg: '#e0f2fe', badgeColor: '#0284c7', borderColor: '#38bdf8',
+          capabilities: ['🏠 Residence Invitations', '💼 Office & Departmental Invites']
+        };
+      case 'RESIDENT_VIP_HOST':
+        return {
+          title: 'Resident + VIP Host',
+          desc: "Dual host privileges: Residence & Ashram VIP Guest invitations",
+          badgeBg: '#fffbeb', badgeColor: '#d97706', borderColor: '#fcd34d',
+          capabilities: ['🏠 Residence Invitations', '🌟 Ashram VIP Guest Invites']
+        };
+      case 'EMPLOYEE_VIP_HOST':
+        return {
+          title: 'Employee + VIP Host',
+          desc: "Dual host privileges: Office & Ashram VIP Guest invitations",
+          badgeBg: '#f0fdf4', badgeColor: '#16a34a', borderColor: '#4ade80',
+          capabilities: ['💼 Office & Departmental Invites', '🌟 Ashram VIP Guest Invites']
+        };
+      case 'RESIDENT_EMPLOYEE_VIP_HOST':
+        return {
+          title: 'Resident + Employee + VIP Host',
+          desc: "Full host privileges: Residence, Office, & Ashram VIP Guest invitations",
+          badgeBg: '#faf5ff', badgeColor: '#9333ea', borderColor: '#c084fc',
+          capabilities: ['🏠 Residence Invitations', '💼 Office & Dept Invites', '🌟 VIP Guest Invites']
+        };
+      default:
+        return {
+          title: `${user?.role || 'Host'} Portal`,
+          desc: 'Ashram Host Invitation Management',
+          badgeBg: '#f1f5f9', badgeColor: '#475569', borderColor: '#cbd5e1',
+          capabilities: ['🤝 General Host Privileges']
+        };
+    }
+  };
+
+  const getHostPermissions = () => {
+    const type = (user?.user_type || user?.role || 'RESIDENT').toUpperCase();
+    const role = (user?.role || '').toUpperCase();
+
+    if (['ADMIN', 'SUPERVISOR', 'SECURITY_HEAD', 'GUARD'].includes(role)) {
+      return {
+        canInviteResidence: true, canInviteOffice: true, canInviteVip: true,
+        allowedCategories: ['GENERAL', 'FAMILY_MEMBER', 'VIP', 'VVIP', 'MAID', 'FREQUENT_VISITOR', 'DELIVERY', 'VENDOR', 'FOREIGN_NATIONAL'],
+        allowedVisitTypes: ['HOME', 'OFFICE', 'BHAJAN', 'EVENT', 'TOUR'],
+      };
+    }
+
+    switch (type) {
+      case 'VIP_HOST':
+        return {
+          canInviteResidence: false, canInviteOffice: false, canInviteVip: true,
+          allowedCategories: ['VIP', 'VVIP'],
+          allowedVisitTypes: ['BHAJAN', 'EVENT', 'TOUR', 'OFFICE'],
+        };
+      case 'EMPLOYEE':
+        return {
+          canInviteResidence: false, canInviteOffice: true, canInviteVip: false,
+          allowedCategories: ['GENERAL', 'DELIVERY', 'VENDOR', 'CONTRACTOR', 'FOREIGN_NATIONAL'],
+          allowedVisitTypes: ['OFFICE', 'BHAJAN', 'EVENT'],
+        };
+      case 'RESIDENT':
+        return {
+          canInviteResidence: true, canInviteOffice: false, canInviteVip: false,
+          allowedCategories: ['GENERAL', 'FAMILY_MEMBER', 'MAID', 'FREQUENT_VISITOR', 'FOREIGN_NATIONAL'],
+          allowedVisitTypes: ['HOME', 'BHAJAN', 'EVENT'],
+        };
+      case 'PRO':
+        return {
+          canInviteResidence: true, canInviteOffice: true, canInviteVip: true,
+          allowedCategories: ['GENERAL', 'VIP', 'VVIP', 'VENDOR', 'FOREIGN_NATIONAL'],
+          allowedVisitTypes: ['TOUR', 'OFFICE', 'HOME', 'BHAJAN', 'EVENT'],
+        };
+      case 'RESIDENT_EMPLOYEE':
+        return {
+          canInviteResidence: true, canInviteOffice: true, canInviteVip: false,
+          allowedCategories: ['GENERAL', 'FAMILY_MEMBER', 'MAID', 'FREQUENT_VISITOR', 'DELIVERY', 'VENDOR', 'FOREIGN_NATIONAL'],
+          allowedVisitTypes: ['HOME', 'OFFICE', 'BHAJAN', 'EVENT'],
+        };
+      case 'RESIDENT_VIP_HOST':
+        return {
+          canInviteResidence: true, canInviteOffice: false, canInviteVip: true,
+          allowedCategories: ['GENERAL', 'FAMILY_MEMBER', 'VIP', 'VVIP', 'MAID', 'FREQUENT_VISITOR', 'FOREIGN_NATIONAL'],
+          allowedVisitTypes: ['HOME', 'BHAJAN', 'EVENT', 'TOUR'],
+        };
+      case 'EMPLOYEE_VIP_HOST':
+        return {
+          canInviteResidence: false, canInviteOffice: true, canInviteVip: true,
+          allowedCategories: ['GENERAL', 'VIP', 'VVIP', 'DELIVERY', 'VENDOR', 'FOREIGN_NATIONAL'],
+          allowedVisitTypes: ['OFFICE', 'BHAJAN', 'EVENT', 'TOUR'],
+        };
+      case 'RESIDENT_EMPLOYEE_VIP_HOST':
+        return {
+          canInviteResidence: true, canInviteOffice: true, canInviteVip: true,
+          allowedCategories: ['GENERAL', 'FAMILY_MEMBER', 'VIP', 'VVIP', 'MAID', 'FREQUENT_VISITOR', 'DELIVERY', 'VENDOR', 'FOREIGN_NATIONAL'],
+          allowedVisitTypes: ['HOME', 'OFFICE', 'BHAJAN', 'EVENT', 'TOUR'],
+        };
+      default:
+        return {
+          canInviteResidence: true, canInviteOffice: true, canInviteVip: true,
+          allowedCategories: ['GENERAL', 'FAMILY_MEMBER', 'VIP', 'VVIP', 'MAID', 'FREQUENT_VISITOR', 'DELIVERY', 'VENDOR', 'FOREIGN_NATIONAL'],
+          allowedVisitTypes: ['HOME', 'OFFICE', 'BHAJAN', 'EVENT', 'TOUR'],
+        };
+    }
+  };
+
+  const hostTypeDetails = getHostTypeInfo();
+  const hostPerms = getHostPermissions();
+
   return (
     <div className="container">
       <DashboardHeader
-        title="Host Portal (Resident / Employee)"
+        title={`Host Portal (${hostTypeDetails.title})`}
         subtitle={`Welcome back, ${user.name} | Residency Status: ${user.residency_status || 'Resident'}`}
-        roleBadge="RESIDENT / HOST"
+        roleBadge={hostTypeDetails.title.toUpperCase()}
         actionButton={
           <div style={{ display: 'flex', gap: '0.6rem', flexWrap: 'wrap' }}>
             <button
@@ -506,6 +649,51 @@ export default function HostDashboard({ user }) {
           </div>
         }
       />
+
+      {/* Host Type & Capability Summary Banner */}
+      <div style={{
+        background: hostTypeDetails.badgeBg,
+        border: `1px solid ${hostTypeDetails.borderColor}`,
+        borderRadius: '10px',
+        padding: '0.85rem 1.2rem',
+        marginBottom: '1.2rem',
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'space-between',
+        flexWrap: 'wrap',
+        gap: '0.8rem'
+      }}>
+        <div>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+            <span style={{ fontSize: '0.78rem', fontWeight: '800', textTransform: 'uppercase', letterSpacing: '0.04em', color: hostTypeDetails.badgeColor }}>
+              YOUR HOST PROFILE TYPE:
+            </span>
+            <strong style={{ fontSize: '1rem', color: '#1e293b' }}>
+              {hostTypeDetails.title}
+            </strong>
+          </div>
+          <p style={{ margin: '0.2rem 0 0 0', fontSize: '0.82rem', color: '#334155' }}>
+            📌 <strong>Invitation Scope:</strong> {hostTypeDetails.desc}
+          </p>
+        </div>
+
+        <div style={{ display: 'flex', gap: '0.4rem', flexWrap: 'wrap' }}>
+          {hostTypeDetails.capabilities.map((cap, idx) => (
+            <span key={idx} style={{
+              background: '#ffffff',
+              color: hostTypeDetails.badgeColor,
+              border: `1px solid ${hostTypeDetails.borderColor}`,
+              fontSize: '0.75rem',
+              fontWeight: '700',
+              padding: '0.25rem 0.6rem',
+              borderRadius: '6px',
+              boxShadow: '0 1px 3px rgba(0,0,0,0.05)'
+            }}>
+              {cap}
+            </span>
+          ))}
+        </div>
+      </div>
 
       {msg && <div style={{ background: '#def7ec', color: '#03543f', padding: '0.75rem', borderRadius: '6px', marginBottom: '1rem' }}>{msg}</div>}
       {error && <div style={{ background: '#fee2e2', color: '#991b1b', padding: '0.75rem', borderRadius: '6px', marginBottom: '1rem' }}>{error}</div>}
@@ -688,20 +876,22 @@ export default function HostDashboard({ user }) {
                   onChange={(e) => {
                     const val = e.target.value;
                     setCategory(val);
+                    if (val === 'VVIP') setIsVvip(true);
+                    else if (val === 'VIP') setIsVvip(false);
                     if (val === 'FOREIGN_NATIONAL' && idType === 'Aadhaar') {
                       setIdType('Foreign Passport');
                     }
                   }}
                 >
-                  <option value="GENERAL">General Guest</option>
-                  <option value="FAMILY_MEMBER">Resident Family Member (Pre-Approved)</option>
-                  <option value="VIP">VIP</option>
-                  <option value="VVIP">VVIP</option>
-                  <option value="MAID">Domestic Helper / Maid</option>
-                  <option value="FREQUENT_VISITOR">Frequent Visitor</option>
-                  <option value="DELIVERY">Delivery / Courier</option>
-                  <option value="VENDOR">Vendor</option>
-                  <option value="FOREIGN_NATIONAL">Foreign National</option>
+                  {hostPerms.allowedCategories.includes('GENERAL') && <option value="GENERAL">General Guest</option>}
+                  {hostPerms.allowedCategories.includes('FAMILY_MEMBER') && <option value="FAMILY_MEMBER">Resident Family Member (Pre-Approved)</option>}
+                  {hostPerms.allowedCategories.includes('VIP') && <option value="VIP">VIP (Very Important Person)</option>}
+                  {hostPerms.allowedCategories.includes('VVIP') && <option value="VVIP">VVIP (High Priority VVIP Guest)</option>}
+                  {hostPerms.allowedCategories.includes('MAID') && <option value="MAID">Domestic Helper / Maid</option>}
+                  {hostPerms.allowedCategories.includes('FREQUENT_VISITOR') && <option value="FREQUENT_VISITOR">Frequent Visitor</option>}
+                  {hostPerms.allowedCategories.includes('DELIVERY') && <option value="DELIVERY">Delivery / Courier</option>}
+                  {hostPerms.allowedCategories.includes('VENDOR') && <option value="VENDOR">Vendor</option>}
+                  {hostPerms.allowedCategories.includes('FOREIGN_NATIONAL') && <option value="FOREIGN_NATIONAL">Foreign National</option>}
                 </select>
               </label>
 

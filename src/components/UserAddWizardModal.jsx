@@ -230,12 +230,17 @@ export default function UserAddWizardModal({ isOpen, onClose, onSuccess }) {
                     value={formData.user_type}
                     onChange={(e) => handleChange('user_type', e.target.value)}
                   >
-                    <option value="RESIDENT">RESIDENT (Ashram Resident Host)</option>
-                    <option value="EMPLOYEE">EMPLOYEE (Ashram Staff Member)</option>
-                    <option value="RESIDENT_EMPLOYEE">RESIDENT_EMPLOYEE (Resident + Staff Dual Profile)</option>
-                    <option value="VOLUNTEER">VOLUNTEER (Ashram Sevadal / Volunteer)</option>
-                    <option value="STUDENT">STUDENT (Campus Student)</option>
-                    <option value="GUEST">GUEST (Visiting Guest Host)</option>
+                    <option value="RESIDENT">🏠 RESIDENT - Residence Host (Invites to Residence)</option>
+                    <option value="EMPLOYEE">💼 EMPLOYEE - Office Host (Invites to Office: PBMT, Annapoorna)</option>
+                    <option value="VIP_HOST">🌟 VIP_HOST - VIP Guest Host (Invites Ashram VIP Guests)</option>
+                    <option value="PRO">🏛️ PRO - Public Relations Office (Walk-ins & Ashram Tours)</option>
+                    <option value="RESIDENT_EMPLOYEE">🏠+💼 RESIDENT_EMPLOYEE - Resident + Employee</option>
+                    <option value="RESIDENT_VIP_HOST">🏠+🌟 RESIDENT_VIP_HOST - Resident + VIP Host</option>
+                    <option value="EMPLOYEE_VIP_HOST">💼+🌟 EMPLOYEE_VIP_HOST - Employee + VIP Host</option>
+                    <option value="RESIDENT_EMPLOYEE_VIP_HOST">🏠+💼+🌟 RESIDENT_EMPLOYEE_VIP_HOST - All 3 Host Types</option>
+                    <option value="VOLUNTEER">🤝 VOLUNTEER (Ashram Sevadal / Volunteer)</option>
+                    <option value="STUDENT">🎓 STUDENT (Campus Student)</option>
+                    <option value="GUEST">🎫 GUEST (Visiting Guest Host)</option>
                   </select>
                 </div>
 
