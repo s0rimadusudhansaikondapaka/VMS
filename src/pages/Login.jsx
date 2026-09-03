@@ -152,14 +152,9 @@ export default function Login({ onLoginSuccess }) {
               <Mail size={14} /> Email Login
             </button>
             <button type="button" onClick={() => { setActiveTab('phone'); setOtpSent(false); setOtp(''); setDevOtp(''); }}
-              style={{ flex: 1, padding: '0.55rem', fontSize: '0.8rem', fontWeight: '700', border: 'none', borderLeft: '1px solid #e2e8f0', borderRight: '1px solid #e2e8f0', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.3rem',
+              style={{ flex: 1, padding: '0.55rem', fontSize: '0.8rem', fontWeight: '700', border: 'none', borderLeft: '1px solid #e2e8f0', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.3rem',
                 background: activeTab === 'phone' ? '#d97706' : '#f8fafc', color: activeTab === 'phone' ? 'white' : '#64748b' }}>
               <Phone size={14} /> Phone OTP
-            </button>
-            <button type="button" onClick={() => setActiveTab('register')}
-              style={{ flex: 1, padding: '0.55rem', fontSize: '0.8rem', fontWeight: '700', border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.3rem',
-                background: activeTab === 'register' ? '#d97706' : '#f8fafc', color: activeTab === 'register' ? 'white' : '#64748b' }}>
-              <UserPlus size={14} /> Register
             </button>
           </div>
 
@@ -307,33 +302,6 @@ export default function Login({ onLoginSuccess }) {
                   </button>
                 </form>
               )}
-            </>
-          )}
-
-          {/* Register Tab */}
-          {activeTab === 'register' && (
-            <>
-              <div style={{ background: '#fef3c7', padding: '0.65rem', borderRadius: '8px', marginBottom: '0.8rem', fontSize: '0.82rem', color: '#92400e' }}>
-                <strong>First Time?</strong> Register below. Your account will be reviewed and approved by the Accommodation/Admin office.
-              </div>
-              <form onSubmit={handleRegister}>
-                <label style={{ fontWeight: '600', color: '#334155', fontSize: '0.85rem' }}>
-                  Full Name *
-                  <input type="text" value={regName} onChange={(e) => setRegName(e.target.value)} required placeholder="Enter your full name" style={{ padding: '0.45rem' }} />
-                </label>
-                <label style={{ fontWeight: '600', color: '#334155', marginTop: '0.4rem', fontSize: '0.85rem' }}>
-                  WhatsApp / Mobile Number *
-                  <input type="tel" value={regPhone} onChange={(e) => setRegPhone(e.target.value)} required placeholder="+91 9876549999" style={{ padding: '0.45rem' }} />
-                </label>
-                <label style={{ fontWeight: '600', color: '#334155', marginTop: '0.4rem', fontSize: '0.85rem' }}>
-                  Email Address (Optional)
-                  <input type="email" value={regEmail} onChange={(e) => setRegEmail(e.target.value)} placeholder="your.email@example.com" style={{ padding: '0.45rem' }} />
-                </label>
-                <button type="submit" disabled={loading}
-                  style={{ width: '100%', marginTop: '1rem', background: 'linear-gradient(135deg, #2563eb 0%, #1e40af 100%)', borderColor: '#2563eb', fontWeight: '700', fontSize: '0.95rem', padding: '0.55rem' }}>
-                  {loading ? 'Submitting...' : 'Submit Registration for Approval'}
-                </button>
-              </form>
             </>
           )}
         </article>

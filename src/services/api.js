@@ -261,4 +261,35 @@ export const deleteResidentFamilyMember = async (id) => {
   return res.data;
 };
 
+// Delivery Persons Module API Helpers
+export const getDeliveryPersons = async () => {
+  const res = await api.get('/delivery-persons');
+  return res.data;
+};
+
+export const createDeliveryPerson = async (data) => {
+  const res = await api.post('/delivery-persons', data);
+  return res.data;
+};
+
+export const updateDeliveryPerson = async (id, data) => {
+  const res = await api.put(`/delivery-persons/${id}`, data);
+  return res.data;
+};
+
+export const approveOrRejectDeliveryPerson = async (id, action, remarks) => {
+  const res = await api.post(`/delivery-persons/${id}/approval`, { action, remarks });
+  return res.data;
+};
+
+export const markDeliveryIn = async (id, data) => {
+  const res = await api.post(`/delivery-persons/${id}/mark-in`, data);
+  return res.data;
+};
+
+export const markDeliveryOut = async (id, data) => {
+  const res = await api.post(`/delivery-persons/${id}/mark-out`, data);
+  return res.data;
+};
+
 export default api;

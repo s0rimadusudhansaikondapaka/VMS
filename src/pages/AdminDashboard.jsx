@@ -3,8 +3,9 @@ import { getReportData, adminBypassApprove, adminEmergencyPass, toggleL2Approval
 import DashboardHeader from '../components/DashboardHeader';
 import UserAddWizardModal from '../components/UserAddWizardModal';
 import BulkUploadModal from '../components/BulkUploadModal';
+import DeliveryPersonsReport from '../components/DeliveryPersonsReport';
 import { useTablePagination, PaginationControls } from '../components/TablePagination';
-import { KeyRound, Zap, ShieldAlert, CheckCircle, Lock, Unlock, AlertTriangle, FileSpreadsheet, UserPlus, Users, UploadCloud, Shield, Check, X, Sliders, ArrowRightLeft, Pencil } from 'lucide-react';
+import { KeyRound, Zap, ShieldAlert, CheckCircle, Lock, Unlock, AlertTriangle, FileSpreadsheet, UserPlus, Users, UploadCloud, Shield, Check, X, Sliders, ArrowRightLeft, Pencil, Truck } from 'lucide-react';
 
 export default function AdminDashboard({ user }) {
   const [registrations, setRegistrations] = useState([]);
@@ -366,6 +367,9 @@ export default function AdminDashboard({ user }) {
           fetchData();
         }}
       />
+
+      {/* Delivery Persons Management & Supervisor Approvals */}
+      <DeliveryPersonsReport user={user} />
 
       {/* Admin Policy Controls & Emergency Pass Generator */}
       <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1.5rem', marginBottom: '1.5rem' }}>

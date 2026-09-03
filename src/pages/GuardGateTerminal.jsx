@@ -2,8 +2,9 @@ import React, { useState, useEffect } from 'react';
 import { verifyGatePass, processGateMovement, createRegistration, getSpotRegistrationsQueue, assignSpotHost, getAdminUsers, updateApproval, getRecentGateLookups, getGatewiseStatsAndSelfRegistered } from '../services/api';
 import DashboardHeader from '../components/DashboardHeader';
 import QrScannerModal from '../components/QrScannerModal';
+import DeliveryPersonsReport from '../components/DeliveryPersonsReport';
 import { useTablePagination, PaginationControls } from '../components/TablePagination';
-import { Shield, ShieldCheck, LogIn, LogOut, Search, UserCheck, AlertTriangle, Car, Users, Calendar, Camera, Phone, KeyRound, UserPlus, QrCode, Share2, CheckCircle, XCircle, Clock } from 'lucide-react';
+import { Shield, ShieldCheck, LogIn, LogOut, Search, UserCheck, AlertTriangle, Car, Users, Calendar, Camera, Phone, KeyRound, UserPlus, QrCode, Share2, CheckCircle, XCircle, Clock, Truck } from 'lucide-react';
 
 export default function GuardGateTerminal({ user }) {
   const [gateName, setGateName] = useState('NORTH_GATE');
@@ -13,6 +14,7 @@ export default function GuardGateTerminal({ user }) {
   const [msg, setMsg] = useState('');
   const [loading, setLoading] = useState(false);
   const [showCameraScanner, setShowCameraScanner] = useState(false);
+  const [showDeliveryReport, setShowDeliveryReport] = useState(false);
 
   // Gate Spot Registration Queue & QR Modal State
   const [showGateSpotQrModal, setShowGateSpotQrModal] = useState(false);
@@ -387,7 +389,32 @@ export default function GuardGateTerminal({ user }) {
             {showSelfRegModal ? 'Close List' : 'View Visitors List'}
           </button>
         </div>
+
+        {/* Delivery Persons Summary Card */}
+        <div
+          onClick={() => setShowDeliveryReport(!showDeliveryReport)}
+          style={{ background: '#e0e7ff', border: '2px solid #4338ca', borderRadius: '10px', padding: '0.8rem 1rem', cursor: 'pointer', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}
+        >
+          <div>
+            <div style={{ fontSize: '0.78rem', color: '#312e81', fontWeight: 'bold', display: 'flex', alignItems: 'center', gap: '0.3rem' }}>
+              <Truck size={14} color="#4338ca" /> Delivery Persons Report & IN/OUT
+            </div>
+            <div style={{ fontSize: '1rem', fontWeight: 'bold', color: '#1e1b4b', marginTop: '4px' }}>
+              Track Entry, Exit & Overstay
+            </div>
+          </div>
+          <button style={{ fontSize: '0.72rem', padding: '0.2rem 0.5rem', background: '#4338ca', color: '#fff', border: 'none', borderRadius: '4px' }}>
+            {showDeliveryReport ? 'Hide Report' : 'Open Delivery Report'}
+          </button>
+        </div>
       </div>
+
+      {/* Delivery Persons Report Component */}
+      {showDeliveryReport && (
+        <div style={{ marginBottom: '1.5rem' }}>
+          <DeliveryPersonsReport user={user} />
+        </div>
+      )}
 
       {/* Gatewise Movement Log List Modal / Card */}
       {showGateLogsModal && (
