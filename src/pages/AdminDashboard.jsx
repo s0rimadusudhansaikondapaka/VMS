@@ -4,6 +4,7 @@ import DashboardHeader from '../components/DashboardHeader';
 import UserAddWizardModal from '../components/UserAddWizardModal';
 import BulkUploadModal from '../components/BulkUploadModal';
 import DeliveryPersonsReport from '../components/DeliveryPersonsReport';
+import DeviceManagementReport from '../components/DeviceManagementReport';
 import { useTablePagination, PaginationControls } from '../components/TablePagination';
 import { KeyRound, Zap, ShieldAlert, CheckCircle, Lock, Unlock, AlertTriangle, FileSpreadsheet, UserPlus, Users, UploadCloud, Shield, Check, X, Sliders, ArrowRightLeft, Pencil, Truck } from 'lucide-react';
 
@@ -370,6 +371,9 @@ export default function AdminDashboard({ user }) {
 
       {/* Delivery Persons Management & Supervisor Approvals */}
       <DeliveryPersonsReport user={user} />
+
+      {/* Ashram Gate Devices & Duty Audit */}
+      <DeviceManagementReport user={user} />
 
       {/* Admin Policy Controls & Emergency Pass Generator */}
       <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1.5rem', marginBottom: '1.5rem' }}>

@@ -292,4 +292,25 @@ export const markDeliveryOut = async (id, data) => {
   return res.data;
 };
 
+// Ashram Mobile Devices & Guard Duty Audit (Super Admin)
+export const getAdminDevices = async () => {
+  const res = await api.get('/admin/devices');
+  return res.data;
+};
+
+export const createAdminDevice = async (data) => {
+  const res = await api.post('/admin/devices', data);
+  return res.data;
+};
+
+export const updateAdminDevice = async (id, data) => {
+  const res = await api.put(`/admin/devices/${id}`, data);
+  return res.data;
+};
+
+export const getDeviceDutyAudit = async (params = {}) => {
+  const res = await api.get('/admin/devices/audit', { params });
+  return res.data;
+};
+
 export default api;
