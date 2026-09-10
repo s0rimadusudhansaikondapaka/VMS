@@ -300,10 +300,54 @@ export default function GuardGateTerminal({ user }) {
 
       if (res.success) {
         setMsg(res.message);
-        setPassData((prev) => ({ ...prev, status: res.status }));
+        setPassData((prev) => ({
+          ...prev,
+          status: res.status,
+          lifecycle_status: res.lifecycle_status,
+          presence_status: res.presence_status,
+          is_in_enabled: res.presence_status !== 'currently_inside' && !prev.departure_time_passed,
+          is_out_enabled: res.presence_status === 'currently_inside' || res.presence_status === 'over_stayed',
+        }));
+        fetchInvitedVisitorsList(invitedSearch);
+        fetchGateStats(gateName);
       }
     } catch (err) {
       setError(err.response?.data?.message || `Failed to process ${direction} movement.`);
+    }
+  };
+
+  const handleUpdateVisitorDetails = async () => {
+    if (!passData) return;
+    setUpdatingDetails(true);
+    setError('');
+    setMsg('');
+    try {
+      const res = await updateVisitorGateDetails(passData.id, {
+        adult_men_count: adultMen,
+        adult_women_count: adultWomen,
+        boys_count: boysCount,
+        girls_count: girlsCount,
+        vehicle_no: selectedVehicle,
+      });
+
+      if (res.success) {
+        setMsg(res.message || 'Visitor people count and vehicle details updated successfully.');
+        setPassData((prev) => ({
+          ...prev,
+          adult_men_count: adultMen,
+          adult_women_count: adultWomen,
+          boys_count: boysCount,
+          girls_count: girlsCount,
+          children_count: (parseInt(boysCount) || 0) + (parseInt(girlsCount) || 0),
+          person_count: (parseInt(adultMen) || 0) + (parseInt(adultWomen) || 0) + (parseInt(boysCount) || 0) + (parseInt(girlsCount) || 0),
+          vehicle_no: selectedVehicle,
+        }));
+        fetchInvitedVisitorsList(invitedSearch);
+      }
+    } catch (err) {
+      setError(err.response?.data?.message || 'Failed to update visitor details.');
+    } finally {
+      setUpdatingDetails(false);
     }
   };
 
@@ -382,7 +426,26 @@ export default function GuardGateTerminal({ user }) {
       />
 
       {/* Active Gate Traffic & Self-Registered Visitors Live Counter */}
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '1rem', marginBottom: '1.2rem' }}>
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '1rem', marginBottom: '1.2rem' }}>
+        <div
+          onClick={() => {
+            const el = document.getElementById('invited-visitors-section');
+            if (el) el.scrollIntoView({ behavior: 'smooth' });
+          }}
+          style={{ background: '#eff6ff', border: '2px solid #2563eb', borderRadius: '10px', padding: '0.8rem 1rem', cursor: 'pointer', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}
+        >
+          <div>
+            <div style={{ fontSize: '0.78rem', color: '#1e40af', fontWeight: 'bold', display: 'flex', alignItems: 'center', gap: '0.3rem' }}>
+              <Users size={14} color="#2563eb" /> Invited Visitors (+8h & Active)
+            </div>
+            <div style={{ fontSize: '1.4rem', fontWeight: 'bold', color: '#1d4ed8' }}>
+              {invitedVisitors.length} <span style={{ fontSize: '0.78rem', color: '#475569', fontWeight: 'normal' }}>visitors</span>
+            </div>
+          </div>
+          <button style={{ fontSize: '0.72rem', padding: '0.2rem 0.5rem', background: '#2563eb', color: '#fff', border: 'none', borderRadius: '4px' }}>
+            View List
+          </button>
+        </div>
         <div
           onClick={() => setShowGateLogsModal(!showGateLogsModal)}
           style={{ background: '#fffbf0', border: '2px solid #df6f06', borderRadius: '10px', padding: '0.8rem 1rem', cursor: 'pointer', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}
@@ -617,6 +680,206 @@ export default function GuardGateTerminal({ user }) {
         </div>
       )}
 
+      {/* Invited Visitors (+8 Hours Upcoming & Checked-In) Section */}
+      <div id="invited-visitors-section" className="card" style={{ borderTop: '4px solid #2563eb', marginBottom: '1.5rem' }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '0.8rem', marginBottom: '0.8rem' }}>
+          <div>
+            <h3 style={{ margin: 0, color: '#1e40af', display: 'flex', alignItems: 'center', gap: '0.5rem', fontSize: '1.15rem' }}>
+              <Users size={22} color="#2563eb" /> Invited Visitors (+8h Upcoming & Active Checked-In)
+            </h3>
+            <p style={{ margin: '0.2rem 0 0 0', fontSize: '0.82rem', color: '#64748b' }}>
+              Showing upcoming visitors scheduled within +8 hours and all active checked-in visitors. Search by visitor name, last 4 digits phone, or vehicle plate.
+            </p>
+          </div>
+          <button
+            onClick={() => fetchInvitedVisitorsList(invitedSearch)}
+            disabled={invitedLoading}
+            style={{ fontSize: '0.8rem', padding: '0.35rem 0.8rem', background: '#2563eb', color: '#fff', border: 'none', borderRadius: '6px', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '0.3rem' }}
+          >
+            🔄 {invitedLoading ? 'Refreshing...' : `Refresh List (${invitedVisitors.length})`}
+          </button>
+        </div>
+
+        {/* Search Filter: Name, last 4 digits phone, vehicle no */}
+        <div style={{ display: 'flex', gap: '0.6rem', marginBottom: '1rem', flexWrap: 'wrap' }}>
+          <div style={{ flex: '1 1 320px' }}>
+            <input
+              type="text"
+              placeholder="🔍 Search by Visitor Name, Last 4 digits of Phone, or Vehicle Plate No..."
+              value={invitedSearch}
+              onChange={(e) => {
+                setInvitedSearch(e.target.value);
+                setInvitedSearchTerm(e.target.value);
+              }}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter') {
+                  e.preventDefault();
+                  fetchInvitedVisitorsList(invitedSearch);
+                }
+              }}
+              style={{ width: '100%', margin: 0, padding: '0.5rem 0.8rem', fontSize: '0.9rem', borderRadius: '6px', border: '2px solid #93c5fd' }}
+            />
+          </div>
+          <button
+            type="button"
+            onClick={() => fetchInvitedVisitorsList(invitedSearch)}
+            style={{ margin: 0, background: '#1d4ed8', borderColor: '#1d4ed8', color: 'white', padding: '0 1rem', fontSize: '0.85rem' }}
+          >
+            <Search size={16} /> Search List
+          </button>
+          {invitedSearch && (
+            <button
+              type="button"
+              onClick={() => {
+                setInvitedSearch('');
+                setInvitedSearchTerm('');
+                fetchInvitedVisitorsList('');
+              }}
+              className="secondary outline"
+              style={{ margin: 0, padding: '0 0.8rem', fontSize: '0.85rem' }}
+            >
+              Clear
+            </button>
+          )}
+        </div>
+
+        <PaginationControls
+          searchTerm={invitedSearchTerm}
+          setSearchTerm={(term) => {
+            setInvitedSearchTerm(term);
+            setInvitedSearch(term);
+          }}
+          currentPage={invitedPage}
+          setCurrentPage={setInvitedPage}
+          totalPages={invitedTotalPages}
+          totalItems={invitedTotalItems}
+          pageSize={10}
+          placeholder="Filter shown records..."
+        />
+
+        {/* Invited Visitors Table */}
+        <div style={{ overflowX: 'auto', marginTop: '0.5rem' }}>
+          <table role="grid" style={{ fontSize: '0.84rem' }}>
+            <thead>
+              <tr style={{ background: '#1e40af', color: '#ffffff' }}>
+                <th>Pass & Visitor</th>
+                <th>Host & Flat</th>
+                <th>Scheduled Departure</th>
+                <th>Category 1 Status</th>
+                <th>Category 2 Status</th>
+                <th>People & Vehicle</th>
+                <th>Action</th>
+              </tr>
+            </thead>
+            <tbody>
+              {paginatedInvitedVisitors.length === 0 ? (
+                <tr>
+                  <td colSpan="7" style={{ textAlign: 'center', color: '#64748b', padding: '1.5rem' }}>
+                    {invitedLoading ? 'Loading invited visitors...' : 'No invited visitors found matching criteria.'}
+                  </td>
+                </tr>
+              ) : (
+                paginatedInvitedVisitors.map((vis) => (
+                  <tr 
+                    key={vis.id} 
+                    style={{ 
+                      cursor: 'pointer', 
+                      background: passData?.id === vis.id ? '#eff6ff' : undefined,
+                      transition: 'background 0.2s'
+                    }} 
+                    onClick={() => {
+                      executePassVerification(vis.pass_code);
+                      const el = document.getElementById('pass-details-terminal-card');
+                      if (el) el.scrollIntoView({ behavior: 'smooth' });
+                    }}
+                  >
+                    <td>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                        {vis.photo_url ? (
+                          <img src={vis.photo_url} alt="" style={{ width: '36px', height: '36px', borderRadius: '50%', objectFit: 'cover' }} />
+                        ) : (
+                          <div style={{ width: '36px', height: '36px', borderRadius: '50%', background: '#cbd5e1', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 'bold', fontSize: '0.85rem' }}>
+                            {vis.visitor_name ? vis.visitor_name.charAt(0).toUpperCase() : 'V'}
+                          </div>
+                        )}
+                        <div>
+                          <strong>{vis.visitor_name}</strong>
+                          <div style={{ fontSize: '0.74rem', color: '#64748b' }}>📞 {vis.visitor_phone}</div>
+                          <span style={{ fontSize: '0.7rem', padding: '0.1rem 0.35rem', borderRadius: '4px', background: '#e2e8f0', color: '#334155', fontWeight: 'bold' }}>
+                            {vis.pass_code}
+                          </span>
+                        </div>
+                      </div>
+                    </td>
+                    <td>
+                      <div><strong>{vis.host_name || 'Ashram Resident'}</strong></div>
+                      <div style={{ fontSize: '0.74rem', color: '#64748b' }}>📍 {vis.host_flat_info || 'Main Campus'}</div>
+                    </td>
+                    <td>
+                      <div style={{ fontWeight: 'bold', color: vis.departure_time_passed ? '#dc2626' : '#1e293b' }}>
+                        {new Date(vis.valid_until).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                      </div>
+                      <div style={{ fontSize: '0.72rem', color: '#64748b' }}>
+                        {new Date(vis.valid_until).toLocaleDateString()}
+                      </div>
+                      {vis.departure_time_passed && (
+                        <span style={{ fontSize: '0.68rem', color: '#b91c1c', fontWeight: 'bold', display: 'block' }}>⚠️ Departure Passed</span>
+                      )}
+                    </td>
+                    <td>
+                      <span style={{
+                        display: 'inline-block',
+                        padding: '0.2rem 0.55rem',
+                        borderRadius: '6px',
+                        fontWeight: 'bold',
+                        fontSize: '0.75rem',
+                        background: vis.lifecycle_status === 'CHECKED-IN' ? '#dbeafe' : vis.lifecycle_status === 'CHECKED-OUT' ? '#f1f5f9' : '#fef3c7',
+                        color: vis.lifecycle_status === 'CHECKED-IN' ? '#1d4ed8' : vis.lifecycle_status === 'CHECKED-OUT' ? '#475569' : '#b45309',
+                        border: '1px solid currentColor'
+                      }}>
+                        {vis.lifecycle_status || 'Yet to Arrive'}
+                      </span>
+                    </td>
+                    <td>
+                      <span style={{
+                        display: 'inline-block',
+                        padding: '0.2rem 0.55rem',
+                        borderRadius: '6px',
+                        fontWeight: 'bold',
+                        fontSize: '0.75rem',
+                        background: vis.presence_status === 'currently_inside' ? '#dcfce7' : vis.presence_status === 'over_stayed' ? '#fee2e2' : '#e0f2fe',
+                        color: vis.presence_status === 'currently_inside' ? '#15803d' : vis.presence_status === 'over_stayed' ? '#b91c1c' : '#0369a1',
+                        border: '1px solid currentColor'
+                      }}>
+                        {vis.presence_status === 'currently_inside' ? 'Currently Inside' : vis.presence_status === 'over_stayed' ? 'Over Stayed' : 'Currently Outside'}
+                      </span>
+                    </td>
+                    <td>
+                      <div><strong>{vis.person_count || 1} people</strong></div>
+                      <div style={{ fontSize: '0.74rem', color: '#64748b' }}>🚗 {vis.vehicle_details || 'No Vehicle'}</div>
+                    </td>
+                    <td>
+                      <button
+                        type="button"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          executePassVerification(vis.pass_code);
+                          const el = document.getElementById('pass-details-terminal-card');
+                          if (el) el.scrollIntoView({ behavior: 'smooth' });
+                        }}
+                        style={{ fontSize: '0.75rem', padding: '0.25rem 0.6rem', background: '#2563eb', borderColor: '#2563eb', color: '#fff', borderRadius: '4px' }}
+                      >
+                        View Details ➔
+                      </button>
+                    </td>
+                  </tr>
+                ))
+              )}
+            </tbody>
+          </table>
+        </div>
+      </div>
+
       <div className="card">
         <h3>Verify Visitor Gate Pass</h3>
         <p style={{ fontSize: '0.85rem', color: '#64748b' }}>
@@ -810,20 +1073,43 @@ export default function GuardGateTerminal({ user }) {
       </div>
 
       {passData && (
-        <div className="card">
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '2px solid #e2e8f0', paddingBottom: '0.5rem' }}>
+        <div id="pass-details-terminal-card" className="card" style={{ borderTop: '4px solid #df6f06' }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '2px solid #e2e8f0', paddingBottom: '0.5rem', flexWrap: 'wrap', gap: '0.5rem' }}>
             <div>
-              <h3 style={{ margin: 0 }}>Pass Verification Details</h3>
+              <h3 style={{ margin: 0 }}>Pass Verification Details ({passData.pass_code})</h3>
               {passData.is_permanent_pass && (
                 <span className="badge badge-approved" style={{ marginTop: '0.3rem' }}>
                   PERMANENT PASSCODE (Reusable Daily)
                 </span>
               )}
             </div>
-            <div>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', flexWrap: 'wrap' }}>
               {passData.is_vvip && <span className="badge badge-vvip">IMPORTANT VVIP</span>}
-              <span className={`badge badge-${passData.status.toLowerCase()}`} style={{ marginLeft: '0.5rem' }}>
-                Status: {passData.status}
+              
+              {/* Category 1: Lifecycle Status */}
+              <span style={{
+                padding: '0.25rem 0.65rem',
+                borderRadius: '6px',
+                fontWeight: 'bold',
+                fontSize: '0.8rem',
+                background: (passData.lifecycle_status === 'CHECKED-IN' ? '#dbeafe' : passData.lifecycle_status === 'CHECKED-OUT' ? '#f1f5f9' : '#fef3c7'),
+                color: (passData.lifecycle_status === 'CHECKED-IN' ? '#1d4ed8' : passData.lifecycle_status === 'CHECKED-OUT' ? '#475569' : '#b45309'),
+                border: '1px solid currentColor'
+              }}>
+                Lifecycle: {passData.lifecycle_status || 'Yet to Arrive'}
+              </span>
+
+              {/* Category 2: Physical Presence Status */}
+              <span style={{
+                padding: '0.25rem 0.65rem',
+                borderRadius: '6px',
+                fontWeight: 'bold',
+                fontSize: '0.8rem',
+                background: (passData.presence_status === 'currently_inside' ? '#dcfce7' : passData.presence_status === 'over_stayed' ? '#fee2e2' : '#e0f2fe'),
+                color: (passData.presence_status === 'currently_inside' ? '#15803d' : passData.presence_status === 'over_stayed' ? '#b91c1c' : '#0369a1'),
+                border: '1px solid currentColor'
+              }}>
+                Presence: {passData.presence_status === 'currently_inside' ? 'Currently Inside' : passData.presence_status === 'over_stayed' ? 'Over Stayed' : 'Currently Outside'}
               </span>
             </div>
           </div>
@@ -1061,57 +1347,118 @@ export default function GuardGateTerminal({ user }) {
                   onChange={(e) => setRemarks(e.target.value)}
                 />
               </label>
+
+              {/* Guard Restricted Edit Action */}
+              <div style={{ marginTop: '0.8rem', display: 'flex', justifyContent: 'flex-end' }}>
+                <button
+                  type="button"
+                  onClick={handleUpdateVisitorDetails}
+                  disabled={updatingDetails}
+                  style={{
+                    background: '#059669',
+                    borderColor: '#059669',
+                    color: 'white',
+                    fontSize: '0.85rem',
+                    fontWeight: 'bold',
+                    padding: '0.45rem 1rem',
+                    borderRadius: '6px',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '0.4rem',
+                    cursor: updatingDetails ? 'not-allowed' : 'pointer',
+                  }}
+                >
+                  <CheckCircle size={16} />
+                  {updatingDetails ? 'Saving...' : '💾 Save People & Vehicle Details'}
+                </button>
+              </div>
             </div>
           </div>
 
-          <div style={{ display: 'flex', gap: '1rem', marginTop: '1.5rem' }}>
-            <button
-              onClick={() => handleMovement('IN')}
-              disabled={passData.is_current_gate_allowed === false || passData.arrival_status === 'TOO_EARLY'}
-              className="gate-btn-in"
-              data-tooltip={passData.is_current_gate_allowed === false ? `Category ${passData.visitor_category} disabled at ${gateName}` : 'Record visitor entry IN at gate'}
-              style={{
-                flex: 1,
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                gap: '0.5rem',
-                opacity: (passData.is_current_gate_allowed === false || passData.arrival_status === 'TOO_EARLY') ? 0.55 : 1,
-                cursor: (passData.is_current_gate_allowed === false || passData.arrival_status === 'TOO_EARLY') ? 'not-allowed' : 'pointer',
-                background: (passData.is_current_gate_allowed === false || passData.arrival_status === 'TOO_EARLY') ? '#64748b' : undefined,
-                borderColor: (passData.is_current_gate_allowed === false || passData.arrival_status === 'TOO_EARLY') ? '#64748b' : undefined,
-              }}
-            >
-              <LogIn size={20} />
-              {passData.is_current_gate_allowed === false 
-                ? '⛔ Restricted at this Gate' 
-                : passData.arrival_status === 'TOO_EARLY'
-                ? '⛔ Entry Window Not Open'
-                : passData.status === 'INSIDE_CAMPUS' 
-                ? '➔ Record Entry IN (Multi-Entry Active)' 
-                : passData.status === 'CHECKED_OUT' 
-                ? '➔ Re-Entry IN (Multi-Entry Active)' 
-                : '➔ Record Entry IN'}
-            </button>
-            <button
-              onClick={() => handleMovement('OUT')}
-              disabled={passData.is_current_gate_allowed === false}
-              className="gate-btn-out"
-              style={{
-                flex: 1,
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                gap: '0.5rem',
-                opacity: passData.is_current_gate_allowed === false ? 0.55 : 1,
-                cursor: passData.is_current_gate_allowed === false ? 'not-allowed' : 'pointer',
-                background: passData.is_current_gate_allowed === false ? '#475569' : undefined,
-                borderColor: passData.is_current_gate_allowed === false ? '#475569' : undefined,
-              }}
-            >
-              <LogOut size={20} />
-              {passData.status === 'CHECKED_OUT' ? '⬅ Record Exit OUT (Multi-Exit Active)' : '⬅ Record Egress (OUT)'}
-            </button>
+          {/* Rule 7 & 8 Gating Status Notice */}
+          <div style={{ marginTop: '1rem' }}>
+            {(!passData.is_permanent_pass && (passData.departure_time_passed || (passData.valid_until && new Date() > new Date(passData.valid_until)))) && (
+              <div style={{ background: '#fee2e2', border: '1.5px solid #ef4444', color: '#991b1b', padding: '0.6rem 0.9rem', borderRadius: '8px', fontSize: '0.85rem', fontWeight: 'bold', display: 'flex', alignItems: 'center', gap: '0.4rem', marginBottom: '0.8rem' }}>
+                <AlertTriangle size={18} color="#dc2626" />
+                <span>Estimated departure time ({new Date(passData.valid_until).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}) has passed. Entry IN is disabled.</span>
+              </div>
+            )}
+            {passData.presence_status !== 'currently_inside' && passData.presence_status !== 'over_stayed' && passData.status !== 'INSIDE_CAMPUS' && (
+              <div style={{ background: '#f8fafc', border: '1px solid #cbd5e1', color: '#475569', padding: '0.5rem 0.8rem', borderRadius: '6px', fontSize: '0.8rem', marginBottom: '0.6rem' }}>
+                ℹ️ Visitor is currently outside. OUT exit button is enabled only when visitor is recorded inside campus.
+              </div>
+            )}
+          </div>
+
+          <div style={{ display: 'flex', gap: '1rem', marginTop: '0.8rem' }}>
+            {/* Rule 7: IN button enabled ONLY till estimated departure time */}
+            {(() => {
+              const isDeparturePassed = !passData.is_permanent_pass && (passData.departure_time_passed || (passData.valid_until && new Date() > new Date(passData.valid_until)));
+              const isAlreadyInside = passData.presence_status === 'currently_inside' && !passData.is_permanent_pass;
+              const isInDisabled = passData.is_current_gate_allowed === false || passData.arrival_status === 'TOO_EARLY' || isDeparturePassed || isAlreadyInside;
+
+              return (
+                <button
+                  onClick={() => handleMovement('IN')}
+                  disabled={isInDisabled}
+                  className="gate-btn-in"
+                  style={{
+                    flex: 1,
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    gap: '0.5rem',
+                    opacity: isInDisabled ? 0.5 : 1,
+                    cursor: isInDisabled ? 'not-allowed' : 'pointer',
+                    background: isInDisabled ? '#64748b' : undefined,
+                    borderColor: isInDisabled ? '#64748b' : undefined,
+                  }}
+                >
+                  <LogIn size={20} />
+                  {passData.is_current_gate_allowed === false 
+                    ? '⛔ Restricted at this Gate' 
+                    : passData.arrival_status === 'TOO_EARLY'
+                    ? '⛔ Entry Window Not Open'
+                    : isDeparturePassed
+                    ? '⛔ Departure Passed (IN Disabled)'
+                    : isAlreadyInside
+                    ? '✓ Currently Inside Campus'
+                    : passData.presence_status === 'currently_outside' && passData.lifecycle_status === 'CHECKED-IN'
+                    ? '➔ Re-Entry IN (Allow Ingress)'
+                    : '➔ Record Entry IN'}
+                </button>
+              );
+            })()}
+
+            {/* Rule 8: OUT button enabled if Visitor status is 'currently_inside' */}
+            {(() => {
+              const isInside = passData.presence_status === 'currently_inside' || passData.presence_status === 'over_stayed' || passData.status === 'INSIDE_CAMPUS';
+              const isOutDisabled = passData.is_current_gate_allowed === false || (!passData.is_permanent_pass && !isInside);
+
+              return (
+                <button
+                  onClick={() => handleMovement('OUT')}
+                  disabled={isOutDisabled}
+                  className="gate-btn-out"
+                  style={{
+                    flex: 1,
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    gap: '0.5rem',
+                    opacity: isOutDisabled ? 0.5 : 1,
+                    cursor: isOutDisabled ? 'not-allowed' : 'pointer',
+                    background: isOutDisabled ? '#475569' : undefined,
+                    borderColor: isOutDisabled ? '#475569' : undefined,
+                  }}
+                >
+                  <LogOut size={20} />
+                  {!isInside && !passData.is_permanent_pass
+                    ? '⛔ Cannot Exit (Currently Outside)'
+                    : '⬅ Allow OUT (Step Outside)'}
+                </button>
+              );
+            })()}
           </div>
 
           {/* Gate Movement Log & Members Audit Card */}
