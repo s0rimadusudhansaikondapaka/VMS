@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { createRegistration, updateRegistration, getHostRegistrations, updateApproval, getVisitHistory, generateQrCode, generateInviteToken, getResidentFamilyMembers, addResidentFamilyMember, deleteResidentFamilyMember } from '../services/api';
+import { createRegistration, updateRegistration, getHostRegistrations, updateApproval, getVisitHistory, generateQrCode, generateInviteToken, getResidentFamilyMembers, addResidentFamilyMember, deleteResidentFamilyMember, API_BASE } from '../services/api';
 import CameraCaptureModal from '../components/CameraCaptureModal';
 import DashboardHeader from '../components/DashboardHeader';
 import FormFieldGuide from '../components/FormFieldGuide';
@@ -1794,7 +1794,7 @@ export default function HostDashboard({ user }) {
               <button
                 type="button"
                 onClick={async () => {
-                  const directImageUrl = `${window.location.origin}/api/registrations/qr-image/${qrModalData.pass_code}.png`;
+                  const directImageUrl = `${API_BASE}/registrations/qr-image/${qrModalData.pass_code}.png`;
                   const fullPassUrl = `${window.location.origin}/?pass=${qrModalData.pass_code}`;
                   const shareText = `Jay Sai Ram! Here is your entry Passcode and official QR Code Pass for Sathya Sai Grama:\n\nGuest: ${qrModalData.visitor_name || 'Guest'}\nPasscode: ${qrModalData.pass_code}\nStatus: Approved\n\nDirect QR Image:\n${directImageUrl}\n\nFull Gate Pass Link:\n${fullPassUrl}`;
 

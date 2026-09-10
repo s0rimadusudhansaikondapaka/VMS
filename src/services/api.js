@@ -1,10 +1,7 @@
 import axios from 'axios';
 
-const API_BASE =
-  import.meta.env.VITE_API_BASE_URL ||
-  (typeof window !== 'undefined' && window.location.hostname.includes('onrender.com')
-    ? 'https://smsavmsserver.onrender.com/api'
-    : '/api');
+export const API_BASE =
+  import.meta.env.VITE_API_BASE_URL || 'https://smsavmsserver.onrender.com/api';
 
 const api = axios.create({
   baseURL: API_BASE,
@@ -310,6 +307,17 @@ export const updateAdminDevice = async (id, data) => {
 
 export const getDeviceDutyAudit = async (params = {}) => {
   const res = await api.get('/admin/devices/audit', { params });
+  return res.data;
+};
+
+// Gate Security Incidents (Supervisors & Security Head)
+export const getIncidents = async (params = {}) => {
+  const res = await api.get('/incidents', { params });
+  return res.data;
+};
+
+export const resolveIncident = async (id, resolution_notes) => {
+  const res = await api.patch(`/incidents/${id}/resolve`, { resolution_notes });
   return res.data;
 };
 

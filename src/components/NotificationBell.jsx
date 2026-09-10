@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { Bell, Check, Trash2, X, CheckCircle, Info, AlertTriangle, ArrowRightLeft, Volume2, VolumeX, ShieldAlert } from 'lucide-react';
 import { playAudioChime, requestDesktopNotificationPermission, triggerDesktopNotification } from '../services/realtimeService';
+import { API_BASE } from '../services/api';
 
 export default function NotificationBell({ user }) {
   const [notifications, setNotifications] = useState(() => {
@@ -29,10 +30,14 @@ export default function NotificationBell({ user }) {
   useEffect(() => {
     if (!user) return;
 
-    // Connect to WebSocket server
+    // Connect to WebSocket server (defaulting to cloud server)
     const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
     const host = window.location.host;
-    const wsUrl = `${protocol}//${host}`;
+    const wsUrl =
+      import.meta.env.VITE_WS_URL ||
+      (API_BASE && API_BASE.startsWith('http')
+        ? API_BASE.replace(/^http/, 'ws').replace(/\/api\/?$/, '')
+        : `${protocol}//${host}`);
 
     let socket;
     try {
