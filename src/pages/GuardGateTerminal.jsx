@@ -1,5 +1,17 @@
 import React, { useState, useEffect } from 'react';
-import { verifyGatePass, processGateMovement, createRegistration, getSpotRegistrationsQueue, assignSpotHost, getAdminUsers, updateApproval, getRecentGateLookups, getGatewiseStatsAndSelfRegistered } from '../services/api';
+import { 
+  verifyGatePass, 
+  processGateMovement, 
+  createRegistration, 
+  getSpotRegistrationsQueue, 
+  assignSpotHost, 
+  getAdminUsers, 
+  updateApproval, 
+  getRecentGateLookups, 
+  getGatewiseStatsAndSelfRegistered,
+  getInvitedVisitors,
+  updateVisitorGateDetails
+} from '../services/api';
 import DashboardHeader from '../components/DashboardHeader';
 import QrScannerModal from '../components/QrScannerModal';
 import DeliveryPersonsReport from '../components/DeliveryPersonsReport';
@@ -61,17 +73,35 @@ export default function GuardGateTerminal({ user }) {
     paginatedData: paginatedSelfReg,
   } = useTablePagination(selfRegList, ['visitor_name', 'visitor_phone', 'pass_code', 'visitor_category', 'host_name', 'status'], 10);
 
+  // Invited Visitors (+8 hours upcoming & already checked-in)
+  const [invitedVisitors, setInvitedVisitors] = useState([]);
+  const [invitedSearch, setInvitedSearch] = useState('');
+  const [invitedLoading, setInvitedLoading] = useState(false);
+  const [updatingDetails, setUpdatingDetails] = useState(false);
+
+  const {
+    searchTerm: invitedSearchTerm,
+    setSearchTerm: setInvitedSearchTerm,
+    currentPage: invitedPage,
+    setCurrentPage: setInvitedPage,
+    totalPages: invitedTotalPages,
+    totalItems: invitedTotalItems,
+    paginatedData: paginatedInvitedVisitors,
+  } = useTablePagination(invitedVisitors, ['visitor_name', 'visitor_phone', 'pass_code', 'host_name', 'vehicle_details', 'visitor_category'], 10);
+
   useEffect(() => {
     fetchSpotQueue();
     fetchUsersList();
     fetchRecentLookups();
     fetchGateStats(gateName);
+    fetchInvitedVisitorsList();
 
     const handleRealtimeSync = (e) => {
       console.log('[GuardGateTerminal] Realtime Event Received:', e.detail);
       fetchSpotQueue();
       fetchRecentLookups();
       fetchGateStats(gateName);
+      fetchInvitedVisitorsList();
       if (passData && passData.pass_code) {
         executePassVerification(passData.pass_code);
       }
@@ -93,6 +123,20 @@ export default function GuardGateTerminal({ user }) {
       }
     } catch (err) {
       console.error('Failed to fetch gatewise stats:', err);
+    }
+  };
+
+  const fetchInvitedVisitorsList = async (search = '') => {
+    setInvitedLoading(true);
+    try {
+      const res = await getInvitedVisitors({ search, gate_name: gateName });
+      if (res.success) {
+        setInvitedVisitors(res.visitors || []);
+      }
+    } catch (err) {
+      console.error('Failed to fetch invited visitors:', err);
+    } finally {
+      setInvitedLoading(false);
     }
   };
 

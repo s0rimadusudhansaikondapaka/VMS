@@ -113,6 +113,17 @@ export const getVisitorsInsideCampus = async () => {
   return res.data;
 };
 
+export const getInvitedVisitors = async (params = {}) => {
+  const query = new URLSearchParams(params).toString();
+  const res = await api.get(`/gate/invited-visitors${query ? `?${query}` : ''}`);
+  return res.data;
+};
+
+export const updateVisitorGateDetails = async (id, data) => {
+  const res = await api.patch(`/gate/visitors/${id}/details`, data);
+  return res.data;
+};
+
 export const getOverstayAlerts = async () => {
   const res = await api.get('/supervisor/overstays');
   return res.data;
