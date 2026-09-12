@@ -65,8 +65,22 @@ export default function GuestInviteForm() {
   const [boysCount, setBoysCount] = useState(0);
   const [girlsCount, setGirlsCount] = useState(0);
 
+  const VEHICLE_TYPE_OPTIONS = [
+    'Select',
+    'Two-Wheeler',
+    'Car',
+    'Auto Rickshaw',
+    'Taxi / Cab',
+    'Van',
+    'Bus',
+    'Mini Bus',
+    'Tractor',
+    'Construction Vehicle',
+    'Other'
+  ];
+
   const [vehicles, setVehicles] = useState([
-    { plate_number: '', vehicle_type: 'Car', driver_name: '', driver_phone: '' }
+    { plate_number: '', vehicle_type: 'Select', driver_name: '', driver_phone: '' }
   ]);
 
   const addVehicleField = () => {
@@ -74,7 +88,7 @@ export default function GuestInviteForm() {
       alert('Maximum 5 vehicles allowed.');
       return;
     }
-    setVehicles([...vehicles, { plate_number: '', vehicle_type: 'Car', driver_name: '', driver_phone: '' }]);
+    setVehicles([...vehicles, { plate_number: '', vehicle_type: 'Select', driver_name: '', driver_phone: '' }]);
   };
 
   const removeVehicleField = (index) => {
@@ -509,16 +523,13 @@ export default function GuestInviteForm() {
                   style={{ margin: 0 }}
                 />
                 <select
-                  value={v.vehicle_type}
+                  value={v.vehicle_type || 'Select'}
                   onChange={(e) => handleVehicleChange(idx, 'vehicle_type', e.target.value)}
                   style={{ margin: 0 }}
                 >
-                  <option value="Car">Car</option>
-                  <option value="SUV">SUV</option>
-                  <option value="Two Wheeler">Two Wheeler</option>
-                  <option value="Auto">Auto</option>
-                  <option value="Bus">Bus</option>
-                  <option value="Truck">Truck</option>
+                  {VEHICLE_TYPE_OPTIONS.map((vt) => (
+                    <option key={vt} value={vt}>{vt}</option>
+                  ))}
                 </select>
                 <input
                   type="text"

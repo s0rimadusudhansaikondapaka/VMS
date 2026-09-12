@@ -76,6 +76,18 @@ export default function HostDashboard({ user }) {
     }
   };
 
+  const [statusFilter, setStatusFilter] = useState('ALL');
+
+  const filteredRegistrations = React.useMemo(() => {
+    if (statusFilter === 'ALL') return registrations;
+    if (statusFilter === 'PENDING') return registrations.filter((r) => r.status && r.status.startsWith('PENDING'));
+    return registrations.filter((r) => r.status === statusFilter);
+  }, [registrations, statusFilter]);
+
+  const pendingApprovalCount = registrations.filter((r) => r.status && r.status.startsWith('PENDING')).length;
+  const approvedCount = registrations.filter((r) => r.status === 'APPROVED').length;
+  const insideCount = registrations.filter((r) => r.status === 'INSIDE_CAMPUS').length;
+
   const {
     searchTerm: regSearch,
     setSearchTerm: setRegSearch,
@@ -84,7 +96,7 @@ export default function HostDashboard({ user }) {
     totalPages: regTotalPages,
     totalItems: regTotalItems,
     paginatedData: paginatedRegistrations,
-  } = useTablePagination(registrations, ['visitor_name', 'visitor_phone', 'pass_code', 'visitor_category', 'purpose'], 10);
+  } = useTablePagination(filteredRegistrations, ['visitor_name', 'visitor_phone', 'pass_code', 'visitor_category', 'purpose'], 10);
 
   const {
     searchTerm: histSearch,
@@ -250,9 +262,23 @@ export default function HostDashboard({ user }) {
   const [boysCount, setBoysCount] = useState(0);
   const [girlsCount, setGirlsCount] = useState(0);
 
+  const VEHICLE_TYPE_OPTIONS = [
+    'Select',
+    'Two-Wheeler',
+    'Car',
+    'Auto Rickshaw',
+    'Taxi / Cab',
+    'Van',
+    'Bus',
+    'Mini Bus',
+    'Tractor',
+    'Construction Vehicle',
+    'Other'
+  ];
+
   // Multiple Vehicles Array
   const [vehicles, setVehicles] = useState([
-    { plate_number: '', vehicle_type: 'Car', driver_name: '', driver_phone: '' }
+    { plate_number: '', vehicle_type: 'Select', driver_name: '', driver_phone: '' }
   ]);
 
   useEffect(() => {
@@ -283,7 +309,18 @@ export default function HostDashboard({ user }) {
   const fetchRegistrations = async () => {
     try {
       const res = await getHostRegistrations();
-      if (res.success) setRegistrations(res.registrations);
+      if (res.success) {
+        const seen = new Set();
+        const unique = [];
+        for (const r of (res.registrations || [])) {
+          const key = r.pass_code ? `CODE_${r.pass_code}` : `ID_${r.id}`;
+          if (!seen.has(key)) {
+            seen.add(key);
+            unique.push(r);
+          }
+        }
+        setRegistrations(unique);
+      }
     } catch (err) {
       console.error('Failed to fetch host registrations:', err);
     }
@@ -303,7 +340,7 @@ export default function HostDashboard({ user }) {
       alert('Maximum 5 vehicles allowed per registration.');
       return;
     }
-    setVehicles([...vehicles, { plate_number: '', vehicle_type: 'Car', driver_name: '', driver_phone: '' }]);
+    setVehicles([...vehicles, { plate_number: '', vehicle_type: 'Select', driver_name: '', driver_phone: '' }]);
   };
 
   const removeVehicleField = (index) => {
@@ -385,7 +422,7 @@ export default function HostDashboard({ user }) {
     setAdultWomen(reg.adult_women_count || 0);
     setBoysCount(reg.boys_count || 0);
     setGirlsCount(reg.girls_count || 0);
-    setVehicles(reg.vehicles && reg.vehicles.length > 0 ? reg.vehicles : [{ plate_number: '', vehicle_type: 'Car', driver_name: '', driver_phone: '' }]);
+    setVehicles(reg.vehicles && reg.vehicles.length > 0 ? reg.vehicles : [{ plate_number: '', vehicle_type: 'Select', driver_name: '', driver_phone: '' }]);
     setShowModal(true);
   };
 
@@ -502,7 +539,7 @@ export default function HostDashboard({ user }) {
     setRegistrationMode('Single');
     setRegistrationType('PRE_APPROVAL');
     setIsPermanentPass(false);
-    setVehicles([{ plate_number: '', vehicle_type: 'Car', driver_name: '', driver_phone: '' }]);
+    setVehicles([{ plate_number: '', vehicle_type: 'Select', driver_name: '', driver_phone: '' }]);
     setIsVvip(false);
     setValidFrom(getDefaultFrom());
     setValidUntil(getDefaultUntil());
@@ -1037,11 +1074,10 @@ export default function HostDashboard({ user }) {
               {vehicles.map((v, idx) => (
                 <div key={idx} style={{ display: 'grid', gridTemplateColumns: '1.2fr 1fr 1.2fr 1.2fr 0.4fr', gap: '0.5rem', marginTop: '0.5rem', alignItems: 'center' }}>
                   <input type="text" placeholder="Plate Number (e.g. KA-01-AB-1234)" value={v.plate_number} onChange={(e) => handleVehicleChange(idx, 'plate_number', e.target.value)} />
-                  <select value={v.vehicle_type} onChange={(e) => handleVehicleChange(idx, 'vehicle_type', e.target.value)}>
-                    <option value="Car">Car</option>
-                    <option value="SUV">SUV</option>
-                    <option value="Two Wheeler">Two Wheeler</option>
-                    <option value="Truck">Truck / Supply</option>
+                  <select value={v.vehicle_type || 'Select'} onChange={(e) => handleVehicleChange(idx, 'vehicle_type', e.target.value)}>
+                    {VEHICLE_TYPE_OPTIONS.map((vt) => (
+                      <option key={vt} value={vt}>{vt}</option>
+                    ))}
                   </select>
                   <input type="text" placeholder="Driver Name" value={v.driver_name} onChange={(e) => handleVehicleChange(idx, 'driver_name', e.target.value)} />
                   <input type="text" placeholder="Driver Phone" value={v.driver_phone} onChange={(e) => handleVehicleChange(idx, 'driver_phone', e.target.value)} />
@@ -1197,8 +1233,80 @@ export default function HostDashboard({ user }) {
 
       {/* Invited Visitors List */}
       <div className="card">
-        <h3>My Invited Visitors ({registrations.length})</h3>
-        
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '0.5rem', marginBottom: '0.8rem' }}>
+          <h3 style={{ margin: 0 }}>My Invited & Submitted Visitors ({registrations.length})</h3>
+          {pendingApprovalCount > 0 && (
+            <span style={{ background: '#fef3c7', color: '#92400e', border: '1px solid #fcd34d', padding: '0.25rem 0.7rem', borderRadius: '9999px', fontSize: '0.78rem', fontWeight: 'bold', display: 'inline-flex', alignItems: 'center', gap: '0.3rem' }}>
+              ⏳ {pendingApprovalCount} Action Required
+            </span>
+          )}
+        </div>
+
+        {/* Pending Approvals Alert Banner */}
+        {pendingApprovalCount > 0 && (
+          <div style={{ background: '#fffbeb', border: '2px solid #f59e0b', borderRadius: '10px', padding: '0.8rem 1.2rem', marginBottom: '1.2rem', display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '0.8rem' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '0.8rem' }}>
+              <span style={{ fontSize: '1.6rem' }}>⏳</span>
+              <div>
+                <strong style={{ color: '#92400e', fontSize: '0.98rem' }}>
+                  {pendingApprovalCount} Guest Registration{pendingApprovalCount > 1 ? 's' : ''} Awaiting Your Review & Approval!
+                </strong>
+                <div style={{ fontSize: '0.82rem', color: '#b45309' }}>
+                  Guests who submitted their details via your Invite Link are waiting for your approval. Click &apos;Review &amp; Approve&apos; below to grant gate entry.
+                </div>
+              </div>
+            </div>
+            <button
+              type="button"
+              onClick={() => setStatusFilter('PENDING')}
+              style={{ background: '#057a55', borderColor: '#057a55', color: 'white', fontWeight: 'bold', fontSize: '0.82rem', padding: '0.45rem 0.9rem', borderRadius: '6px', display: 'flex', alignItems: 'center', gap: '0.3rem' }}
+            >
+              <CheckCircle size={15} /> Review Pending ({pendingApprovalCount})
+            </button>
+          </div>
+        )}
+
+        {/* Status Filter Tabs */}
+        <div style={{ display: 'flex', gap: '0.5rem', marginBottom: '1rem', flexWrap: 'wrap' }}>
+          <button
+            type="button"
+            className={statusFilter === 'ALL' ? '' : 'outline secondary'}
+            onClick={() => setStatusFilter('ALL')}
+            style={{ fontSize: '0.8rem', padding: '0.35rem 0.75rem', borderRadius: '20px' }}
+          >
+            All ({registrations.length})
+          </button>
+          <button
+            type="button"
+            className={statusFilter === 'PENDING' ? '' : 'outline secondary'}
+            onClick={() => setStatusFilter('PENDING')}
+            style={{
+              fontSize: '0.8rem',
+              padding: '0.35rem 0.75rem',
+              borderRadius: '20px',
+              ...(pendingApprovalCount > 0 ? { background: statusFilter === 'PENDING' ? '#f59e0b' : '#fffbeb', borderColor: '#f59e0b', color: statusFilter === 'PENDING' ? 'white' : '#b45309', fontWeight: 'bold' } : {})
+            }}
+          >
+            ⏳ Pending Approvals ({pendingApprovalCount})
+          </button>
+          <button
+            type="button"
+            className={statusFilter === 'APPROVED' ? '' : 'outline secondary'}
+            onClick={() => setStatusFilter('APPROVED')}
+            style={{ fontSize: '0.8rem', padding: '0.35rem 0.75rem', borderRadius: '20px' }}
+          >
+            ✅ Approved ({approvedCount})
+          </button>
+          <button
+            type="button"
+            className={statusFilter === 'INSIDE_CAMPUS' ? '' : 'outline secondary'}
+            onClick={() => setStatusFilter('INSIDE_CAMPUS')}
+            style={{ fontSize: '0.8rem', padding: '0.35rem 0.75rem', borderRadius: '20px' }}
+          >
+            🚪 Inside Campus ({insideCount})
+          </button>
+        </div>
+
         <PaginationControls
           searchTerm={regSearch}
           setSearchTerm={setRegSearch}
@@ -1229,8 +1337,10 @@ export default function HostDashboard({ user }) {
                 <td colSpan="8" style={{ textAlign: 'center', color: '#64748b' }}>No registrations found matching search filter.</td>
               </tr>
             ) : (
-              paginatedRegistrations.map((reg) => (
-                <tr key={reg.id}>
+              paginatedRegistrations.map((reg) => {
+                const isPending = reg.status && reg.status.startsWith('PENDING');
+                return (
+                <tr key={reg.id} style={isPending ? { background: '#fffbeb', borderLeft: '4px solid #f59e0b' } : {}}>
                   <td>
                     {reg.photo_url ? (
                       <img src={reg.photo_url} alt="Visitor" style={{ width: '40px', height: '40px', borderRadius: '50%', objectFit: 'cover' }} />
@@ -1243,6 +1353,13 @@ export default function HostDashboard({ user }) {
                   <td>
                     <strong>{reg.visitor_name}</strong><br/>
                     <span style={{ fontSize: '0.75rem', color: '#64748b' }}>{reg.visitor_phone}</span>
+                    {isPending && (
+                      <div style={{ marginTop: '0.2rem' }}>
+                        <span style={{ fontSize: '0.7rem', background: '#fef3c7', color: '#92400e', border: '1px solid #fcd34d', padding: '0.1rem 0.4rem', borderRadius: '4px', fontWeight: 'bold' }}>
+                          ⏳ Awaiting Your Approval
+                        </span>
+                      </div>
+                    )}
                   </td>
                   <td>
                     <strong>{reg.pass_code}</strong><br/>
@@ -1267,17 +1384,30 @@ export default function HostDashboard({ user }) {
                     )}
                   </td>
                   <td>
-                    <span className={`badge badge-${reg.status.toLowerCase()}`}>{reg.status}</span>
+                    <span className={isPending ? 'badge' : `badge badge-${reg.status.toLowerCase()}`} style={isPending ? { background: '#fef3c7', color: '#92400e', border: '1px solid #f59e0b', fontWeight: 'bold' } : {}}>
+                      {reg.status}
+                    </span>
                   </td>
                   <td style={{ whiteSpace: 'nowrap' }}>
                     <div style={{ display: 'flex', gap: '0.3rem', flexWrap: 'wrap' }}>
-                      {reg.status === 'PENDING_L1' && (
+                      {isPending && (
                         <>
-                          <button className="outline" onClick={() => openReviewModal(reg)} style={{ padding: '0.2rem 0.5rem', fontSize: '0.75rem', background: '#057a55', borderColor: '#057a55', color: 'white', fontWeight: 'bold' }}>
-                            <CheckCircle size={14} /> Review & Approve
+                          <button
+                            type="button"
+                            onClick={() => openReviewModal(reg)}
+                            style={{ padding: '0.3rem 0.65rem', fontSize: '0.78rem', background: '#057a55', borderColor: '#057a55', color: 'white', fontWeight: 'bold', display: 'inline-flex', alignItems: 'center', gap: '0.3rem', boxShadow: '0 2px 4px rgba(5,122,85,0.2)' }}
+                            title="Review details submitted by guest and grant entry approval"
+                          >
+                            <CheckCircle size={15} /> Review & Approve
                           </button>
-                          <button className="secondary outline" onClick={() => openReviewModal(reg)} style={{ padding: '0.2rem 0.5rem', fontSize: '0.75rem' }}>
-                            <Pencil size={14} /> Edit Details
+                          <button
+                            type="button"
+                            className="secondary outline"
+                            onClick={() => openReviewModal(reg)}
+                            style={{ padding: '0.3rem 0.5rem', fontSize: '0.75rem' }}
+                            title="Edit guest details before approval"
+                          >
+                            <Pencil size={13} /> Edit
                           </button>
                         </>
                       )}
@@ -1294,7 +1424,8 @@ export default function HostDashboard({ user }) {
                     </div>
                   </td>
                 </tr>
-              ))
+                );
+              })
             )}
           </tbody>
         </table>
@@ -1362,7 +1493,7 @@ export default function HostDashboard({ user }) {
                     </td>
                   </tr>
                 ))
-              )}
+            )}
             </tbody>
             </table>
           </div>

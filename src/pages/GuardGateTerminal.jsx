@@ -16,7 +16,7 @@ import DashboardHeader from '../components/DashboardHeader';
 import QrScannerModal from '../components/QrScannerModal';
 import DeliveryPersonsReport from '../components/DeliveryPersonsReport';
 import { useTablePagination, PaginationControls } from '../components/TablePagination';
-import { Shield, ShieldCheck, LogIn, LogOut, Search, UserCheck, AlertTriangle, Car, Users, Calendar, Camera, Phone, KeyRound, UserPlus, QrCode, Share2, CheckCircle, XCircle, Clock, Truck } from 'lucide-react';
+import { Shield, ShieldCheck, LogIn, LogOut, Search, UserCheck, AlertTriangle, Car, Users, Calendar, Camera, Phone, KeyRound, UserPlus, QrCode, Share2, CheckCircle, XCircle, Clock, Truck, Trash2, PlusCircle } from 'lucide-react';
 
 export default function GuardGateTerminal({ user }) {
   const [gateName, setGateName] = useState('NORTH_GATE');
@@ -190,7 +190,45 @@ export default function GuardGateTerminal({ user }) {
   const [boysCount, setBoysCount] = useState(0);
   const [girlsCount, setGirlsCount] = useState(0);
   const [selectedVehicle, setSelectedVehicle] = useState('');
+  const [editVehicles, setEditVehicles] = useState([]);
   const [remarks, setRemarks] = useState('');
+
+  const VEHICLE_TYPE_OPTIONS = [
+    'Select',
+    'Two-Wheeler',
+    'Car',
+    'Auto Rickshaw',
+    'Taxi / Cab',
+    'Van',
+    'Bus',
+    'Mini Bus',
+    'Tractor',
+    'Construction Vehicle',
+    'Other'
+  ];
+
+  const handleAddVehicle = () => {
+    if (editVehicles.length >= 5) {
+      alert('Maximum 5 vehicles allowed per visitor.');
+      return;
+    }
+    setEditVehicles((prev) => [
+      ...prev,
+      { plate_number: '', vehicle_type: 'Select', driver_name: '', driver_phone: '' }
+    ]);
+  };
+
+  const handleRemoveVehicle = (index) => {
+    setEditVehicles((prev) => prev.filter((_, i) => i !== index));
+  };
+
+  const handleVehicleChange = (index, field, value) => {
+    setEditVehicles((prev) => {
+      const updated = [...prev];
+      updated[index] = { ...updated[index], [field]: value };
+      return updated;
+    });
+  };
 
   const [showAssistedEntry, setShowAssistedEntry] = useState(false);
   const [assistedName, setAssistedName] = useState('');
@@ -233,7 +271,21 @@ export default function GuardGateTerminal({ user }) {
         setAdultWomen(res.pass.adult_women_count || 0);
         setBoysCount(res.pass.boys_count || 0);
         setGirlsCount(res.pass.girls_count || 0);
-        setSelectedVehicle(res.pass.vehicles && res.pass.vehicles.length > 0 ? res.pass.vehicles[0].plate_number : res.pass.registered_vehicle_no || '');
+        const vehList = (res.pass.vehicles && res.pass.vehicles.length > 0)
+          ? res.pass.vehicles.map(v => ({
+              plate_number: v.plate_number || '',
+              vehicle_type: v.vehicle_type || 'Car',
+              driver_name: v.driver_name || '',
+              driver_phone: v.driver_phone || ''
+            }))
+          : (res.pass.registered_vehicle_no ? [{
+              plate_number: res.pass.registered_vehicle_no,
+              vehicle_type: res.pass.vehicle_type || 'Car',
+              driver_name: '',
+              driver_phone: ''
+            }] : []);
+        setEditVehicles(vehList);
+        setSelectedVehicle(vehList.length > 0 ? vehList[0].plate_number : (res.pass.registered_vehicle_no || ''));
       } else {
         setError(res.message);
         setPassData(null);
@@ -284,6 +336,17 @@ export default function GuardGateTerminal({ user }) {
     if (!passData) return;
     setError('');
     setMsg('');
+
+    const validVehicles = editVehicles
+      .filter((v) => v.plate_number && v.plate_number.trim() !== '')
+      .map((v) => ({
+        plate_number: v.plate_number.trim().toUpperCase(),
+        vehicle_type: v.vehicle_type || 'Car',
+        driver_name: v.driver_name?.trim() || '',
+        driver_phone: v.driver_phone?.trim() || '',
+      }));
+    const primaryVehicle = validVehicles.length > 0 ? validVehicles[0].plate_number : (selectedVehicle || null);
+
     try {
       const res = await processGateMovement({
         registration_id: passData.id,
@@ -294,7 +357,8 @@ export default function GuardGateTerminal({ user }) {
         boys_count: boysCount,
         girls_count: girlsCount,
         children_count: (parseInt(boysCount) || 0) + (parseInt(girlsCount) || 0),
-        vehicle_no: selectedVehicle,
+        vehicle_no: primaryVehicle,
+        vehicles: validVehicles,
         remarks,
       });
 
@@ -305,6 +369,8 @@ export default function GuardGateTerminal({ user }) {
           status: res.status,
           lifecycle_status: res.lifecycle_status,
           presence_status: res.presence_status,
+          vehicle_no: primaryVehicle,
+          vehicles: validVehicles.length > 0 ? validVehicles : prev.vehicles,
           is_in_enabled: res.is_in_enabled !== undefined ? res.is_in_enabled : (res.presence_status !== 'currently_inside' && res.presence_status !== 'over_stayed' && !prev.departure_time_passed),
           is_out_enabled: res.is_out_enabled !== undefined ? res.is_out_enabled : (res.presence_status === 'currently_inside' || res.presence_status === 'over_stayed'),
         }));
@@ -321,13 +387,25 @@ export default function GuardGateTerminal({ user }) {
     setUpdatingDetails(true);
     setError('');
     setMsg('');
+
+    const validVehicles = editVehicles
+      .filter((v) => v.plate_number && v.plate_number.trim() !== '')
+      .map((v) => ({
+        plate_number: v.plate_number.trim().toUpperCase(),
+        vehicle_type: v.vehicle_type || 'Car',
+        driver_name: v.driver_name?.trim() || '',
+        driver_phone: v.driver_phone?.trim() || '',
+      }));
+    const primaryVehicle = validVehicles.length > 0 ? validVehicles[0].plate_number : (selectedVehicle || null);
+
     try {
       const res = await updateVisitorGateDetails(passData.id, {
         adult_men_count: adultMen,
         adult_women_count: adultWomen,
         boys_count: boysCount,
         girls_count: girlsCount,
-        vehicle_no: selectedVehicle,
+        vehicle_no: primaryVehicle,
+        vehicles: validVehicles,
       });
 
       if (res.success) {
@@ -340,7 +418,8 @@ export default function GuardGateTerminal({ user }) {
           girls_count: girlsCount,
           children_count: (parseInt(boysCount) || 0) + (parseInt(girlsCount) || 0),
           person_count: (parseInt(adultMen) || 0) + (parseInt(adultWomen) || 0) + (parseInt(boysCount) || 0) + (parseInt(girlsCount) || 0),
-          vehicle_no: selectedVehicle,
+          vehicle_no: primaryVehicle,
+          vehicles: validVehicles,
         }));
         fetchInvitedVisitorsList(invitedSearch);
       }
@@ -1122,6 +1201,24 @@ export default function GuardGateTerminal({ user }) {
             </div>
           </div>
 
+          {/* Unapproved Warning Banner */}
+          {passData.status && passData.status !== 'APPROVED' && passData.status !== 'INSIDE_CAMPUS' && !passData.is_permanent_pass && !passData.is_vvip && !passData.bypassed_by_admin && (
+            <div style={{
+              background: '#fef3c7',
+              border: '2px solid #f59e0b',
+              borderRadius: '10px',
+              padding: '0.85rem 1rem',
+              marginTop: '1rem',
+            }}>
+              <h4 style={{ margin: '0 0 0.3rem 0', fontSize: '1rem', color: '#b45309', display: 'flex', alignItems: 'center', gap: '0.4rem', fontWeight: 'bold' }}>
+                <AlertTriangle size={18} color="#d97706" /> ⛔ ENTRY BLOCKED: Visitor Approval Not Finished
+              </h4>
+              <p style={{ margin: 0, fontSize: '0.85rem', color: '#78350f', lineHeight: 1.4 }}>
+                Current status is <strong>{passData.status === 'PENDING_L1' ? 'Awaiting Host Approval' : passData.status === 'PENDING_L2' ? 'Awaiting L2 / PRO Approval' : passData.status}</strong>. Gate entry cannot be processed until the request is approved.
+              </p>
+            </div>
+          )}
+
           {/* Authorized & Allowed Gates List Banner */}
           <div style={{
             background: passData.is_current_gate_allowed === false ? '#fef2f2' : '#f0fdf4',
@@ -1318,32 +1415,108 @@ export default function GuardGateTerminal({ user }) {
                 Total People Entering: {(parseInt(adultMen) || 0) + (parseInt(adultWomen) || 0) + (parseInt(boysCount) || 0) + (parseInt(girlsCount) || 0)} (Children: {(parseInt(boysCount) || 0) + (parseInt(girlsCount) || 0)})
               </div>
 
-              <h4 style={{ fontSize: '0.9rem', color: '#1e293b', marginTop: '1rem' }}>
-                Registered Vehicles ({passData.vehicles?.length || 0})
-              </h4>
-              {passData.vehicles && passData.vehicles.length > 0 ? (
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '0.4rem', marginBottom: '0.8rem' }}>
-                  {passData.vehicles.map((v, i) => (
-                    <label key={i} style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', fontSize: '0.85rem', cursor: 'pointer' }}>
-                      <input
-                        type="radio"
-                        name="selectedVehicle"
-                        value={v.plate_number}
-                        checked={selectedVehicle === v.plate_number}
-                        onChange={(e) => setSelectedVehicle(e.target.value)}
-                      />
-                      <span><strong>{v.plate_number}</strong> ({v.vehicle_type}) - Driver: {v.driver_name || 'Owner'}</span>
-                    </label>
-                  ))}
+              {/* Multi-Vehicle Gate Management (up to 5) */}
+              <div style={{ marginTop: '1rem', borderTop: '1px solid #cbd5e1', paddingTop: '0.8rem' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.6rem' }}>
+                  <h4 style={{ fontSize: '0.9rem', color: '#1e293b', margin: 0, display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
+                    <Car size={16} color="#df6f06" /> Vehicles at Gate ({editVehicles.length}/5)
+                  </h4>
+                  <button
+                    type="button"
+                    onClick={handleAddVehicle}
+                    disabled={editVehicles.length >= 5}
+                    style={{
+                      background: editVehicles.length >= 5 ? '#94a3b8' : '#3b82f6',
+                      borderColor: editVehicles.length >= 5 ? '#94a3b8' : '#3b82f6',
+                      color: 'white',
+                      fontSize: '0.78rem',
+                      fontWeight: 'bold',
+                      padding: '0.3rem 0.65rem',
+                      borderRadius: '5px',
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '0.3rem',
+                      cursor: editVehicles.length >= 5 ? 'not-allowed' : 'pointer'
+                    }}
+                  >
+                    <PlusCircle size={14} /> + Add Vehicle
+                  </button>
                 </div>
-              ) : (
-                <input
-                  type="text"
-                  placeholder="Enter Vehicle Plate Number"
-                  value={selectedVehicle}
-                  onChange={(e) => setSelectedVehicle(e.target.value)}
-                />
-              )}
+
+                {editVehicles.length === 0 ? (
+                  <div style={{ background: '#f1f5f9', padding: '0.6rem 0.8rem', borderRadius: '6px', fontSize: '0.82rem', color: '#64748b', textAlign: 'center', border: '1px dashed #cbd5e1', marginBottom: '0.8rem' }}>
+                    No vehicle registered. Click <strong>"+ Add Vehicle"</strong> if visitor arrived with a vehicle.
+                  </div>
+                ) : (
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem', marginBottom: '0.8rem' }}>
+                    {editVehicles.map((v, i) => (
+                      <div
+                        key={i}
+                        style={{
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: '0.5rem',
+                          background: '#ffffff',
+                          padding: '0.5rem 0.7rem',
+                          borderRadius: '6px',
+                          border: '1px solid #cbd5e1'
+                        }}
+                      >
+                        <span style={{ fontSize: '0.75rem', fontWeight: 'bold', color: '#64748b', minWidth: '70px' }}>
+                          Vehicle #{i + 1}:
+                        </span>
+                        <input
+                          type="text"
+                          placeholder="Plate (e.g. AP39AB1234)"
+                          value={v.plate_number || ''}
+                          onChange={(e) => handleVehicleChange(i, 'plate_number', e.target.value.toUpperCase())}
+                          style={{
+                            flex: 1,
+                            margin: 0,
+                            padding: '0.35rem 0.5rem',
+                            fontSize: '0.82rem',
+                            fontWeight: 'bold',
+                            letterSpacing: '0.5px'
+                          }}
+                        />
+                        <select
+                          value={v.vehicle_type || 'Select'}
+                          onChange={(e) => handleVehicleChange(i, 'vehicle_type', e.target.value)}
+                          style={{
+                            width: '145px',
+                            margin: 0,
+                            padding: '0.35rem 0.4rem',
+                            fontSize: '0.82rem'
+                          }}
+                        >
+                          {VEHICLE_TYPE_OPTIONS.map((vt) => (
+                            <option key={vt} value={vt}>{vt}</option>
+                          ))}
+                        </select>
+                        <button
+                          type="button"
+                          onClick={() => handleRemoveVehicle(i)}
+                          style={{
+                            background: '#fee2e2',
+                            border: '1px solid #fca5a5',
+                            color: '#b91c1c',
+                            padding: '0.35rem 0.55rem',
+                            borderRadius: '5px',
+                            cursor: 'pointer',
+                            display: 'flex',
+                            alignItems: 'center',
+                            gap: '0.2rem',
+                            fontSize: '0.75rem'
+                          }}
+                          title="Remove this vehicle"
+                        >
+                          <Trash2 size={13} />
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
 
               <label style={{ marginTop: '0.5rem' }}>
                 Gate Guard Remarks:
@@ -1403,9 +1576,10 @@ export default function GuardGateTerminal({ user }) {
               const isDeparturePassed = !passData.is_permanent_pass && (passData.departure_time_passed || (passData.valid_until && new Date() > new Date(passData.valid_until)));
               const isAlreadyInside = passData.presence_status === 'currently_inside' && !passData.is_permanent_pass;
               const isOverstayed = passData.presence_status === 'over_stayed';
-              const isInDisabled = passData.is_in_enabled !== undefined
+              const isNotApproved = passData.status && passData.status !== 'APPROVED' && passData.status !== 'INSIDE_CAMPUS' && !passData.is_permanent_pass && !passData.is_vvip && !passData.bypassed_by_admin;
+              const isInDisabled = isNotApproved || (passData.is_in_enabled !== undefined
                 ? !passData.is_in_enabled
-                : (passData.is_current_gate_allowed === false || passData.arrival_status === 'TOO_EARLY' || isDeparturePassed || isAlreadyInside || isOverstayed);
+                : (passData.is_current_gate_allowed === false || passData.arrival_status === 'TOO_EARLY' || isDeparturePassed || isAlreadyInside || isOverstayed));
 
               return (
                 <button
@@ -1425,7 +1599,9 @@ export default function GuardGateTerminal({ user }) {
                   }}
                 >
                   <LogIn size={20} />
-                  {passData.is_current_gate_allowed === false 
+                  {isNotApproved
+                    ? '⛔ Not Yet Approved (Entry Blocked)'
+                    : passData.is_current_gate_allowed === false 
                     ? '⛔ Restricted at this Gate' 
                     : passData.arrival_status === 'TOO_EARLY'
                     ? '⛔ Entry Window Not Open'
