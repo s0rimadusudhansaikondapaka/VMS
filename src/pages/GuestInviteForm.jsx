@@ -130,7 +130,7 @@ export default function GuestInviteForm() {
 
     try {
       const res = await createPublicVisitorRegistration({
-        host_id: hostId,
+        host_id: hostInfo?.id || hostId,
         token: params.get('token') || (typeof hostId === 'string' && hostId.startsWith('inv_') ? hostId : null),
         full_name: fullName,
         phone,
