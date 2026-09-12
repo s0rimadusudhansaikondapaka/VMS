@@ -305,8 +305,8 @@ export default function GuardGateTerminal({ user }) {
           status: res.status,
           lifecycle_status: res.lifecycle_status,
           presence_status: res.presence_status,
-          is_in_enabled: res.presence_status !== 'currently_inside' && !prev.departure_time_passed,
-          is_out_enabled: res.presence_status === 'currently_inside' || res.presence_status === 'over_stayed',
+          is_in_enabled: res.is_in_enabled !== undefined ? res.is_in_enabled : (res.presence_status !== 'currently_inside' && res.presence_status !== 'over_stayed' && !prev.departure_time_passed),
+          is_out_enabled: res.is_out_enabled !== undefined ? res.is_out_enabled : (res.presence_status === 'currently_inside' || res.presence_status === 'over_stayed'),
         }));
         fetchInvitedVisitorsList(invitedSearch);
         fetchGateStats(gateName);
@@ -804,7 +804,9 @@ export default function GuardGateTerminal({ user }) {
                         )}
                         <div>
                           <strong>{vis.visitor_name}</strong>
-                          <div style={{ fontSize: '0.74rem', color: '#64748b' }}>📞 {vis.visitor_phone}</div>
+                          <div style={{ fontSize: '0.74rem', color: '#64748b' }}>
+                            📞 {vis.visitor_phone ? (vis.visitor_phone.length > 4 ? '******' + vis.visitor_phone.slice(-4) : vis.visitor_phone) : ''}
+                          </div>
                           <span style={{ fontSize: '0.7rem', padding: '0.1rem 0.35rem', borderRadius: '4px', background: '#e2e8f0', color: '#334155', fontWeight: 'bold' }}>
                             {vis.pass_code}
                           </span>
@@ -856,7 +858,13 @@ export default function GuardGateTerminal({ user }) {
                     </td>
                     <td>
                       <div><strong>{vis.person_count || 1} people</strong></div>
-                      <div style={{ fontSize: '0.74rem', color: '#64748b' }}>🚗 {vis.vehicle_details || 'No Vehicle'}</div>
+                      {vis.vehicles && vis.vehicles.length > 0 ? (
+                        <div style={{ fontSize: '0.74rem', color: '#64748b' }}>
+                          🚗 {vis.vehicles.map(v => `${v.plate_number} (${v.vehicle_type || 'Car'})`).join(', ')}
+                        </div>
+                      ) : (
+                        <div style={{ fontSize: '0.74rem', color: '#64748b' }}>🚗 {vis.vehicle_details || 'No Vehicle'}</div>
+                      )}
                     </td>
                     <td>
                       <button
@@ -1212,20 +1220,19 @@ export default function GuardGateTerminal({ user }) {
                   <h4 style={{ margin: 0, color: '#1e293b' }}>{passData.visitor_name}</h4>
                   <p style={{ margin: 0, fontSize: '0.85rem', color: '#64748b' }}>Category: <strong>{passData.visitor_category}</strong></p>
                   <p style={{ margin: 0, fontSize: '0.85rem', color: '#64748b' }}>Gender: <strong>{passData.visitor_gender || 'Male'}</strong></p>
-                  <p style={{ margin: 0, fontSize: '0.85rem', color: '#64748b' }}>Phone: <strong>{passData.visitor_phone}</strong></p>
+                  <p style={{ margin: 0, fontSize: '0.85rem', color: '#64748b' }}>Phone: <strong>{passData.visitor_phone ? (passData.visitor_phone.length > 4 ? '******' + passData.visitor_phone.slice(-4) : passData.visitor_phone) : 'N/A'}</strong></p>
                 </div>
               </div>
 
               <h4 style={{ fontSize: '0.9rem', color: '#475569', borderBottom: '1px solid #e2e8f0', paddingBottom: '0.3rem' }}>
-                Address Proof & Identity (`idCardNumber`)
+                Identity & Verification
               </h4>
-              <p style={{ margin: '0.4rem 0' }}><strong>Aadhaar Card No:</strong> {passData.id_card_number || passData.id_number || 'Verified'}</p>
-              {passData.id_card_image_url && (
-                <div style={{ marginTop: '0.4rem' }}>
-                  <span style={{ fontSize: '0.75rem', color: '#64748b' }}>Aadhaar Card Image:</span><br/>
-                  <img src={passData.id_card_image_url} alt="Aadhaar Proof" style={{ maxWidth: '200px', borderRadius: '6px', border: '1px solid #cbd5e1' }} />
-                </div>
-              )}
+              <p style={{ margin: '0.4rem 0', fontSize: '0.85rem', color: '#059669', display: 'flex', alignItems: 'center', gap: '0.3rem' }}>
+                <CheckCircle size={15} /> <strong>Identity Verified</strong>
+              </p>
+              <div style={{ fontSize: '0.78rem', color: '#64748b', fontStyle: 'italic', marginBottom: '0.5rem' }}>
+                🔒 Aadhaar & personal identification details are hidden from guard view for privacy.
+              </div>
 
               <h4 style={{ fontSize: '0.9rem', color: '#475569', borderBottom: '1px solid #e2e8f0', paddingBottom: '0.3rem', marginTop: '1rem' }}>
                 Scheduled Visit Window & 8-Hour Grace Policy
@@ -1391,11 +1398,14 @@ export default function GuardGateTerminal({ user }) {
           </div>
 
           <div style={{ display: 'flex', gap: '1rem', marginTop: '0.8rem' }}>
-            {/* Rule 7: IN button enabled ONLY till estimated departure time */}
+            {/* Category 1 & 2 State Machine: IN Button */}
             {(() => {
               const isDeparturePassed = !passData.is_permanent_pass && (passData.departure_time_passed || (passData.valid_until && new Date() > new Date(passData.valid_until)));
               const isAlreadyInside = passData.presence_status === 'currently_inside' && !passData.is_permanent_pass;
-              const isInDisabled = passData.is_current_gate_allowed === false || passData.arrival_status === 'TOO_EARLY' || isDeparturePassed || isAlreadyInside;
+              const isOverstayed = passData.presence_status === 'over_stayed';
+              const isInDisabled = passData.is_in_enabled !== undefined
+                ? !passData.is_in_enabled
+                : (passData.is_current_gate_allowed === false || passData.arrival_status === 'TOO_EARLY' || isDeparturePassed || isAlreadyInside || isOverstayed);
 
               return (
                 <button
@@ -1419,6 +1429,8 @@ export default function GuardGateTerminal({ user }) {
                     ? '⛔ Restricted at this Gate' 
                     : passData.arrival_status === 'TOO_EARLY'
                     ? '⛔ Entry Window Not Open'
+                    : isOverstayed
+                    ? '⛔ Overstayed (IN Disabled)'
                     : isDeparturePassed
                     ? '⛔ Departure Passed (IN Disabled)'
                     : isAlreadyInside
@@ -1430,10 +1442,12 @@ export default function GuardGateTerminal({ user }) {
               );
             })()}
 
-            {/* Rule 8: OUT button enabled if Visitor status is 'currently_inside' */}
+            {/* Category 1 & 2 State Machine: OUT Button */}
             {(() => {
               const isInside = passData.presence_status === 'currently_inside' || passData.presence_status === 'over_stayed' || passData.status === 'INSIDE_CAMPUS';
-              const isOutDisabled = passData.is_current_gate_allowed === false || (!passData.is_permanent_pass && !isInside);
+              const isOutDisabled = passData.is_out_enabled !== undefined
+                ? !passData.is_out_enabled
+                : (passData.is_current_gate_allowed === false || (!passData.is_permanent_pass && !isInside));
 
               return (
                 <button
@@ -1455,6 +1469,8 @@ export default function GuardGateTerminal({ user }) {
                   <LogOut size={20} />
                   {!isInside && !passData.is_permanent_pass
                     ? '⛔ Cannot Exit (Currently Outside)'
+                    : passData.presence_status === 'over_stayed'
+                    ? '⬅ Exit Overstayed Visitor (OUT)'
                     : '⬅ Allow OUT (Step Outside)'}
                 </button>
               );

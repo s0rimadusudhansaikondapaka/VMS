@@ -299,6 +299,10 @@ export default function HostDashboard({ user }) {
   };
 
   const addVehicleField = () => {
+    if (vehicles.length >= 5) {
+      alert('Maximum 5 vehicles allowed per registration.');
+      return;
+    }
     setVehicles([...vehicles, { plate_number: '', vehicle_type: 'Car', driver_name: '', driver_phone: '' }]);
   };
 
@@ -390,6 +394,26 @@ export default function HostDashboard({ user }) {
     setError('');
     setMsg('');
     try {
+      const fromDate = new Date(validFrom);
+      const untilDate = new Date(validUntil);
+      const fromH = fromDate.getHours();
+      const fromM = fromDate.getMinutes();
+      const untilH = untilDate.getHours();
+      const untilM = untilDate.getMinutes();
+
+      if (fromH < 5 || fromH > 22 || (fromH === 22 && fromM > 0)) {
+        setError('Arrival Time (ETA) must be between 5:00 AM and 10:00 PM.');
+        return;
+      }
+      if (untilH < 5 || untilH > 22 || (untilH === 22 && untilM > 0)) {
+        setError('Departure Time (ETD) must be between 5:00 AM and 10:00 PM.');
+        return;
+      }
+      if (untilDate <= fromDate) {
+        setError('Departure Time must be after Arrival Time.');
+        return;
+      }
+
       const isSingle = registrationMode === 'Single';
       const computedMen = isSingle ? (gender === 'Female' ? 0 : 1) : (parseInt(adultMen) || 0);
       const computedWomen = isSingle ? (gender === 'Female' ? 1 : 0) : (parseInt(adultWomen) || 0);

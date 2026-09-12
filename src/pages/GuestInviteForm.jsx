@@ -3,7 +3,7 @@ import { getPublicHostInfo, createPublicVisitorRegistration } from '../services/
 import CameraCaptureModal from '../components/CameraCaptureModal';
 import FormFieldGuide from '../components/FormFieldGuide';
 import OneWorldOneFamilyLogo from '../components/OneWorldOneFamilyLogo';
-import { Shield, User, Camera, Upload, CheckCircle, Calendar, Users, Car, AlertTriangle } from 'lucide-react';
+import { Shield, User, Camera, Upload, CheckCircle, Calendar, Users, Car, AlertTriangle, Plus, Trash2 } from 'lucide-react';
 
 export default function GuestInviteForm() {
   const params = new URLSearchParams(window.location.search);
@@ -28,9 +28,15 @@ export default function GuestInviteForm() {
   const [category, setCategory] = useState('GENERAL');
   const [purpose, setPurpose] = useState('');
 
-  // Visit Window (Arrival: Now, Departure: Tomorrow 9:00 PM)
+  // Visit Window (Operating hours 5:00 AM to 10:00 PM)
   const getDefaultFrom = () => {
     const now = new Date();
+    if (now.getHours() < 5) {
+      now.setHours(5, 0, 0, 0);
+    } else if (now.getHours() >= 22) {
+      now.setDate(now.getDate() + 1);
+      now.setHours(9, 0, 0, 0);
+    }
     const year = now.getFullYear();
     const month = String(now.getMonth() + 1).padStart(2, '0');
     const day = String(now.getDate()).padStart(2, '0');
@@ -42,7 +48,7 @@ export default function GuestInviteForm() {
   const getDefaultUntil = () => {
     const tomorrow = new Date();
     tomorrow.setDate(tomorrow.getDate() + 1);
-    tomorrow.setHours(21, 0, 0, 0); // Tomorrow 9:00 PM
+    tomorrow.setHours(21, 0, 0, 0); // Default 9:00 PM
     const year = tomorrow.getFullYear();
     const month = String(tomorrow.getMonth() + 1).padStart(2, '0');
     const day = String(tomorrow.getDate()).padStart(2, '0');
@@ -62,6 +68,24 @@ export default function GuestInviteForm() {
   const [vehicles, setVehicles] = useState([
     { plate_number: '', vehicle_type: 'Car', driver_name: '', driver_phone: '' }
   ]);
+
+  const addVehicleField = () => {
+    if (vehicles.length >= 5) {
+      alert('Maximum 5 vehicles allowed.');
+      return;
+    }
+    setVehicles([...vehicles, { plate_number: '', vehicle_type: 'Car', driver_name: '', driver_phone: '' }]);
+  };
+
+  const removeVehicleField = (index) => {
+    setVehicles(vehicles.filter((_, i) => i !== index));
+  };
+
+  const handleVehicleChange = (index, field, value) => {
+    const updated = [...vehicles];
+    updated[index][field] = value;
+    setVehicles(updated);
+  };
 
   const [submitting, setSubmitting] = useState(false);
   const [submittedPassCode, setSubmittedPassCode] = useState(null);
@@ -122,6 +146,30 @@ export default function GuestInviteForm() {
     e.preventDefault();
     setError('');
     setSubmitting(true);
+
+    const fromDate = new Date(validFrom);
+    const untilDate = new Date(validUntil);
+    const fromH = fromDate.getHours();
+    const fromM = fromDate.getMinutes();
+    const untilH = untilDate.getHours();
+    const untilM = untilDate.getMinutes();
+
+    if (fromH < 5 || fromH > 22 || (fromH === 22 && fromM > 0)) {
+      setError('Arrival Time (ETA) must be between 5:00 AM and 10:00 PM.');
+      setSubmitting(false);
+      return;
+    }
+    if (untilH < 5 || untilH > 22 || (untilH === 22 && untilM > 0)) {
+      setError('Departure Time (ETD) must be between 5:00 AM and 10:00 PM.');
+      setSubmitting(false);
+      return;
+    }
+    if (untilDate <= fromDate) {
+      setError('Departure Time must be after Arrival Time.');
+      setSubmitting(false);
+      return;
+    }
+
     const isSingle = registrationMode === 'Single';
     const computedMen = isSingle ? (gender === 'Female' ? 0 : 1) : (parseInt(adultMen) || 0);
     const computedWomen = isSingle ? (gender === 'Female' ? 1 : 0) : (parseInt(adultWomen) || 0);
@@ -150,7 +198,7 @@ export default function GuestInviteForm() {
         boys_count: computedBoys,
         girls_count: computedGirls,
         children_count: computedBoys + computedGirls,
-        vehicles: vehicles.filter(v => v.plate_number.trim() !== ''),
+        vehicles: vehicles.filter(v => v.plate_number.trim() !== '').slice(0, 5),
       });
 
       if (res.success) {
@@ -437,6 +485,63 @@ export default function GuestInviteForm() {
               ⚡ Single Visitor Mode: Auto-calculated breakdown for 1 Visitor ({gender === 'Female' ? '1 Adult Woman' : '1 Adult Man'}).
             </div>
           )}
+
+          {/* Section 4: Multiple Registered Vehicles */}
+          <div style={{ marginTop: '1rem', background: '#f8fafc', padding: '0.8rem', borderRadius: '8px', border: '1px solid #cbd5e1' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+              <h4 style={{ fontSize: '0.9rem', color: '#2563eb', margin: 0, display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
+                <Car size={16} /> 4. Vehicle Details (Optional, up to 5 vehicles)
+              </h4>
+              {vehicles.length < 5 && (
+                <button type="button" onClick={addVehicleField} className="secondary outline" style={{ fontSize: '0.75rem', padding: '0.2rem 0.6rem' }}>
+                  <Plus size={14} /> Add Vehicle ({vehicles.length}/5)
+                </button>
+              )}
+            </div>
+
+            {vehicles.map((v, idx) => (
+              <div key={idx} style={{ display: 'grid', gridTemplateColumns: '1.2fr 1fr 1.2fr 1.2fr 0.4fr', gap: '0.5rem', marginTop: '0.5rem', alignItems: 'center' }}>
+                <input
+                  type="text"
+                  placeholder="Plate No (e.g. KA-01-AB-1234)"
+                  value={v.plate_number}
+                  onChange={(e) => handleVehicleChange(idx, 'plate_number', e.target.value)}
+                  style={{ margin: 0 }}
+                />
+                <select
+                  value={v.vehicle_type}
+                  onChange={(e) => handleVehicleChange(idx, 'vehicle_type', e.target.value)}
+                  style={{ margin: 0 }}
+                >
+                  <option value="Car">Car</option>
+                  <option value="SUV">SUV</option>
+                  <option value="Two Wheeler">Two Wheeler</option>
+                  <option value="Auto">Auto</option>
+                  <option value="Bus">Bus</option>
+                  <option value="Truck">Truck</option>
+                </select>
+                <input
+                  type="text"
+                  placeholder="Driver Name (optional)"
+                  value={v.driver_name}
+                  onChange={(e) => handleVehicleChange(idx, 'driver_name', e.target.value)}
+                  style={{ margin: 0 }}
+                />
+                <input
+                  type="text"
+                  placeholder="Driver Phone (optional)"
+                  value={v.driver_phone}
+                  onChange={(e) => handleVehicleChange(idx, 'driver_phone', e.target.value)}
+                  style={{ margin: 0 }}
+                />
+                {vehicles.length > 1 && (
+                  <button type="button" onClick={() => removeVehicleField(idx)} className="secondary" style={{ padding: '0.4rem', color: '#dc2626', margin: 0 }}>
+                    <Trash2 size={14} />
+                  </button>
+                )}
+              </div>
+            ))}
+          </div>
 
           <label style={{ marginTop: '1rem' }}>
             Purpose of Visit *
