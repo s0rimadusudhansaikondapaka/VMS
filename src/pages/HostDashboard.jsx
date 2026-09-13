@@ -183,6 +183,16 @@ export default function HostDashboard({ user }) {
     return `${year}-${month}-${day}T${hours}:${minutes}`;
   };
 
+  const getMinDateTime = () => {
+    const now = new Date();
+    const year = now.getFullYear();
+    const month = String(now.getMonth() + 1).padStart(2, '0');
+    const day = String(now.getDate()).padStart(2, '0');
+    const hours = String(now.getHours()).padStart(2, '0');
+    const minutes = String(now.getMinutes()).padStart(2, '0');
+    return `${year}-${month}-${day}T${hours}:${minutes}`;
+  };
+
   const [validFrom, setValidFrom] = useState(getDefaultFrom());
   const [validUntil, setValidUntil] = useState(getDefaultUntil());
   const [relationship, setRelationship] = useState('Spouse');
@@ -232,6 +242,19 @@ export default function HostDashboard({ user }) {
 
   const handleReviewAction = async (action) => {
     if (!reviewModalData) return;
+    if (action === 'APPROVE') {
+      const now = new Date();
+      const fromDate = new Date(reviewValidFrom);
+      const untilDate = new Date(reviewValidUntil);
+      if (fromDate < new Date(now.getTime() - 10 * 60 * 1000)) {
+        alert('Arrival Date/Time cannot be in the past or already expired.');
+        return;
+      }
+      if (untilDate <= fromDate) {
+        alert('Departure Date/Time must be after Arrival Date/Time.');
+        return;
+      }
+    }
     try {
       const res = await updateApproval(
         reviewModalData.id,
@@ -431,8 +454,21 @@ export default function HostDashboard({ user }) {
     setError('');
     setMsg('');
     try {
+      const now = new Date();
       const fromDate = new Date(validFrom);
       const untilDate = new Date(validUntil);
+
+      // Block past or already expired arrival dates (allow 10-minute grace window for form filling)
+      if (fromDate < new Date(now.getTime() - 10 * 60 * 1000)) {
+        setError('Arrival Date/Time cannot be in the past or already expired.');
+        return;
+      }
+
+      if (untilDate <= fromDate) {
+        setError('Departure Time must be after Arrival Time.');
+        return;
+      }
+
       const fromH = fromDate.getHours();
       const fromM = fromDate.getMinutes();
       const untilH = untilDate.getHours();
@@ -444,10 +480,6 @@ export default function HostDashboard({ user }) {
       }
       if (untilH < 5 || untilH > 22 || (untilH === 22 && untilM > 0)) {
         setError('Departure Time (ETD) must be between 5:00 AM and 10:00 PM.');
-        return;
-      }
-      if (untilDate <= fromDate) {
-        setError('Departure Time must be after Arrival Time.');
         return;
       }
 
@@ -1121,12 +1153,24 @@ export default function HostDashboard({ user }) {
             <h4 style={{ fontSize: '0.9rem', color: '#2563eb', marginTop: '1rem' }}>3. Scheduled Visit Window & Accompanying Breakdown</h4>
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.8rem' }}>
               <label>
-                Arrival Date/Time (`validFrom`)
-                <input type="datetime-local" required value={validFrom} onChange={(e) => setValidFrom(e.target.value)} />
+                Arrival Date/Time
+                <input 
+                  type="datetime-local" 
+                  required 
+                  min={getMinDateTime()}
+                  value={validFrom} 
+                  onChange={(e) => setValidFrom(e.target.value)} 
+                />
               </label>
               <label>
-                Departure Date/Time (`validUntil`)
-                <input type="datetime-local" required value={validUntil} onChange={(e) => setValidUntil(e.target.value)} />
+                Departure Date/Time
+                <input 
+                  type="datetime-local" 
+                  required 
+                  min={validFrom || getMinDateTime()}
+                  value={validUntil} 
+                  onChange={(e) => setValidUntil(e.target.value)} 
+                />
               </label>
             </div>
 
@@ -1981,12 +2025,22 @@ export default function HostDashboard({ user }) {
 
               <label>
                 Arrival Date / Time
-                <input type="datetime-local" value={reviewValidFrom} onChange={(e) => setReviewValidFrom(e.target.value)} />
+                <input 
+                  type="datetime-local" 
+                  min={getMinDateTime()}
+                  value={reviewValidFrom} 
+                  onChange={(e) => setReviewValidFrom(e.target.value)} 
+                />
               </label>
 
               <label style={{ gridColumn: 'span 2' }}>
                 Departure Date / Time (Date of Visit)
-                <input type="datetime-local" value={reviewValidUntil} onChange={(e) => setReviewValidUntil(e.target.value)} />
+                <input 
+                  type="datetime-local" 
+                  min={reviewValidFrom || getMinDateTime()}
+                  value={reviewValidUntil} 
+                  onChange={(e) => setReviewValidUntil(e.target.value)} 
+                />
               </label>
 
               <label style={{ gridColumn: 'span 2' }}>

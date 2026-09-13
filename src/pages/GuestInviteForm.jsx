@@ -57,6 +57,16 @@ export default function GuestInviteForm() {
     return `${year}-${month}-${day}T${hours}:${minutes}`;
   };
 
+  const getMinDateTime = () => {
+    const now = new Date();
+    const year = now.getFullYear();
+    const month = String(now.getMonth() + 1).padStart(2, '0');
+    const day = String(now.getDate()).padStart(2, '0');
+    const hours = String(now.getHours()).padStart(2, '0');
+    const minutes = String(now.getMinutes()).padStart(2, '0');
+    return `${year}-${month}-${day}T${hours}:${minutes}`;
+  };
+
   const [validFrom, setValidFrom] = useState(getDefaultFrom());
   const [validUntil, setValidUntil] = useState(getDefaultUntil());
 
@@ -161,8 +171,23 @@ export default function GuestInviteForm() {
     setError('');
     setSubmitting(true);
 
+    const now = new Date();
     const fromDate = new Date(validFrom);
     const untilDate = new Date(validUntil);
+
+    // Block past or already expired arrival dates (allow 10-minute grace window for form filling)
+    if (fromDate < new Date(now.getTime() - 10 * 60 * 1000)) {
+      setError('Arrival Date/Time cannot be in the past or already expired.');
+      setSubmitting(false);
+      return;
+    }
+
+    if (untilDate <= fromDate) {
+      setError('Departure Time must be after Arrival Time.');
+      setSubmitting(false);
+      return;
+    }
+
     const fromH = fromDate.getHours();
     const fromM = fromDate.getMinutes();
     const untilH = untilDate.getHours();
@@ -175,11 +200,6 @@ export default function GuestInviteForm() {
     }
     if (untilH < 5 || untilH > 22 || (untilH === 22 && untilM > 0)) {
       setError('Departure Time (ETD) must be between 5:00 AM and 10:00 PM.');
-      setSubmitting(false);
-      return;
-    }
-    if (untilDate <= fromDate) {
-      setError('Departure Time must be after Arrival Time.');
       setSubmitting(false);
       return;
     }
@@ -548,11 +568,23 @@ export default function GuestInviteForm() {
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.8rem' }}>
             <label>
               Arrival Date/Time
-              <input type="datetime-local" required value={validFrom} onChange={(e) => setValidFrom(e.target.value)} />
+              <input 
+                type="datetime-local" 
+                required 
+                min={getMinDateTime()} 
+                value={validFrom} 
+                onChange={(e) => setValidFrom(e.target.value)} 
+              />
             </label>
             <label>
               Departure Date/Time
-              <input type="datetime-local" required value={validUntil} onChange={(e) => setValidUntil(e.target.value)} />
+              <input 
+                type="datetime-local" 
+                required 
+                min={validFrom || getMinDateTime()} 
+                value={validUntil} 
+                onChange={(e) => setValidUntil(e.target.value)} 
+              />
             </label>
           </div>
 
