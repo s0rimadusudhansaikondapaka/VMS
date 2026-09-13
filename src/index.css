@@ -340,16 +340,58 @@ table tbody tr:hover td, table[role="grid"] tbody tr:hover td {
 }
 
 /* Override Any Dark Inputs / Textareas / Selects */
-input, select, textarea {
+input:not([type="checkbox"]):not([type="radio"]), select, textarea {
   background-color: #ffffff !important;
   color: var(--sms-text-dark) !important;
   border: 1px solid #cbd5e1 !important;
 }
 
-input:focus, select:focus, textarea:focus {
+input:not([type="checkbox"]):not([type="radio"]):focus, select:focus, textarea:focus {
   border-color: var(--sms-saffron) !important;
   box-shadow: 0 0 0 3px rgba(223, 111, 6, 0.25) !important;
   background-color: var(--sms-card-warm) !important;
+}
+
+/* High-Contrast Accessible Radio Buttons with Visible Highlight Dot */
+input[type="radio"] {
+  appearance: none !important;
+  -webkit-appearance: none !important;
+  width: 20px !important;
+  height: 20px !important;
+  border: 2px solid #94a3b8 !important;
+  border-radius: 50% !important;
+  background-color: #ffffff !important;
+  cursor: pointer !important;
+  display: inline-grid !important;
+  place-content: center !important;
+  margin: 0 0.4rem 0 0 !important;
+  vertical-align: middle !important;
+  box-sizing: border-box !important;
+  position: relative !important;
+  transition: all 0.15s ease !important;
+}
+
+input[type="radio"]:hover {
+  border-color: var(--sms-saffron, #df6f06) !important;
+}
+
+input[type="radio"]:checked {
+  border-color: var(--sms-saffron, #df6f06) !important;
+  background-color: #ffffff !important;
+}
+
+input[type="radio"]:checked::after {
+  content: "" !important;
+  width: 10px !important;
+  height: 10px !important;
+  border-radius: 50% !important;
+  background-color: var(--sms-saffron, #df6f06) !important;
+  display: block !important;
+}
+
+input[type="radio"]:focus-visible {
+  outline: 2px solid var(--sms-saffron, #df6f06) !important;
+  outline-offset: 2px !important;
 }
 
 /* ========================================================= */

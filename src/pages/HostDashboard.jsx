@@ -838,16 +838,115 @@ export default function HostDashboard({ user }) {
             </div>
 
             {/* PPTX Requirement 2: Registration Mode (Single vs Group) */}
-            <div style={{ display: 'flex', gap: '1.5rem', marginBottom: '1rem', background: '#f8fafc', padding: '0.5rem 1rem', borderRadius: '6px' }}>
-              <span style={{ fontSize: '0.85rem', fontWeight: 'bold' }}>Registration Mode:</span>
-              <label style={{ cursor: 'pointer', fontSize: '0.85rem' }}>
-                <input type="radio" name="regMode" value="Single" checked={registrationMode === 'Single'} onChange={(e) => setRegistrationMode(e.target.value)} />
-                Single Visitor
-              </label>
-              <label style={{ cursor: 'pointer', fontSize: '0.85rem' }}>
-                <input type="radio" name="regMode" value="Group" checked={registrationMode === 'Group'} onChange={(e) => setRegistrationMode(e.target.value)} />
-                Group Visit
-              </label>
+            <div style={{ display: 'flex', gap: '1rem', alignItems: 'center', marginBottom: '1rem', background: '#f8fafc', padding: '0.65rem 1rem', borderRadius: '8px', border: '1px solid #cbd5e1', flexWrap: 'wrap' }}>
+              <span style={{ fontSize: '0.88rem', fontWeight: 'bold', color: '#1e293b' }}>Registration Mode:</span>
+              <div style={{ display: 'flex', gap: '0.8rem', alignItems: 'center', flexWrap: 'wrap' }}>
+                <label 
+                  style={{ 
+                    cursor: 'pointer', 
+                    fontSize: '0.85rem', 
+                    fontWeight: 'bold', 
+                    color: registrationMode === 'Single' ? '#df6f06' : '#475569', 
+                    display: 'flex', 
+                    alignItems: 'center', 
+                    gap: '0.5rem', 
+                    margin: 0,
+                    padding: '0.35rem 0.75rem',
+                    borderRadius: '6px',
+                    backgroundColor: registrationMode === 'Single' ? '#fff7ed' : '#ffffff',
+                    border: registrationMode === 'Single' ? '1.5px solid #df6f06' : '1.5px solid #cbd5e1',
+                    boxShadow: registrationMode === 'Single' ? '0 0 0 3px rgba(223, 111, 6, 0.18)' : 'none',
+                    transition: 'all 0.15s ease'
+                  }}
+                >
+                  <input 
+                    type="radio" 
+                    name="regMode" 
+                    value="Single" 
+                    checked={registrationMode === 'Single'} 
+                    onChange={(e) => setRegistrationMode(e.target.value)} 
+                    style={{ position: 'absolute', opacity: 0, width: 0, height: 0, margin: 0, pointerEvents: 'none' }}
+                  />
+                  <span 
+                    aria-hidden="true"
+                    style={{
+                      width: '18px',
+                      height: '18px',
+                      borderRadius: '50%',
+                      border: registrationMode === 'Single' ? '2.5px solid #df6f06' : '2px solid #94a3b8',
+                      backgroundColor: '#ffffff',
+                      display: 'inline-flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      flexShrink: 0
+                    }}
+                  >
+                    {registrationMode === 'Single' && (
+                      <span style={{
+                        width: '9px',
+                        height: '9px',
+                        borderRadius: '50%',
+                        backgroundColor: '#df6f06',
+                        display: 'block'
+                      }} />
+                    )}
+                  </span>
+                  <span>Single Visitor</span>
+                </label>
+
+                <label 
+                  style={{ 
+                    cursor: 'pointer', 
+                    fontSize: '0.85rem', 
+                    fontWeight: 'bold', 
+                    color: registrationMode === 'Group' ? '#057a55' : '#475569', 
+                    display: 'flex', 
+                    alignItems: 'center', 
+                    gap: '0.5rem', 
+                    margin: 0,
+                    padding: '0.35rem 0.75rem',
+                    borderRadius: '6px',
+                    backgroundColor: registrationMode === 'Group' ? '#f0fdf4' : '#ffffff',
+                    border: registrationMode === 'Group' ? '1.5px solid #057a55' : '1.5px solid #cbd5e1',
+                    boxShadow: registrationMode === 'Group' ? '0 0 0 3px rgba(5, 122, 85, 0.18)' : 'none',
+                    transition: 'all 0.15s ease'
+                  }}
+                >
+                  <input 
+                    type="radio" 
+                    name="regMode" 
+                    value="Group" 
+                    checked={registrationMode === 'Group'} 
+                    onChange={(e) => setRegistrationMode(e.target.value)} 
+                    style={{ position: 'absolute', opacity: 0, width: 0, height: 0, margin: 0, pointerEvents: 'none' }}
+                  />
+                  <span 
+                    aria-hidden="true"
+                    style={{
+                      width: '18px',
+                      height: '18px',
+                      borderRadius: '50%',
+                      border: registrationMode === 'Group' ? '2.5px solid #057a55' : '2px solid #94a3b8',
+                      backgroundColor: '#ffffff',
+                      display: 'inline-flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      flexShrink: 0
+                    }}
+                  >
+                    {registrationMode === 'Group' && (
+                      <span style={{
+                        width: '9px',
+                        height: '9px',
+                        borderRadius: '50%',
+                        backgroundColor: '#057a55',
+                        display: 'block'
+                      }} />
+                    )}
+                  </span>
+                  <span>Group Visit</span>
+                </label>
+              </div>
             </div>
 
             {/* Section 1: Demographics */}
