@@ -1799,7 +1799,7 @@ export default function GuardGateTerminal({ user }) {
                   </td>
                   <td>
                     <span className={`badge badge-${spot.status.toLowerCase()}`}>
-                      {spot.status === 'PENDING_L1' ? 'PENDING HOST APPROVAL' : spot.status}
+                      {spot.status === 'PENDING_L1' ? 'PENDING HOST APPROVAL' : spot.status === 'PENDING_SUPERVISOR' ? 'PENDING SUPERVISOR APPROVAL' : spot.status}
                     </span>
                   </td>
                   <td>
@@ -1818,7 +1818,7 @@ export default function GuardGateTerminal({ user }) {
                     ) : (
                       <div style={{ display: 'flex', flexDirection: 'column', gap: '0.3rem' }}>
                         <span style={{ fontSize: '0.72rem', color: '#d97706', fontWeight: 'bold' }}>
-                          ⏳ Awaiting Host Response
+                          {spot.status === 'PENDING_SUPERVISOR' ? '⏳ Awaiting Supervisor Approval' : '⏳ Awaiting Host Response'}
                         </span>
                         <button
                           type="button"
