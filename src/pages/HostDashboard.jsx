@@ -21,6 +21,7 @@ export default function HostDashboard({ user }) {
   const [activeShareToken, setActiveShareToken] = useState('');
   const [qrModalData, setQrModalData] = useState(null);
   const [isExpandedQr, setIsExpandedQr] = useState(false);
+  const [expandedQrZoom, setExpandedQrZoom] = useState(1);
 
   // Family Members Management state
   const [showAddFamilyModal, setShowAddFamilyModal] = useState(false);
@@ -80,11 +81,11 @@ export default function HostDashboard({ user }) {
 
   const filteredRegistrations = React.useMemo(() => {
     if (statusFilter === 'ALL') return registrations;
-    if (statusFilter === 'PENDING') return registrations.filter((r) => r.status && r.status.startsWith('PENDING'));
+    if (statusFilter === 'PENDING') return registrations.filter((r) => r.status === 'PENDING_L1');
     return registrations.filter((r) => r.status === statusFilter);
   }, [registrations, statusFilter]);
 
-  const pendingApprovalCount = registrations.filter((r) => r.status && r.status.startsWith('PENDING')).length;
+  const pendingApprovalCount = registrations.filter((r) => r.status === 'PENDING_L1').length;
   const approvedCount = registrations.filter((r) => r.status === 'APPROVED').length;
   const insideCount = registrations.filter((r) => r.status === 'INSIDE_CAMPUS').length;
 
@@ -201,6 +202,7 @@ export default function HostDashboard({ user }) {
   const isUserResident = user?.role === 'RESIDENT' || user?.residency_status === 'Resident' || user?.role === 'ADMIN';
   const isUserEmployee = user?.role === 'EMPLOYEE' || user?.role === 'HOD' || user?.residency_status === 'Employee' || user?.role === 'ADMIN';
   const isVipHostOnly = user?.user_type === 'VIP_HOST' || user?.role === 'VIP_HOST';
+  const isVipOrHodHost = isVipHostOnly || user?.role === 'HOD' || user?.user_type === 'HOD' || (user?.user_type && user.user_type.includes('VIP_HOST')) || (user?.role && user.role.includes('VIP_HOST'));
 
   // Personal Host Gate Pass & QR Code calculation for bottom of screen
   const hostPassCode = user?.pass_code || (
@@ -228,6 +230,15 @@ export default function HostDashboard({ user }) {
   const [reviewRemarks, setReviewRemarks] = useState('');
   const [reviewValidFrom, setReviewValidFrom] = useState('');
   const [reviewValidUntil, setReviewValidUntil] = useState('');
+  const [reviewVisitorName, setReviewVisitorName] = useState('');
+  const [reviewVisitorPhone, setReviewVisitorPhone] = useState('');
+  const [reviewVisitorEmail, setReviewVisitorEmail] = useState('');
+  const [reviewPurpose, setReviewPurpose] = useState('');
+  const [reviewMenCount, setReviewMenCount] = useState(1);
+  const [reviewWomenCount, setReviewWomenCount] = useState(0);
+  const [reviewBoysCount, setReviewBoysCount] = useState(0);
+  const [reviewGirlsCount, setReviewGirlsCount] = useState(0);
+  const [reviewVehicles, setReviewVehicles] = useState([]);
 
   const openReviewModal = (reg) => {
     setReviewModalData(reg);
@@ -238,6 +249,15 @@ export default function HostDashboard({ user }) {
     setReviewRemarks(reg.remarks || '');
     setReviewValidFrom(reg.valid_from ? new Date(reg.valid_from).toISOString().slice(0, 16) : getDefaultFrom());
     setReviewValidUntil(reg.valid_until ? new Date(reg.valid_until).toISOString().slice(0, 16) : getDefaultUntil());
+    setReviewVisitorName(reg.visitor_name || '');
+    setReviewVisitorPhone(reg.visitor_phone || '');
+    setReviewVisitorEmail(reg.visitor_email || '');
+    setReviewPurpose(reg.purpose || '');
+    setReviewMenCount(reg.adult_men_count !== undefined ? reg.adult_men_count : 1);
+    setReviewWomenCount(reg.adult_women_count !== undefined ? reg.adult_women_count : 0);
+    setReviewBoysCount(reg.boys_count !== undefined ? reg.boys_count : 0);
+    setReviewGirlsCount(reg.girls_count !== undefined ? reg.girls_count : 0);
+    setReviewVehicles(reg.vehicles && reg.vehicles.length > 0 ? reg.vehicles.map(v => ({ ...v })) : []);
   };
 
   const handleReviewAction = async (action) => {
@@ -266,6 +286,15 @@ export default function HostDashboard({ user }) {
           visitor_category: reviewCategory,
           valid_from: reviewValidFrom,
           valid_until: reviewValidUntil,
+          visitor_name: reviewVisitorName,
+          visitor_phone: reviewVisitorPhone,
+          visitor_email: reviewVisitorEmail,
+          purpose: reviewPurpose,
+          adult_men_count: reviewMenCount,
+          adult_women_count: reviewWomenCount,
+          boys_count: reviewBoysCount,
+          girls_count: reviewGirlsCount,
+          vehicles: reviewVehicles,
         }
       );
       if (res.success) {
@@ -599,7 +628,14 @@ export default function HostDashboard({ user }) {
           title: 'VIP Host',
           desc: "Can invite VIP Guests who are Ashram's guests and not specific to someone's office (e.g. CSR leaders from Hyd, Deepak brother)",
           badgeBg: '#fef3c7', badgeColor: '#b45309', borderColor: '#fde68a',
-          capabilities: ['🌟 Ashram VIP Guest Invites', '🏆 Priority Escort Passes']
+          capabilities: ['🌟 Ashram VIP Guest Invites', '🏆 Priority Escort Passes', '⚡ Direct Gate Pass (No L2 Needed)']
+        };
+      case 'HOD':
+        return {
+          title: 'HOD (Department Head)',
+          desc: "Head of Department: Invites official guests & departmental visitors with direct gate pass issuance (No L2 approval required)",
+          badgeBg: '#f0fdf4', badgeColor: '#16a34a', borderColor: '#86efac',
+          capabilities: ['💼 Departmental & Office Invites', '⚡ Direct Gate Pass (No L2 Needed)']
         };
       case 'PRO':
         return {
@@ -620,21 +656,21 @@ export default function HostDashboard({ user }) {
           title: 'Resident + VIP Host',
           desc: "Dual host privileges: Residence & Ashram VIP Guest invitations",
           badgeBg: '#fffbeb', badgeColor: '#d97706', borderColor: '#fcd34d',
-          capabilities: ['🏠 Residence Invitations', '🌟 Ashram VIP Guest Invites']
+          capabilities: ['🏠 Residence Invitations', '🌟 Ashram VIP Guest Invites', '⚡ Direct Gate Pass (No L2 Needed)']
         };
       case 'EMPLOYEE_VIP_HOST':
         return {
           title: 'Employee + VIP Host',
           desc: "Dual host privileges: Office & Ashram VIP Guest invitations",
           badgeBg: '#f0fdf4', badgeColor: '#16a34a', borderColor: '#4ade80',
-          capabilities: ['💼 Office & Departmental Invites', '🌟 Ashram VIP Guest Invites']
+          capabilities: ['💼 Office & Departmental Invites', '🌟 Ashram VIP Guest Invites', '⚡ Direct Gate Pass (No L2 Needed)']
         };
       case 'RESIDENT_EMPLOYEE_VIP_HOST':
         return {
           title: 'Resident + Employee + VIP Host',
           desc: "Full host privileges: Residence, Office, & Ashram VIP Guest invitations",
           badgeBg: '#faf5ff', badgeColor: '#9333ea', borderColor: '#c084fc',
-          capabilities: ['🏠 Residence Invitations', '💼 Office & Dept Invites', '🌟 VIP Guest Invites']
+          capabilities: ['🏠 Residence Invitations', '💼 Office & Dept Invites', '🌟 VIP Guest Invites', '⚡ Direct Gate Pass (No L2 Needed)']
         };
       default:
         return {
@@ -664,6 +700,12 @@ export default function HostDashboard({ user }) {
           canInviteResidence: false, canInviteOffice: false, canInviteVip: true,
           allowedCategories: ['VIP', 'VVIP'],
           allowedVisitTypes: ['BHAJAN', 'EVENT', 'TOUR', 'OFFICE'],
+        };
+      case 'HOD':
+        return {
+          canInviteResidence: true, canInviteOffice: true, canInviteVip: true,
+          allowedCategories: ['GENERAL', 'VIP', 'VVIP', 'DELIVERY', 'VENDOR', 'FOREIGN_NATIONAL'],
+          allowedVisitTypes: ['OFFICE', 'BHAJAN', 'EVENT', 'TOUR'],
         };
       case 'EMPLOYEE':
         return {
@@ -1481,9 +1523,22 @@ export default function HostDashboard({ user }) {
               </tr>
             ) : (
               paginatedRegistrations.map((reg) => {
-                const isPending = reg.status && reg.status.startsWith('PENDING');
+                const isPendingL1 = reg.status === 'PENDING_L1';
+                const isPendingL2 = reg.status === 'PENDING_L2';
+                const isPendingAccomm = reg.status === 'PENDING_ACCOMMODATION';
+                const isApprovedOrActive = reg.status === 'APPROVED' || reg.status === 'INSIDE_CAMPUS' || reg.status === 'ADMIN_BYPASSED';
+
+                let rowStyle = {};
+                if (isPendingL1) {
+                  rowStyle = { background: '#fffbeb', borderLeft: '4px solid #f59e0b' };
+                } else if (isPendingL2) {
+                  rowStyle = { background: '#f0f9ff', borderLeft: '4px solid #0ea5e9' };
+                } else if (isPendingAccomm) {
+                  rowStyle = { background: '#faf5ff', borderLeft: '4px solid #a855f7' };
+                }
+
                 return (
-                <tr key={reg.id} style={isPending ? { background: '#fffbeb', borderLeft: '4px solid #f59e0b' } : {}}>
+                <tr key={reg.id} style={rowStyle}>
                   <td>
                     {reg.photo_url ? (
                       <img src={reg.photo_url} alt="Visitor" style={{ width: '40px', height: '40px', borderRadius: '50%', objectFit: 'cover' }} />
@@ -1496,10 +1551,24 @@ export default function HostDashboard({ user }) {
                   <td>
                     <strong>{reg.visitor_name}</strong><br/>
                     <span style={{ fontSize: '0.75rem', color: '#64748b' }}>{reg.visitor_phone}</span>
-                    {isPending && (
+                    {isPendingL1 && (
                       <div style={{ marginTop: '0.2rem' }}>
                         <span style={{ fontSize: '0.7rem', background: '#fef3c7', color: '#92400e', border: '1px solid #fcd34d', padding: '0.1rem 0.4rem', borderRadius: '4px', fontWeight: 'bold' }}>
                           ⏳ Awaiting Your Approval
+                        </span>
+                      </div>
+                    )}
+                    {isPendingL2 && (
+                      <div style={{ marginTop: '0.2rem' }}>
+                        <span style={{ fontSize: '0.7rem', background: '#e0f2fe', color: '#0369a1', border: '1px solid #7dd3fc', padding: '0.1rem 0.4rem', borderRadius: '4px', fontWeight: 'bold' }}>
+                          ✓ Approved by You (Awaiting PRO)
+                        </span>
+                      </div>
+                    )}
+                    {isPendingAccomm && (
+                      <div style={{ marginTop: '0.2rem' }}>
+                        <span style={{ fontSize: '0.7rem', background: '#f3e8ff', color: '#6b21a8', border: '1px solid #d8b4fe', padding: '0.1rem 0.4rem', borderRadius: '4px', fontWeight: 'bold' }}>
+                          ✓ Approved by You (Awaiting Room)
                         </span>
                       </div>
                     )}
@@ -1527,13 +1596,30 @@ export default function HostDashboard({ user }) {
                     )}
                   </td>
                   <td>
-                    <span className={isPending ? 'badge' : `badge badge-${reg.status.toLowerCase()}`} style={isPending ? { background: '#fef3c7', color: '#92400e', border: '1px solid #f59e0b', fontWeight: 'bold' } : {}}>
-                      {reg.status}
-                    </span>
+                    {isPendingL1 && (
+                      <span className="badge" style={{ background: '#fef3c7', color: '#92400e', border: '1px solid #f59e0b', fontWeight: 'bold' }}>
+                        ⏳ PENDING HOST
+                      </span>
+                    )}
+                    {isPendingL2 && (
+                      <span className="badge" style={{ background: '#e0f2fe', color: '#0369a1', border: '1px solid #7dd3fc', fontWeight: 'bold' }}>
+                        ⏳ PENDING L2 (PRO)
+                      </span>
+                    )}
+                    {isPendingAccomm && (
+                      <span className="badge" style={{ background: '#f3e8ff', color: '#6b21a8', border: '1px solid #d8b4fe', fontWeight: 'bold' }}>
+                        🛏️ PENDING ROOM
+                      </span>
+                    )}
+                    {!isPendingL1 && !isPendingL2 && !isPendingAccomm && (
+                      <span className={`badge badge-${reg.status.toLowerCase()}`}>
+                        {reg.status}
+                      </span>
+                    )}
                   </td>
                   <td style={{ whiteSpace: 'nowrap' }}>
                     <div style={{ display: 'flex', gap: '0.3rem', flexWrap: 'wrap' }}>
-                      {isPending && (
+                      {isPendingL1 && (
                         <>
                           <button
                             type="button"
@@ -1546,15 +1632,25 @@ export default function HostDashboard({ user }) {
                           <button
                             type="button"
                             className="secondary outline"
-                            onClick={() => openReviewModal(reg)}
+                            onClick={() => handleStartEdit(reg)}
                             style={{ padding: '0.3rem 0.5rem', fontSize: '0.75rem' }}
-                            title="Edit guest details before approval"
+                            title="Edit all guest details before approval"
                           >
                             <Pencil size={13} /> Edit
                           </button>
                         </>
                       )}
-                      {(reg.status === 'APPROVED' || reg.status === 'INSIDE_CAMPUS' || reg.status === 'ADMIN_BYPASSED') && (
+                      {isPendingL2 && (
+                        <span style={{ fontSize: '0.75rem', color: '#0369a1', fontStyle: 'italic' }}>
+                          Awaiting PRO Verification
+                        </span>
+                      )}
+                      {isPendingAccomm && (
+                        <span style={{ fontSize: '0.75rem', color: '#6b21a8', fontStyle: 'italic' }}>
+                          Awaiting Accommodation
+                        </span>
+                      )}
+                      {isApprovedOrActive && (
                         <button
                           type="button"
                           onClick={() => handleGenerateQr(reg)}
@@ -1979,12 +2075,157 @@ export default function HostDashboard({ user }) {
       {/* Referrer Review & Approval Modal (Screenshot 2: Add below details or skip) */}
       {reviewModalData && (
         <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, background: 'rgba(0,0,0,0.6)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 9999, padding: '1rem' }}>
-          <div className="card" style={{ maxWidth: '540px', width: '100%', padding: '1.5rem', borderRadius: '12px' }}>
+          <div className="card" style={{ maxWidth: '640px', width: '100%', maxHeight: '90vh', overflowY: 'auto', padding: '1.5rem', borderRadius: '12px' }}>
             <div style={{ borderBottom: '2px solid #2563eb', paddingBottom: '0.6rem', marginBottom: '1rem' }}>
               <h3 style={{ margin: 0, color: '#1e293b' }}>Referrer Review & Approval</h3>
               <p style={{ margin: 0, fontSize: '0.82rem', color: '#64748b' }}>
-                Review guest: <strong>{reviewModalData.visitor_name}</strong> ({reviewModalData.visitor_phone})
+                Review &amp; Edit guest details before granting entry approval
               </p>
+            </div>
+
+            {isVipOrHodHost && (
+              <div style={{ background: '#f0fdf4', border: '1.5px solid #86efac', borderRadius: '8px', padding: '0.6rem 0.85rem', marginBottom: '1rem', fontSize: '0.82rem', color: '#166534', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                <span style={{ fontSize: '1.1rem' }}>⚡</span>
+                <div>
+                  <strong>VIP / HOD Direct Approval:</strong> Your approval will immediately issue the official authorized Gate Pass &amp; QR Code with zero L2 / PRO delay.
+                </div>
+              </div>
+            )}
+
+            {/* Editable Visitor Details */}
+            <div style={{ background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: '8px', padding: '0.8rem', marginBottom: '0.8rem' }}>
+              <div style={{ fontSize: '0.82rem', fontWeight: 'bold', color: '#1e293b', marginBottom: '0.5rem', display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
+                <Users size={14} /> Visitor &amp; Guest Details (Editable Before Approval)
+              </div>
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.6rem' }}>
+                <label>
+                  Visitor Full Name
+                  <input
+                    type="text"
+                    value={reviewVisitorName}
+                    onChange={(e) => setReviewVisitorName(e.target.value)}
+                    required
+                  />
+                </label>
+                <label>
+                  Visitor Phone
+                  <input
+                    type="text"
+                    value={reviewVisitorPhone}
+                    onChange={(e) => setReviewVisitorPhone(e.target.value)}
+                    required
+                  />
+                </label>
+                <label style={{ gridColumn: 'span 2' }}>
+                  Purpose of Visit
+                  <input
+                    type="text"
+                    value={reviewPurpose}
+                    onChange={(e) => setReviewPurpose(e.target.value)}
+                    placeholder="Reason / Purpose of visit"
+                  />
+                </label>
+              </div>
+
+              <div style={{ marginTop: '0.6rem' }}>
+                <span style={{ fontSize: '0.78rem', fontWeight: 'bold', color: '#475569', display: 'block', marginBottom: '0.3rem' }}>
+                  Accompanying Guest Breakdown
+                </span>
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '0.5rem' }}>
+                  <label style={{ fontSize: '0.75rem' }}>
+                    👨 Men
+                    <input
+                      type="number"
+                      min="0"
+                      value={reviewMenCount}
+                      onChange={(e) => setReviewMenCount(parseInt(e.target.value, 10) || 0)}
+                    />
+                  </label>
+                  <label style={{ fontSize: '0.75rem' }}>
+                    👩 Women
+                    <input
+                      type="number"
+                      min="0"
+                      value={reviewWomenCount}
+                      onChange={(e) => setReviewWomenCount(parseInt(e.target.value, 10) || 0)}
+                    />
+                  </label>
+                  <label style={{ fontSize: '0.75rem' }}>
+                    👦 Boys
+                    <input
+                      type="number"
+                      min="0"
+                      value={reviewBoysCount}
+                      onChange={(e) => setReviewBoysCount(parseInt(e.target.value, 10) || 0)}
+                    />
+                  </label>
+                  <label style={{ fontSize: '0.75rem' }}>
+                    👧 Girls
+                    <input
+                      type="number"
+                      min="0"
+                      value={reviewGirlsCount}
+                      onChange={(e) => setReviewGirlsCount(parseInt(e.target.value, 10) || 0)}
+                    />
+                  </label>
+                </div>
+              </div>
+
+              {/* Vehicle Details */}
+              <div style={{ marginTop: '0.6rem' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.3rem' }}>
+                  <span style={{ fontSize: '0.78rem', fontWeight: 'bold', color: '#475569' }}>Vehicles</span>
+                  <button
+                    type="button"
+                    onClick={() => setReviewVehicles([...reviewVehicles, { plate_number: '', vehicle_type: 'Car' }])}
+                    style={{ fontSize: '0.72rem', padding: '0.15rem 0.5rem', background: '#e2e8f0', color: '#334155', border: 'none', borderRadius: '4px', cursor: 'pointer' }}
+                  >
+                    + Add Vehicle
+                  </button>
+                </div>
+                {reviewVehicles.length === 0 ? (
+                  <span style={{ fontSize: '0.75rem', color: '#94a3b8' }}>No vehicles specified</span>
+                ) : (
+                  reviewVehicles.map((veh, idx) => (
+                    <div key={idx} style={{ display: 'flex', gap: '0.4rem', marginBottom: '0.4rem', alignItems: 'center' }}>
+                      <input
+                        type="text"
+                        placeholder="Plate (e.g. KA 01 AB 1234)"
+                        value={veh.plate_number}
+                        onChange={(e) => {
+                          const updated = [...reviewVehicles];
+                          updated[idx].plate_number = e.target.value.toUpperCase();
+                          setReviewVehicles(updated);
+                        }}
+                        style={{ flex: 1, fontSize: '0.78rem', padding: '0.3rem 0.5rem' }}
+                      />
+                      <select
+                        value={veh.vehicle_type || 'Car'}
+                        onChange={(e) => {
+                          const updated = [...reviewVehicles];
+                          updated[idx].vehicle_type = e.target.value;
+                          setReviewVehicles(updated);
+                        }}
+                        style={{ width: '130px', fontSize: '0.78rem', padding: '0.3rem 0.4rem' }}
+                      >
+                        {VEHICLE_TYPE_OPTIONS.filter(o => o !== 'Select').map((opt) => (
+                          <option key={opt} value={opt}>{opt}</option>
+                        ))}
+                      </select>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          const updated = reviewVehicles.filter((_, i) => i !== idx);
+                          setReviewVehicles(updated);
+                        }}
+                        style={{ background: '#fee2e2', color: '#ef4444', border: 'none', borderRadius: '4px', padding: '0.3rem 0.5rem', cursor: 'pointer' }}
+                      >
+                        ×
+                      </button>
+                    </div>
+                  ))
+                )}
+              </div>
             </div>
 
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.8rem' }}>
@@ -2192,12 +2433,39 @@ export default function HostDashboard({ user }) {
               </button>
             </div>
 
-            <div style={{ background: '#ffffff', padding: '1.2rem', borderRadius: '16px', border: '3px solid #7c3aed', boxShadow: '0 8px 24px rgba(124, 58, 237, 0.15)', display: 'inline-block', margin: '0.5rem 0 1.2rem 0' }}>
+            <div 
+              onClick={() => setExpandedQrZoom(expandedQrZoom === 1 ? 1.4 : 1)}
+              title="Click QR code to toggle extra enlargement"
+              style={{ background: '#ffffff', padding: '1.2rem', borderRadius: '16px', border: '3px solid #7c3aed', boxShadow: '0 8px 24px rgba(124, 58, 237, 0.15)', display: 'inline-block', margin: '0.5rem 0 0.8rem 0', cursor: 'pointer', transition: 'all 0.2s ease' }}
+            >
               <img
                 src={hostQrImageUrl}
                 alt="Expanded Host Pass QR Code"
-                style={{ width: '320px', height: '320px', maxWidth: '75vw', maxHeight: '75vw', display: 'block', borderRadius: '10px', background: 'white' }}
+                style={{ width: `${Math.round(300 * expandedQrZoom)}px`, height: `${Math.round(300 * expandedQrZoom)}px`, maxWidth: '80vw', maxHeight: '70vh', display: 'block', borderRadius: '10px', background: 'white', transition: 'width 0.2s ease, height 0.2s ease' }}
               />
+            </div>
+
+            {/* Zoom Controls */}
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.6rem', marginBottom: '0.8rem' }}>
+              <button
+                type="button"
+                className="secondary outline"
+                onClick={() => setExpandedQrZoom(Math.max(0.8, Number((expandedQrZoom - 0.2).toFixed(2))))}
+                style={{ padding: '0.25rem 0.6rem', fontSize: '0.78rem', borderRadius: '6px' }}
+              >
+                🔍 - Smaller
+              </button>
+              <span style={{ fontSize: '0.8rem', color: '#475569', fontWeight: 'bold', minWidth: '55px', textAlign: 'center' }}>
+                {Math.round(expandedQrZoom * 100)}%
+              </span>
+              <button
+                type="button"
+                className="secondary outline"
+                onClick={() => setExpandedQrZoom(Math.min(1.8, Number((expandedQrZoom + 0.2).toFixed(2))))}
+                style={{ padding: '0.25rem 0.6rem', fontSize: '0.78rem', borderRadius: '6px' }}
+              >
+                🔍 + Enlarge
+              </button>
             </div>
 
             <div style={{ background: '#faf5ff', padding: '0.6rem 1rem', borderRadius: '8px', border: '1px solid #e9d5ff', marginBottom: '1.2rem' }}>
