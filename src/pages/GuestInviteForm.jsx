@@ -7,7 +7,10 @@ import { Shield, User, Camera, Upload, CheckCircle, Calendar, Users, Car, AlertT
 
 export default function GuestInviteForm() {
   const params = new URLSearchParams(window.location.search);
-  const hostId = params.get('token') || params.get('guid') || params.get('host_guid') || params.get('host_id') || '1';
+  const rawToken = params.get('token');
+  const pathToken = window.location.pathname.startsWith('/invite/') ? window.location.pathname.replace('/invite/', '') : null;
+  const tokenFromUrl = rawToken || pathToken || (params.get('host_id')?.startsWith('inv_') ? params.get('host_id') : null);
+  const hostId = tokenFromUrl || params.get('guid') || params.get('host_guid') || params.get('host_id') || '1';
   const initialMode = params.get('mode') || 'Single';
 
   const [hostInfo, setHostInfo] = useState(null);
@@ -121,6 +124,12 @@ export default function GuestInviteForm() {
   }, [hostId]);
 
   const fetchHostDetails = async () => {
+    const inviteKey = tokenFromUrl || hostId;
+    if (inviteKey && localStorage.getItem(`vms_invite_submitted_${inviteKey}`) === 'true') {
+      setIsLinkUsed(true);
+      setLoadingHost(false);
+      return;
+    }
     setLoadingHost(true);
     try {
       const res = await getPublicHostInfo(hostId);
@@ -131,7 +140,14 @@ export default function GuestInviteForm() {
         }
         if (res.is_used) {
           setIsLinkUsed(true);
+          if (inviteKey) {
+            try {
+              localStorage.setItem(`vms_invite_submitted_${inviteKey}`, 'true');
+            } catch (e) {}
+          }
         }
+      } else if (res.is_used) {
+        setIsLinkUsed(true);
       }
     } catch (err) {
       console.error('Failed to load host info:', err);
@@ -211,9 +227,10 @@ export default function GuestInviteForm() {
     const computedGirls = isSingle ? 0 : (parseInt(girlsCount) || 0);
 
     try {
+      const submissionToken = tokenFromUrl || params.get('token') || (typeof hostId === 'string' && hostId.startsWith('inv_') ? hostId : null);
       const res = await createPublicVisitorRegistration({
         host_id: hostInfo?.id || hostId,
-        token: params.get('token') || (typeof hostId === 'string' && hostId.startsWith('inv_') ? hostId : null),
+        token: submissionToken,
         full_name: fullName,
         phone,
         email,
@@ -237,11 +254,24 @@ export default function GuestInviteForm() {
 
       if (res.success) {
         setSubmittedPassCode(res.pass_code);
+        const inviteKey = submissionToken || hostId;
+        if (inviteKey) {
+          try {
+            localStorage.setItem(`vms_invite_submitted_${inviteKey}`, 'true');
+          } catch (e) {}
+        }
       } else {
         setError(res.message || 'Submission failed.');
+        if (res.message && res.message.toLowerCase().includes('already')) {
+          setIsLinkUsed(true);
+        }
       }
     } catch (err) {
-      setError(err.response?.data?.message || 'Failed to submit visitor registration.');
+      const errMsg = err.response?.data?.message || 'Failed to submit visitor registration.';
+      setError(errMsg);
+      if (errMsg && errMsg.toLowerCase().includes('already')) {
+        setIsLinkUsed(true);
+      }
     } finally {
       setSubmitting(false);
     }
