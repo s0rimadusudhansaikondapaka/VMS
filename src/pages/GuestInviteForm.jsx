@@ -48,16 +48,28 @@ export default function GuestInviteForm() {
     return `${year}-${month}-${day}T${hours}:${minutes}`;
   };
 
-  const getDefaultUntil = () => {
-    const tomorrow = new Date();
-    tomorrow.setDate(tomorrow.getDate() + 1);
-    tomorrow.setHours(21, 0, 0, 0); // Default 9:00 PM
-    const year = tomorrow.getFullYear();
-    const month = String(tomorrow.getMonth() + 1).padStart(2, '0');
-    const day = String(tomorrow.getDate()).padStart(2, '0');
-    const hours = String(tomorrow.getHours()).padStart(2, '0');
-    const minutes = String(tomorrow.getMinutes()).padStart(2, '0');
+  const computeSameDayDeparture = (fromDateStr) => {
+    if (!fromDateStr) return '';
+    const from = new Date(fromDateStr);
+    if (isNaN(from.getTime())) return '';
+    const dep = new Date(from.getTime());
+    dep.setHours(dep.getHours() + 4);
+    const maxTime = new Date(from.getTime());
+    maxTime.setHours(21, 30, 0, 0);
+    const chosenTime = dep.getTime() > maxTime.getTime() ? maxTime : dep;
+    const minDep = new Date(from.getTime() + 30 * 60 * 1000);
+    const finalTime = chosenTime.getTime() < minDep.getTime() ? minDep : chosenTime;
+
+    const year = finalTime.getFullYear();
+    const month = String(finalTime.getMonth() + 1).padStart(2, '0');
+    const day = String(finalTime.getDate()).padStart(2, '0');
+    const hours = String(finalTime.getHours()).padStart(2, '0');
+    const minutes = String(finalTime.getMinutes()).padStart(2, '0');
     return `${year}-${month}-${day}T${hours}:${minutes}`;
+  };
+
+  const getDefaultUntil = () => {
+    return computeSameDayDeparture(getDefaultFrom());
   };
 
   const getMinDateTime = () => {
@@ -72,6 +84,11 @@ export default function GuestInviteForm() {
 
   const [validFrom, setValidFrom] = useState(getDefaultFrom());
   const [validUntil, setValidUntil] = useState(getDefaultUntil());
+
+  const handleArrivalChange = (val) => {
+    setValidFrom(val);
+    setValidUntil(computeSameDayDeparture(val));
+  };
 
   const [adultMen, setAdultMen] = useState(1);
   const [adultWomen, setAdultWomen] = useState(0);
@@ -603,20 +620,24 @@ export default function GuestInviteForm() {
                 required 
                 min={getMinDateTime()} 
                 value={validFrom} 
-                onChange={(e) => setValidFrom(e.target.value)} 
+                onChange={(e) => handleArrivalChange(e.target.value)} 
               />
             </label>
             <label>
-              Departure Date/Time
+              Departure Date/Time (Same-Day Locked)
               <input 
                 type="datetime-local" 
                 required 
-                min={validFrom || getMinDateTime()} 
+                disabled
+                style={{ background: '#f1f5f9', cursor: 'not-allowed', color: '#475569' }}
                 value={validUntil} 
                 onChange={(e) => setValidUntil(e.target.value)} 
               />
             </label>
           </div>
+          <span style={{ fontSize: '0.72rem', color: '#64748b', display: 'block', marginTop: '0.25rem' }}>
+            🔒 Phase 1 enforces strictly single-day visits (5:00 AM – 10:00 PM). Scheduled departure is auto-computed on the same date and locked.
+          </span>
 
           {registrationMode === 'Group' || registrationMode === 'group' ? (
             <div style={{ background: '#f8fafc', padding: '0.75rem', borderRadius: '6px', border: '1px solid #cbd5e1', marginTop: '0.5rem' }}>
