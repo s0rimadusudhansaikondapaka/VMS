@@ -499,7 +499,7 @@ export default function HostDashboard({ user }) {
       }
 
       if (untilDate <= fromDate) {
-        setError('Departure Time must be after Arrival Time.');
+        setError('Scheduled Departure Time (SDT) must be after Scheduled Arrival Time (SAT).');
         return;
       }
 
@@ -509,11 +509,11 @@ export default function HostDashboard({ user }) {
       const untilM = untilDate.getMinutes();
 
       if (fromH < 5 || fromH > 22 || (fromH === 22 && fromM > 0)) {
-        setError('Arrival Time (ETA) must be between 5:00 AM and 10:00 PM.');
+        setError('Scheduled Arrival Time (SAT) must be between 5:00 AM and 10:00 PM.');
         return;
       }
       if (untilH < 5 || untilH > 22 || (untilH === 22 && untilM > 0)) {
-        setError('Departure Time (ETD) must be between 5:00 AM and 10:00 PM.');
+        setError('Scheduled Departure Time (SDT) must be between 5:00 AM and 10:00 PM.');
         return;
       }
 

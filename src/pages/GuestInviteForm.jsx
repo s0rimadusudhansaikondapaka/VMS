@@ -227,12 +227,12 @@ export default function GuestInviteForm() {
     const untilM = untilDate.getMinutes();
 
     if (fromH < 5 || fromH > 22 || (fromH === 22 && fromM > 0)) {
-      setError('Arrival Time (ETA) must be between 5:00 AM and 10:00 PM.');
+      setError('Scheduled Arrival Time (SAT) must be between 5:00 AM and 10:00 PM.');
       setSubmitting(false);
       return;
     }
     if (untilH < 5 || untilH > 22 || (untilH === 22 && untilM > 0)) {
-      setError('Departure Time (ETD) must be between 5:00 AM and 10:00 PM.');
+      setError('Scheduled Departure Time (SDT) must be between 5:00 AM and 10:00 PM.');
       setSubmitting(false);
       return;
     }
@@ -614,7 +614,7 @@ export default function GuestInviteForm() {
           <h4 style={{ fontSize: '0.9rem', color: '#2563eb', marginTop: '1rem' }}>3. Scheduled Visit Window & Accompanying Breakdown</h4>
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.8rem' }}>
             <label>
-              Arrival Date/Time
+              Scheduled Arrival Date/Time (SAT)
               <input 
                 type="datetime-local" 
                 required 
@@ -624,7 +624,7 @@ export default function GuestInviteForm() {
               />
             </label>
             <label>
-              Departure Date/Time (Same-Day Locked)
+              Scheduled Departure Date/Time (SDT) (Same-Day Locked)
               <input 
                 type="datetime-local" 
                 required 

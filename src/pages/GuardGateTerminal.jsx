@@ -1335,10 +1335,10 @@ export default function GuardGateTerminal({ user }) {
                 Scheduled Visit Window & 8-Hour Grace Policy
               </h4>
               <p style={{ margin: '0.3rem 0', fontSize: '0.85rem' }}>
-                <Calendar size={14} /> <strong>Scheduled Arrival (`validFrom`):</strong> {new Date(passData.valid_from).toLocaleString()}
+                <Calendar size={14} /> <strong>Scheduled Arrival (SAT):</strong> {new Date(passData.valid_from).toLocaleString()}
               </p>
               <p style={{ margin: '0.3rem 0', fontSize: '0.85rem' }}>
-                <Calendar size={14} /> <strong>Scheduled Departure (`validUntil`):</strong> {new Date(passData.valid_until).toLocaleString()}
+                <Calendar size={14} /> <strong>Scheduled Departure (SDT):</strong> {new Date(passData.valid_until).toLocaleString()}
               </p>
 
               {/* 8-Hour Grace Window Banner */}
@@ -1560,7 +1560,7 @@ export default function GuardGateTerminal({ user }) {
             {(!passData.is_permanent_pass && (passData.departure_time_passed || (passData.valid_until && new Date() > new Date(passData.valid_until)))) && (
               <div style={{ background: '#fee2e2', border: '1.5px solid #ef4444', color: '#991b1b', padding: '0.6rem 0.9rem', borderRadius: '8px', fontSize: '0.85rem', fontWeight: 'bold', display: 'flex', alignItems: 'center', gap: '0.4rem', marginBottom: '0.8rem' }}>
                 <AlertTriangle size={18} color="#dc2626" />
-                <span>Estimated departure time ({new Date(passData.valid_until).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}) has passed. Entry IN is disabled.</span>
+                <span>Scheduled departure time, SDT ({new Date(passData.valid_until).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}) has passed. Entry IN is disabled.</span>
               </div>
             )}
             {passData.presence_status !== 'currently_inside' && passData.presence_status !== 'over_stayed' && passData.status !== 'INSIDE_CAMPUS' && (
