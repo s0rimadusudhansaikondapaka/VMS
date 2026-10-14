@@ -207,7 +207,8 @@ export default function HostDashboard({ user }) {
   const isUserResident = user?.role === 'RESIDENT' || user?.residency_status === 'Resident' || user?.role === 'ADMIN';
   const isUserEmployee = user?.role === 'EMPLOYEE' || user?.role === 'HOD' || user?.residency_status === 'Employee' || user?.role === 'ADMIN';
   const isVipHostOnly = user?.user_type === 'VIP_HOST' || user?.role === 'VIP_HOST';
-  const isVipOrHodHost = isVipHostOnly || user?.role === 'HOD' || user?.user_type === 'HOD' || (user?.user_type && user.user_type.includes('VIP_HOST')) || (user?.role && user.role.includes('VIP_HOST'));
+  const isVipHost = isVipHostOnly || (user?.user_type && user.user_type.includes('VIP_HOST')) || (user?.role && user.role.includes('VIP_HOST'));
+  const isVipOrHodHost = isVipHost || user?.role === 'HOD' || user?.user_type === 'HOD';
 
   // Personal Host Gate Pass & QR Code calculation for bottom of screen
   const hostPassCode = user?.pass_code || (
@@ -537,7 +538,7 @@ export default function HostDashboard({ user }) {
         id_card_image_url: idCardImageUrl,
         visitor_category: category,
         visit_type: visitType,
-        purpose,
+        purpose: purpose.trim() || (isVipHost ? 'VIP Ashram Visit' : 'General Ashram Visit'),
         stay_required: stayRequired,
         is_vvip: category === 'VVIP' || isVvip,
         registration_mode: registrationMode,
@@ -1291,10 +1292,12 @@ export default function HostDashboard({ user }) {
               ))}
             </div>
 
-            <label style={{ marginTop: '1rem' }}>
-              Purpose of Visit *
-              <textarea rows="2" required value={purpose} onChange={(e) => setPurpose(e.target.value)}></textarea>
-            </label>
+            {!isVipHost && (
+              <label style={{ marginTop: '1rem' }}>
+                Purpose of Visit *
+                <textarea rows="2" required value={purpose} onChange={(e) => setPurpose(e.target.value)}></textarea>
+              </label>
+            )}
 
 
 
