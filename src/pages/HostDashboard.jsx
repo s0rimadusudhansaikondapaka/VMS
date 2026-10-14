@@ -539,7 +539,7 @@ export default function HostDashboard({ user }) {
         visit_type: visitType,
         purpose,
         stay_required: stayRequired,
-        is_vvip: isVvip,
+        is_vvip: category === 'VVIP' || isVvip,
         registration_mode: registrationMode,
         registration_type: registrationType,
         is_permanent_pass: category === 'FAMILY_MEMBER' || isPermanentPass,
@@ -606,7 +606,10 @@ export default function HostDashboard({ user }) {
     setRegistrationType('PRE_APPROVAL');
     setIsPermanentPass(false);
     setVehicles([{ plate_number: '', vehicle_type: 'Select', driver_name: '', driver_phone: '' }]);
-    setIsVvip(false);
+    const currentPerms = getHostPermissions();
+    const defaultCat = currentPerms?.allowedCategories?.[0] || 'GENERAL';
+    setCategory(defaultCat);
+    setIsVvip(defaultCat === 'VVIP');
     setValidFrom(getDefaultFrom());
     setValidUntil(getDefaultUntil());
   };
@@ -765,6 +768,14 @@ export default function HostDashboard({ user }) {
 
   const hostTypeDetails = getHostTypeInfo();
   const hostPerms = getHostPermissions();
+
+  useEffect(() => {
+    if (hostPerms?.allowedCategories?.length > 0 && !hostPerms.allowedCategories.includes(category)) {
+      const defaultCat = hostPerms.allowedCategories[0];
+      setCategory(defaultCat);
+      setIsVvip(defaultCat === 'VVIP');
+    }
+  }, [user]);
 
   return (
     <div className="container">
@@ -1116,7 +1127,7 @@ export default function HostDashboard({ user }) {
                     const val = e.target.value;
                     setCategory(val);
                     if (val === 'VVIP') setIsVvip(true);
-                    else if (val === 'VIP') setIsVvip(false);
+                    else setIsVvip(false);
                     if (val === 'FOREIGN_NATIONAL' && idType === 'Aadhaar') {
                       setIdType('Foreign Passport');
                     }
@@ -1289,10 +1300,6 @@ export default function HostDashboard({ user }) {
               <label style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', color: '#057a55', fontWeight: 'bold' }}>
                 <input type="checkbox" checked={isPermanentPass} onChange={(e) => setIsPermanentPass(e.target.checked)} />
                 Generate Permanent Passcode (Frequent Visitor / Maid - Can be reused every time)
-              </label>
-              <label style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', color: '#99154b', fontWeight: 'bold' }}>
-                <input type="checkbox" checked={isVvip} onChange={(e) => setIsVvip(e.target.checked)} />
-                Important VVIP Request
               </label>
             </div>
 
