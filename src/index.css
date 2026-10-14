@@ -458,3 +458,16 @@ input[type="radio"]:focus-visible {
   animation: pulseGlow 3.5s ease-in-out infinite;
 }
 
+@media (max-width: 640px) {
+  .host-header-actions {
+    width: 100% !important;
+    max-width: 100% !important;
+    flex-direction: column !important;
+  }
+  .host-header-actions button {
+    width: 100% !important;
+    flex: 1 1 100% !important;
+    justify-content: center !important;
+  }
+}
+

@@ -29,6 +29,7 @@ export default function GuestInviteForm() {
   const [idCardNumber, setIdCardNumber] = useState('');
   const [idCardImageUrl, setIdCardImageUrl] = useState('');
   const [category, setCategory] = useState('GENERAL');
+  const [visitType, setVisitType] = useState('HOME');
   const [purpose, setPurpose] = useState('');
 
   // Visit Window (Operating hours 5:00 AM to 10:00 PM)
@@ -215,6 +216,15 @@ export default function GuestInviteForm() {
       return;
     }
 
+    // Enforce same-day visit
+    const fromDateOnly = validFrom.split('T')[0];
+    const untilDateOnly = validUntil.split('T')[0];
+    if (fromDateOnly !== untilDateOnly) {
+      setError('Scheduled Departure Date must be on the same day as Scheduled Arrival Date.');
+      setSubmitting(false);
+      return;
+    }
+
     if (untilDate <= fromDate) {
       setError('Departure Time must be after Arrival Time.');
       setSubmitting(false);
@@ -258,9 +268,10 @@ export default function GuestInviteForm() {
         id_card_image_url: idCardImageUrl,
         registration_mode: registrationMode,
         visitor_category: category,
-        purpose: purpose || 'Visitor Pre-Approval Invite Form',
-        valid_from: validFrom,
-        valid_until: validUntil,
+        visit_type: visitType,
+        purpose: purpose.trim() || 'Visitor Ashram Visit',
+        valid_from: new Date(validFrom).toISOString(),
+        valid_until: new Date(validUntil).toISOString(),
         adult_men_count: computedMen,
         adult_women_count: computedWomen,
         boys_count: computedBoys,
@@ -544,6 +555,67 @@ export default function GuestInviteForm() {
                 <option value="Other">Other</option>
               </select>
             </label>
+            <label>
+              Visitor Category *
+              <select
+                value={category}
+                onChange={(e) => setCategory(e.target.value)}
+                onFocus={() => setActiveField('category')}
+                className={activeField === 'category' ? 'field-highlighted' : ''}
+              >
+                <option value="GENERAL">General Guest</option>
+                <option value="DEVOTEE">Devotee / Frequent Visitor</option>
+                <option value="FAMILY_MEMBER">Family Member</option>
+                <option value="VIP">VIP Guest</option>
+              </select>
+            </label>
+            <label>
+              Visit Type *
+              <select
+                value={visitType}
+                onChange={(e) => setVisitType(e.target.value)}
+                onFocus={() => setActiveField('visitType')}
+                className={activeField === 'visitType' ? 'field-highlighted' : ''}
+              >
+                <option value="HOME">Home / Residence Visit</option>
+                <option value="OFFICE">Office / Administrative</option>
+                <option value="BHAJAN">Bhajan / Darshan</option>
+                <option value="EVENT">Event / Festival</option>
+                <option value="TOUR">Ashram Tour</option>
+              </select>
+            </label>
+            <label>
+              ID Document Type
+              <select
+                value={idType}
+                onChange={(e) => setIdType(e.target.value)}
+              >
+                <option value="Aadhaar">Aadhaar Card</option>
+                <option value="PAN">PAN Card</option>
+                <option value="Driving License">Driving License</option>
+                <option value="Voter ID">Voter ID</option>
+                <option value="Passport">Passport</option>
+                <option value="Other">Other Official ID</option>
+              </select>
+            </label>
+            <label>
+              ID Number
+              <input
+                type="text"
+                value={idCardNumber}
+                onChange={(e) => setIdCardNumber(e.target.value)}
+                placeholder="Enter ID card number"
+              />
+            </label>
+            <label style={{ gridColumn: 'span 2' }}>
+              Purpose of Visit (Optional)
+              <input
+                type="text"
+                value={purpose}
+                onChange={(e) => setPurpose(e.target.value)}
+                placeholder="e.g. Darshan, Family meeting, Work..."
+              />
+            </label>
           </div>
 
           {/* Simplified Visitor Photo Attachment Control */}
@@ -624,19 +696,19 @@ export default function GuestInviteForm() {
               />
             </label>
             <label>
-              Scheduled Departure Date/Time (SDT) (Same-Day Locked)
+              Scheduled Departure Date/Time (SDT)
               <input 
                 type="datetime-local" 
                 required 
-                disabled
-                style={{ background: '#f1f5f9', cursor: 'not-allowed', color: '#475569' }}
+                min={validFrom}
+                max={validFrom ? `${validFrom.split('T')[0]}T22:00` : undefined}
                 value={validUntil} 
                 onChange={(e) => setValidUntil(e.target.value)} 
               />
             </label>
           </div>
           <span style={{ fontSize: '0.72rem', color: '#64748b', display: 'block', marginTop: '0.25rem' }}>
-            🔒 Phase 1 enforces strictly single-day visits (5:00 AM – 10:00 PM). Scheduled departure is auto-computed on the same date and locked.
+            🔒 Visits are same-day only during operating hours (5:00 AM – 10:00 PM).
           </span>
 
           {registrationMode === 'Group' || registrationMode === 'group' ? (
