@@ -1296,12 +1296,7 @@ export default function HostDashboard({ user }) {
               <textarea rows="2" required value={purpose} onChange={(e) => setPurpose(e.target.value)}></textarea>
             </label>
 
-            <div style={{ display: 'flex', gap: '2rem', margin: '0.5rem 0' }}>
-              <label style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', color: '#057a55', fontWeight: 'bold' }}>
-                <input type="checkbox" checked={isPermanentPass} onChange={(e) => setIsPermanentPass(e.target.checked)} />
-                Generate Permanent Passcode (Frequent Visitor / Maid - Can be reused every time)
-              </label>
-            </div>
+
 
             <div style={{ display: 'flex', gap: '1rem', marginTop: '1rem' }}>
               <button type="submit" style={{ background: editingRegistrationId ? '#2563eb' : undefined, borderColor: editingRegistrationId ? '#2563eb' : undefined }} data-tooltip="Submit visitor pass registration">
