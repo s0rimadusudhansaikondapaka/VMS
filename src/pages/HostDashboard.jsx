@@ -166,9 +166,27 @@ export default function HostDashboard({ user }) {
   const [isPermanentPass, setIsPermanentPass] = useState(false);
   const [hasSmartphone, setHasSmartphone] = useState(true);
 
-  // Visit Window (Arrival: Now, Departure: Tomorrow 9:00 PM)
+  const toLocalInputDateTime = (dateVal) => {
+    if (!dateVal) return '';
+    const d = new Date(dateVal);
+    if (isNaN(d.getTime())) return '';
+    const year = d.getFullYear();
+    const month = String(d.getMonth() + 1).padStart(2, '0');
+    const day = String(d.getDate()).padStart(2, '0');
+    const hours = String(d.getHours()).padStart(2, '0');
+    const minutes = String(d.getMinutes()).padStart(2, '0');
+    return `${year}-${month}-${day}T${hours}:${minutes}`;
+  };
+
+  // Visit Window (Operating hours 5:00 AM to 10:00 PM, Single-day visits)
   const getDefaultFrom = () => {
     const now = new Date();
+    if (now.getHours() < 5) {
+      now.setHours(5, 0, 0, 0);
+    } else if (now.getHours() >= 22) {
+      now.setDate(now.getDate() + 1);
+      now.setHours(9, 0, 0, 0);
+    }
     const year = now.getFullYear();
     const month = String(now.getMonth() + 1).padStart(2, '0');
     const day = String(now.getDate()).padStart(2, '0');
@@ -177,15 +195,18 @@ export default function HostDashboard({ user }) {
     return `${year}-${month}-${day}T${hours}:${minutes}`;
   };
 
-  const getDefaultUntil = () => {
-    const tomorrow = new Date();
-    tomorrow.setDate(tomorrow.getDate() + 1);
-    tomorrow.setHours(21, 0, 0, 0); // Tomorrow 9:00 PM
-    const year = tomorrow.getFullYear();
-    const month = String(tomorrow.getMonth() + 1).padStart(2, '0');
-    const day = String(tomorrow.getDate()).padStart(2, '0');
-    const hours = String(tomorrow.getHours()).padStart(2, '0');
-    const minutes = String(tomorrow.getMinutes()).padStart(2, '0');
+  const getDefaultUntil = (fromDateStr) => {
+    const base = fromDateStr ? new Date(fromDateStr) : new Date();
+    const year = base.getFullYear();
+    const month = String(base.getMonth() + 1).padStart(2, '0');
+    const day = String(base.getDate()).padStart(2, '0');
+    // Same-day: default to 4 hours later, capped at 21:30 (9:30 PM), maximum 22:00
+    const dep = new Date(base.getTime() + 4 * 60 * 60 * 1000);
+    if (dep.getDate() !== base.getDate() || dep.getHours() >= 22) {
+      return `${year}-${month}-${day}T21:30`;
+    }
+    const hours = String(dep.getHours()).padStart(2, '0');
+    const minutes = String(dep.getMinutes()).padStart(2, '0');
     return `${year}-${month}-${day}T${hours}:${minutes}`;
   };
 
@@ -202,12 +223,25 @@ export default function HostDashboard({ user }) {
   const [validFrom, setValidFrom] = useState(getDefaultFrom());
   const [validUntil, setValidUntil] = useState(getDefaultUntil());
   const [relationship, setRelationship] = useState('Spouse');
+  const [copiedLink, setCopiedLink] = useState(false);
+
+  const handleArrivalChange = (val) => {
+    setValidFrom(val);
+    if (val) {
+      const fromD = new Date(val);
+      const untilD = new Date(validUntil);
+      if (!validUntil || untilD.toDateString() !== fromD.toDateString() || untilD <= fromD) {
+        setValidUntil(getDefaultUntil(val));
+      }
+    }
+  };
 
   // Role capability checks for visit_type filtering
   const isUserResident = user?.role === 'RESIDENT' || user?.residency_status === 'Resident' || user?.role === 'ADMIN';
   const isUserEmployee = user?.role === 'EMPLOYEE' || user?.role === 'HOD' || user?.residency_status === 'Employee' || user?.role === 'ADMIN';
   const isVipHostOnly = user?.user_type === 'VIP_HOST' || user?.role === 'VIP_HOST';
-  const isVipOrHodHost = isVipHostOnly || user?.role === 'HOD' || user?.user_type === 'HOD' || (user?.user_type && user.user_type.includes('VIP_HOST')) || (user?.role && user.role.includes('VIP_HOST'));
+  const isVipHost = isVipHostOnly || (user?.user_type && user.user_type.includes('VIP_HOST')) || (user?.role && user.role.includes('VIP_HOST'));
+  const isVipOrHodHost = isVipHost || user?.role === 'HOD' || user?.user_type === 'HOD';
 
   // Personal Host Gate Pass & QR Code calculation for bottom of screen
   const hostPassCode = user?.pass_code || (
@@ -252,8 +286,8 @@ export default function HostDashboard({ user }) {
     setReviewCategory(reg.visitor_category || 'GENERAL');
     setReviewPriority(reg.priority || 'P3');
     setReviewRemarks(reg.remarks || '');
-    setReviewValidFrom(reg.valid_from ? new Date(reg.valid_from).toISOString().slice(0, 16) : getDefaultFrom());
-    setReviewValidUntil(reg.valid_until ? new Date(reg.valid_until).toISOString().slice(0, 16) : getDefaultUntil());
+    setReviewValidFrom(reg.valid_from ? toLocalInputDateTime(reg.valid_from) : getDefaultFrom());
+    setReviewValidUntil(reg.valid_until ? toLocalInputDateTime(reg.valid_until) : getDefaultUntil());
     setReviewVisitorName(reg.visitor_name || '');
     setReviewVisitorPhone(reg.visitor_phone || '');
     setReviewVisitorEmail(reg.visitor_email || '');
@@ -279,6 +313,14 @@ export default function HostDashboard({ user }) {
         alert('Departure Date/Time must be after Arrival Date/Time.');
         return;
       }
+      if (reviewValidFrom && reviewValidUntil) {
+        const fromD = reviewValidFrom.split('T')[0];
+        const untilD = reviewValidUntil.split('T')[0];
+        if (fromD !== untilD) {
+          alert('Scheduled Departure Date must be on the same day as Scheduled Arrival Date.');
+          return;
+        }
+      }
     }
     try {
       const res = await updateApproval(
@@ -289,8 +331,8 @@ export default function HostDashboard({ user }) {
           priority: reviewPriority,
           visit_type: reviewVisitType,
           visitor_category: reviewCategory,
-          valid_from: reviewValidFrom,
-          valid_until: reviewValidUntil,
+          valid_from: reviewValidFrom ? new Date(reviewValidFrom).toISOString() : undefined,
+          valid_until: reviewValidUntil ? new Date(reviewValidUntil).toISOString() : undefined,
           visitor_name: reviewVisitorName,
           visitor_phone: reviewVisitorPhone,
           visitor_email: reviewVisitorEmail,
@@ -473,8 +515,8 @@ export default function HostDashboard({ user }) {
     setRegistrationType(reg.registration_type || 'PRE_APPROVAL');
     setIsPermanentPass(reg.is_permanent_pass || false);
     setHasSmartphone(reg.has_smartphone !== undefined ? reg.has_smartphone : true);
-    if (reg.valid_from) setValidFrom(new Date(reg.valid_from).toISOString().slice(0, 16));
-    if (reg.valid_until) setValidUntil(new Date(reg.valid_until).toISOString().slice(0, 16));
+    if (reg.valid_from) setValidFrom(toLocalInputDateTime(reg.valid_from));
+    if (reg.valid_until) setValidUntil(toLocalInputDateTime(reg.valid_until));
     setAdultMen(reg.adult_men_count || 1);
     setAdultWomen(reg.adult_women_count || 0);
     setBoysCount(reg.boys_count || 0);
@@ -498,11 +540,21 @@ export default function HostDashboard({ user }) {
         return;
       }
 
+      // Issue #11: Same day departure
+      const fromDateOnly = validFrom.split('T')[0];
+      const untilDateOnly = validUntil.split('T')[0];
+      if (fromDateOnly !== untilDateOnly) {
+        setError('Scheduled Departure Date must be on the same day as Scheduled Arrival Date.');
+        return;
+      }
+
+      // Issue #10: Departure after Arrival
       if (untilDate <= fromDate) {
         setError('Scheduled Departure Time (SDT) must be after Scheduled Arrival Time (SAT).');
         return;
       }
 
+      // Issue #2: Operating hours 5:00 AM - 10:00 PM
       const fromH = fromDate.getHours();
       const fromM = fromDate.getMinutes();
       const untilH = untilDate.getHours();
@@ -535,17 +587,17 @@ export default function HostDashboard({ user }) {
         id_number: idCardNumber,
         id_card_number: idCardNumber,
         id_card_image_url: idCardImageUrl,
-        visitor_category: category,
+        visitor_category: isVipHost ? 'VIP' : category,
         visit_type: visitType,
-        purpose,
+        purpose: purpose.trim() || (isVipHost ? 'VIP Ashram Visit' : 'General Ashram Visit'),
         stay_required: stayRequired,
-        is_vvip: isVvip,
+        is_vvip: category === 'VVIP' || isVvip,
         registration_mode: registrationMode,
         registration_type: registrationType,
         is_permanent_pass: category === 'FAMILY_MEMBER' || isPermanentPass,
         has_smartphone: hasSmartphone,
-        valid_from: validFrom,
-        valid_until: validUntil,
+        valid_from: new Date(validFrom).toISOString(),
+        valid_until: new Date(validUntil).toISOString(),
         adult_men_count: computedMen,
         adult_women_count: computedWomen,
         boys_count: computedBoys,
@@ -606,7 +658,10 @@ export default function HostDashboard({ user }) {
     setRegistrationType('PRE_APPROVAL');
     setIsPermanentPass(false);
     setVehicles([{ plate_number: '', vehicle_type: 'Select', driver_name: '', driver_phone: '' }]);
-    setIsVvip(false);
+    const currentPerms = getHostPermissions();
+    const defaultCat = isVipHost ? 'VIP' : (currentPerms?.allowedCategories?.[0] || 'GENERAL');
+    setCategory(defaultCat);
+    setIsVvip(defaultCat === 'VVIP');
     setValidFrom(getDefaultFrom());
     setValidUntil(getDefaultUntil());
   };
@@ -766,6 +821,14 @@ export default function HostDashboard({ user }) {
   const hostTypeDetails = getHostTypeInfo();
   const hostPerms = getHostPermissions();
 
+  useEffect(() => {
+    if (hostPerms?.allowedCategories?.length > 0 && !hostPerms.allowedCategories.includes(category)) {
+      const defaultCat = hostPerms.allowedCategories[0];
+      setCategory(defaultCat);
+      setIsVvip(defaultCat === 'VVIP');
+    }
+  }, [user]);
+
   return (
     <div className="container">
       <DashboardHeader
@@ -773,16 +836,16 @@ export default function HostDashboard({ user }) {
         subtitle={`Welcome back, ${user.name} | Residency Status: ${user.residency_status || 'Resident'}`}
         roleBadge={hostTypeDetails.title.toUpperCase()}
         actionButton={
-          <div style={{ display: 'flex', gap: '0.6rem', flexWrap: 'wrap' }}>
+          <div className="host-header-actions" style={{ display: 'flex', gap: '0.6rem', flexWrap: 'wrap', width: '100%', maxWidth: '420px' }}>
             <button
               onClick={handleOpenShareModal}
-              style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', background: '#2563eb', borderColor: '#2563eb', color: 'white', fontWeight: 'bold', fontSize: '0.85rem' }}
+              style={{ flex: '1 1 180px', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.4rem', background: '#2563eb', borderColor: '#2563eb', color: 'white', fontWeight: 'bold', fontSize: '0.85rem' }}
             >
               <Share2 size={16} /> Share Guest Invite Link
             </button>
             <button
               onClick={() => setShowModal(!showModal)}
-              style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', background: '#d97706', borderColor: '#d97706', color: 'white', fontWeight: 'bold', fontSize: '0.85rem' }}
+              style={{ flex: '1 1 180px', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.4rem', background: '#d97706', borderColor: '#d97706', color: 'white', fontWeight: 'bold', fontSize: '0.85rem' }}
             >
               <UserPlus size={16} /> Invite / Pre-Register Guest
             </button>
@@ -1108,31 +1171,33 @@ export default function HostDashboard({ user }) {
                 </div>
               </div>
 
-              <label>
-                Category
-                <select
-                  value={category}
-                  onChange={(e) => {
-                    const val = e.target.value;
-                    setCategory(val);
-                    if (val === 'VVIP') setIsVvip(true);
-                    else if (val === 'VIP') setIsVvip(false);
-                    if (val === 'FOREIGN_NATIONAL' && idType === 'Aadhaar') {
-                      setIdType('Foreign Passport');
-                    }
-                  }}
-                >
-                  {hostPerms.allowedCategories.includes('GENERAL') && <option value="GENERAL">General Guest</option>}
-                  {hostPerms.allowedCategories.includes('FAMILY_MEMBER') && <option value="FAMILY_MEMBER">Resident Family Member (Pre-Approved)</option>}
-                  {hostPerms.allowedCategories.includes('VIP') && <option value="VIP">VIP (Very Important Person)</option>}
-                  {hostPerms.allowedCategories.includes('VVIP') && <option value="VVIP">VVIP (High Priority VVIP Guest)</option>}
-                  {hostPerms.allowedCategories.includes('MAID') && <option value="MAID">Domestic Helper / Maid</option>}
-                  {hostPerms.allowedCategories.includes('FREQUENT_VISITOR') && <option value="FREQUENT_VISITOR">Frequent Visitor</option>}
-                  {hostPerms.allowedCategories.includes('DELIVERY') && <option value="DELIVERY">Delivery / Courier</option>}
-                  {hostPerms.allowedCategories.includes('VENDOR') && <option value="VENDOR">Vendor</option>}
-                  {hostPerms.allowedCategories.includes('FOREIGN_NATIONAL') && <option value="FOREIGN_NATIONAL">Foreign National</option>}
-                </select>
-              </label>
+              {!isVipHost && (
+                <label>
+                  Category
+                  <select
+                    value={category}
+                    onChange={(e) => {
+                      const val = e.target.value;
+                      setCategory(val);
+                      if (val === 'VVIP') setIsVvip(true);
+                      else setIsVvip(false);
+                      if (val === 'FOREIGN_NATIONAL' && idType === 'Aadhaar') {
+                        setIdType('Foreign Passport');
+                      }
+                    }}
+                  >
+                    {hostPerms.allowedCategories.includes('GENERAL') && <option value="GENERAL">General Guest</option>}
+                    {hostPerms.allowedCategories.includes('FAMILY_MEMBER') && <option value="FAMILY_MEMBER">Resident Family Member (Pre-Approved)</option>}
+                    {hostPerms.allowedCategories.includes('VIP') && <option value="VIP">VIP (Very Important Person)</option>}
+                    {hostPerms.allowedCategories.includes('VVIP') && <option value="VVIP">VVIP (High Priority VVIP Guest)</option>}
+                    {hostPerms.allowedCategories.includes('MAID') && <option value="MAID">Domestic Helper / Maid</option>}
+                    {hostPerms.allowedCategories.includes('FREQUENT_VISITOR') && <option value="FREQUENT_VISITOR">Frequent Visitor</option>}
+                    {hostPerms.allowedCategories.includes('DELIVERY') && <option value="DELIVERY">Delivery / Courier</option>}
+                    {hostPerms.allowedCategories.includes('VENDOR') && <option value="VENDOR">Vendor</option>}
+                    {hostPerms.allowedCategories.includes('FOREIGN_NATIONAL') && <option value="FOREIGN_NATIONAL">Foreign National</option>}
+                  </select>
+                </label>
+              )}
 
               {category === 'FAMILY_MEMBER' && (
                 <label style={{ marginTop: '0.6rem' }}>
@@ -1206,7 +1271,7 @@ export default function HostDashboard({ user }) {
                   required 
                   min={getMinDateTime()}
                   value={validFrom} 
-                  onChange={(e) => setValidFrom(e.target.value)} 
+                  onChange={(e) => handleArrivalChange(e.target.value)} 
                 />
               </label>
               <label>
@@ -1215,10 +1280,14 @@ export default function HostDashboard({ user }) {
                   type="datetime-local" 
                   required 
                   min={validFrom || getMinDateTime()}
+                  max={validFrom ? `${validFrom.split('T')[0]}T22:00` : undefined}
                   value={validUntil} 
                   onChange={(e) => setValidUntil(e.target.value)} 
                 />
               </label>
+              <small style={{ color: '#64748b', fontSize: '0.78rem', gridColumn: 'span 2' }}>
+                🔒 Phase 1 enforces strictly single-day visits during operating hours (5:00 AM – 10:00 PM).
+              </small>
             </div>
 
             {registrationMode === 'Group' || registrationMode === 'group' ? (
@@ -1280,21 +1349,14 @@ export default function HostDashboard({ user }) {
               ))}
             </div>
 
-            <label style={{ marginTop: '1rem' }}>
-              Purpose of Visit *
-              <textarea rows="2" required value={purpose} onChange={(e) => setPurpose(e.target.value)}></textarea>
-            </label>
+            {!isVipHost && (
+              <label style={{ marginTop: '1rem' }}>
+                Purpose of Visit *
+                <textarea rows="2" required value={purpose} onChange={(e) => setPurpose(e.target.value)}></textarea>
+              </label>
+            )}
 
-            <div style={{ display: 'flex', gap: '2rem', margin: '0.5rem 0' }}>
-              <label style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', color: '#057a55', fontWeight: 'bold' }}>
-                <input type="checkbox" checked={isPermanentPass} onChange={(e) => setIsPermanentPass(e.target.checked)} />
-                Generate Permanent Passcode (Frequent Visitor / Maid - Can be reused every time)
-              </label>
-              <label style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', color: '#99154b', fontWeight: 'bold' }}>
-                <input type="checkbox" checked={isVvip} onChange={(e) => setIsVvip(e.target.checked)} />
-                Important VVIP Request
-              </label>
-            </div>
+
 
             <div style={{ display: 'flex', gap: '1rem', marginTop: '1rem' }}>
               <button type="submit" style={{ background: editingRegistrationId ? '#2563eb' : undefined, borderColor: editingRegistrationId ? '#2563eb' : undefined }} data-tooltip="Submit visitor pass registration">
@@ -2047,6 +2109,43 @@ export default function HostDashboard({ user }) {
             <p style={{ fontSize: '0.88rem', color: '#475569', margin: '0 0 1.5rem 0', lineHeight: '1.4' }}>
               Share this invite link directly with your guest via WhatsApp. They can fill out their details and choose <strong>Single</strong> or <strong>Group Visit</strong> on their smartphone prior to arrival.
             </p>
+
+            {/* Dedicated Copy Link Field (Issue #6) */}
+            <div style={{ marginBottom: '1.2rem', background: '#f8fafc', padding: '0.8rem', borderRadius: '8px', border: '1px solid #cbd5e1' }}>
+              <label style={{ fontSize: '0.82rem', fontWeight: 'bold', color: '#334155', display: 'block', marginBottom: '0.35rem' }}>
+                Single-Use Guest Invite Link
+              </label>
+              <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
+                <input 
+                  type="text" 
+                  readOnly 
+                  value={`${window.location.origin}/?invite=true&token=${activeShareToken || `inv_${user?.id || 1}_${Date.now()}`}`}
+                  style={{ margin: 0, fontSize: '0.82rem', background: '#ffffff', flex: 1 }} 
+                  onClick={(e) => e.target.select()}
+                />
+                <button 
+                  type="button" 
+                  onClick={() => {
+                    const link = `${window.location.origin}/?invite=true&token=${activeShareToken || `inv_${user?.id || 1}_${Date.now()}`}`;
+                    navigator.clipboard.writeText(link);
+                    setCopiedLink(true);
+                    setTimeout(() => setCopiedLink(false), 2000);
+                  }}
+                  style={{
+                    margin: 0,
+                    whiteSpace: 'nowrap',
+                    background: copiedLink ? '#057a55' : '#4f46e5',
+                    borderColor: copiedLink ? '#057a55' : '#4f46e5',
+                    color: 'white',
+                    fontWeight: 'bold',
+                    fontSize: '0.82rem',
+                    padding: '0.55rem 0.85rem'
+                  }}
+                >
+                  {copiedLink ? '✓ Copied!' : '📋 Copy Link'}
+                </button>
+              </div>
+            </div>
 
             <div style={{ display: 'flex', gap: '0.6rem', flexWrap: 'wrap' }}>
               <a

@@ -42,7 +42,7 @@ export default function App() {
   if (passCodeFromUrl) {
     return (
       <div>
-        <Navbar user={user} onLogout={handleLogout} />
+        <Navbar user={null} onLogout={handleLogout} />
         <PublicPassView passCode={passCodeFromUrl} />
       </div>
     );
@@ -51,7 +51,7 @@ export default function App() {
   if (isInviteRoute) {
     return (
       <div>
-        <Navbar user={user} onLogout={handleLogout} />
+        <Navbar user={null} onLogout={handleLogout} />
         <GuestInviteForm />
       </div>
     );
