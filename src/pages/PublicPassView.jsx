@@ -83,9 +83,15 @@ export default function PublicPassView({ passCode }) {
         </div>
 
         <div style={{ background: '#f8fafc', borderRadius: '10px', border: '1px solid #e2e8f0', padding: '1.2rem', margin: '1rem 0' }}>
-          <span style={{ background: '#def7ec', color: '#03543f', padding: '0.25rem 0.75rem', borderRadius: '9999px', fontSize: '0.75rem', fontWeight: '800', display: 'inline-block', marginBottom: '0.8rem' }}>
-            ✓ {passData.status === 'APPROVED' || passData.status === 'INSIDE_CAMPUS' ? 'AUTHORIZED GATE PASS' : passData.status}
-          </span>
+          {(passData.is_expired || passData.status === 'EXPIRED') ? (
+            <span style={{ background: '#fee2e2', color: '#991b1b', border: '1px solid #f87171', padding: '0.25rem 0.75rem', borderRadius: '9999px', fontSize: '0.75rem', fontWeight: '800', display: 'inline-block', marginBottom: '0.8rem' }}>
+              ⛔ EXPIRED GATE PASS (SDT PASSED)
+            </span>
+          ) : (
+            <span style={{ background: '#def7ec', color: '#03543f', padding: '0.25rem 0.75rem', borderRadius: '9999px', fontSize: '0.75rem', fontWeight: '800', display: 'inline-block', marginBottom: '0.8rem' }}>
+              ✓ {passData.status === 'APPROVED' || passData.status === 'INSIDE_CAMPUS' ? 'AUTHORIZED GATE PASS' : passData.status}
+            </span>
+          )}
 
           {passData.visitor_photo && (
             <img
