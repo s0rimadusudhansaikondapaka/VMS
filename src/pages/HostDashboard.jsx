@@ -853,6 +853,47 @@ export default function HostDashboard({ user }) {
         }
       />
 
+      {/* Unified Host App Access Banner (Issue #18) */}
+      <div style={{
+        background: '#fff7ed',
+        border: '1.5px solid #fed7aa',
+        borderRadius: '12px',
+        padding: '0.65rem 1rem',
+        marginBottom: '1rem',
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'space-between',
+        flexWrap: 'wrap',
+        gap: '0.5rem'
+      }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+          <span style={{ fontSize: '1.2rem' }}>🏛️</span>
+          <div>
+            <div style={{ fontSize: '0.85rem', fontWeight: '800', color: '#9a3412' }}>Sathya Sai Grama Host Portal</div>
+            <div style={{ fontSize: '0.74rem', color: '#c2410c' }}>Unified Host Application • Access the dedicated Host app or continue in this Web Portal.</div>
+          </div>
+        </div>
+        <a
+          href="https://hostapp-clw1.onrender.com/home"
+          target="_blank"
+          rel="noopener noreferrer"
+          style={{
+            background: '#b84018',
+            color: '#ffffff',
+            borderRadius: '8px',
+            padding: '0.4rem 0.85rem',
+            fontSize: '0.76rem',
+            fontWeight: '700',
+            textDecoration: 'none',
+            display: 'inline-flex',
+            alignItems: 'center',
+            gap: '0.35rem'
+          }}
+        >
+          Open Dedicated Host App ↗
+        </a>
+      </div>
+
       {/* Host Type & Capability Summary Banner */}
       <div style={{
         background: hostTypeDetails.badgeBg,
