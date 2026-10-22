@@ -25,27 +25,89 @@ export default function BulkUploadModal({ isOpen, onClose, onSuccess }) {
     let headers = [];
     let sampleRows = [];
     let filename = '';
+    const workbook = XLSX.utils.book_new();
 
     if (type === 'USERS') {
       filename = 'VMS_Bulk_Users_Template.xlsx';
-      headers = ['Name', 'Email', 'Phone', 'Role', 'Residency', 'Department', 'Password'];
+      headers = ['Name', 'Email', 'Phone', 'Role', 'User Type', 'Residency', 'Department', 'Flat / Office Info', 'Password'];
       sampleRows = [
-        ['Ramesh Sharma', 'ramesh@ashram.org', '+91 9876543210', 'RESIDENT', 'RESIDENT', 'Administration Office', 'password123'],
-        ['Priya Guard', 'priya.guard@ashram.org', '+91 9876543211', 'GUARD', 'NON_RESIDENT', 'Security Department', 'password123'],
-        ['Dr. Suresh (HOD)', 'suresh.hod@ashram.org', '+91 9876543212', 'HOD', 'RESIDENT', 'IT & Systems', 'password123'],
+        ['Srinivas Rao (Resident)', 'srinivas.resident@ashram.org', '+91 9876543210', 'HOST', 'RESIDENT', 'RESIDENT', 'Administration Office', 'Flat 302, Sai Residence Block A', 'password123'],
+        ['Dr. Ananya (Employee Host)', 'ananya.employee@ashram.org', '+91 9876543211', 'HOST', 'EMPLOYEE', 'NON_RESIDENT', 'Hospital Administration', 'PBMT Administration Office', 'password123'],
+        ['Dr. Kumar (Resident + Employee)', 'kumar.res.emp@ashram.org', '+91 9876543212', 'HOST', 'RESIDENT_EMPLOYEE', 'RESIDENT', 'Hospital Administration', 'Annapoorna & Villa 12', 'password123'],
+        ['Srikar Sharma (VIP Host)', 'srikar.vip@ashram.org', '+91 9876543213', 'HOST', 'VIP_HOST', 'RESIDENT', 'VIP Relations', 'VIP Guest Relations Office', 'password123'],
+        ['Trustee Prasad (Resident + VIP)', 'prasad.trustee@ashram.org', '+91 9876543214', 'HOST', 'RESIDENT_VIP_HOST', 'RESIDENT', 'Administration Office', 'Trustee Residence Block A', 'password123'],
+        ['Director Ramesh (Employee + VIP)', 'ramesh.director@ashram.org', '+91 9876543215', 'HOST', 'EMPLOYEE_VIP_HOST', 'NON_RESIDENT', 'Executive Administration', 'Executive Office & VIP Lounge', 'password123'],
+        ['Ashram Lead Admin (Res + Emp + VIP)', 'lead.admin@ashram.org', '+91 9876543216', 'HOST', 'RESIDENT_EMPLOYEE_VIP_HOST', 'RESIDENT', 'Administration Office', 'Main Ashram Admin Complex', 'password123'],
+        ['PRO Office Desk (PRO Host)', 'pro.desk@ashram.org', '+91 9876543217', 'PRO', 'PRO', 'RESIDENT', 'Public Relations Office', 'Public Relations Office Desk', 'password123'],
+        ['Dr. Suresh (HOD)', 'suresh.hod@ashram.org', '+91 9876543218', 'HOD', 'HOD', 'RESIDENT', 'IT & Systems', 'IT Center Room 101', 'password123'],
+        ['Ramesh Guard (North Gate)', 'ramesh.guard@ashram.org', '+91 9876543219', 'GUARD', 'GUARD', 'NON_RESIDENT', 'Security Department', 'North Gate Terminal Phone', 'password123'],
+        ['Mahesh Guard (South Gate)', 'mahesh.guard@ashram.org', '+91 9876543220', 'GUARD', 'GUARD', 'NON_RESIDENT', 'Security Department', 'South Gate Terminal Phone', 'password123'],
+        ['Ganesh Guard (East Gate)', 'ganesh.guard@ashram.org', '+91 9876543221', 'GUARD', 'GUARD', 'NON_RESIDENT', 'Security Department', 'East Gate Terminal Phone', 'password123'],
+        ['Suresh Supervisor (SO)', 'suresh.so@ashram.org', '+91 9876543222', 'SUPERVISOR', 'SUPERVISOR', 'RESIDENT', 'Security Department', 'Security Control Room', 'password123'],
+        ['Major Rajesh (Security Head)', 'securityhead@ashram.org', '+91 9876543223', 'SECURITY_HEAD', 'SECURITY_HEAD', 'RESIDENT', 'Security Department', 'Chief Security Office', 'password123'],
+        ['System Administrator (Super Admin)', 'admin@ashram.org', '+91 9876543224', 'ADMIN', 'ADMIN', 'RESIDENT', 'IT & Systems', 'Central IT Server Complex', 'password123'],
+        ['Kishore Seva (Volunteer)', 'volunteer1@ashram.org', '+91 9876543225', 'HOST', 'VOLUNTEER', 'NON_RESIDENT', 'Seva Department', 'Volunteer Barracks Room 12', 'password123'],
+        ['Sai Student (Host)', 'student1@ashram.org', '+91 9876543226', 'HOST', 'STUDENT', 'RESIDENT', 'Education Department', 'Student Hostel Block B', 'password123'],
       ];
+
+      // Add Users Sheet
+      const worksheet = XLSX.utils.aoa_to_sheet([headers, ...sampleRows]);
+      worksheet['!cols'] = headers.map((h, i) => {
+        const maxLen = Math.max(h.length, ...sampleRows.map(r => (r[i] ? String(r[i]).length : 0)));
+        return { wch: Math.max(maxLen + 3, 12) };
+      });
+      XLSX.utils.book_append_sheet(workbook, worksheet, 'Users Template');
+
+      // Add Reference & Allowed Values Sheet
+      const guideHeaders = ['Category', 'Allowed / Supported Value', 'Description & Permissions'];
+      const guideRows = [
+        ['Role', 'HOST', 'Standard host account (Residents, Staff, VIP Hosts, Volunteers)'],
+        ['Role', 'GUARD', 'Gate Security Guards with QR code scanning and movement verification'],
+        ['Role', 'SUPERVISOR', 'Security Supervisor (SO) managing gates and overstay escalations'],
+        ['Role', 'SECURITY_HEAD', 'Chief Security Officer with full override authority'],
+        ['Role', 'HOD', 'Department Head with Level 2 (L2) visit approval authority'],
+        ['Role', 'PRO', 'Public Relations Office approving pre-registrations & family additions'],
+        ['Role', 'ADMIN', 'System Administrator with complete system management rights'],
+        ['User Type', 'RESIDENT', 'Permanent Ashram Resident Host'],
+        ['User Type', 'EMPLOYEE', 'Ashram Staff / Official Host (non-resident)'],
+        ['User Type', 'RESIDENT_EMPLOYEE', 'Resident who is also an Ashram employee'],
+        ['User Type', 'VIP_HOST', 'Designated Host for VIP dignitaries and guests'],
+        ['User Type', 'RESIDENT_VIP_HOST', 'Resident Host with VIP invitation authority'],
+        ['User Type', 'EMPLOYEE_VIP_HOST', 'Staff Host with VIP invitation authority'],
+        ['User Type', 'RESIDENT_EMPLOYEE_VIP_HOST', 'Resident + Staff + VIP invitation privileges'],
+        ['User Type', 'PRO', 'Public Relations Officer'],
+        ['User Type', 'GUARD', 'Gate Security Guard'],
+        ['User Type', 'SUPERVISOR', 'Security Supervisor'],
+        ['User Type', 'SECURITY_HEAD', 'Chief Security Officer'],
+        ['User Type', 'HOD', 'Head of Department'],
+        ['User Type', 'ADMIN', 'Super Administrator'],
+        ['User Type', 'VOLUNTEER', 'Seva Volunteer'],
+        ['User Type', 'STUDENT', 'Ashram Student Host'],
+        ['Residency', 'RESIDENT', 'Living within Ashram premises'],
+        ['Residency', 'NON_RESIDENT', 'Commuting from outside Ashram premises']
+      ];
+      const guideSheet = XLSX.utils.aoa_to_sheet([guideHeaders, ...guideRows]);
+      guideSheet['!cols'] = [{ wch: 15 }, { wch: 32 }, { wch: 70 }];
+      XLSX.utils.book_append_sheet(workbook, guideSheet, 'Allowed Values Guide');
+
     } else {
       filename = 'VMS_Bulk_Visitors_Template.xlsx';
       headers = ['Visitor Name', 'Phone', 'Email', 'Gender', 'Category', 'Visit Type', 'Purpose', 'Vehicle No', 'Person Count'];
       sampleRows = [
         ['Kavitha Rao', '+91 9988776655', 'kavitha@gmail.com', 'Female', 'VIP', 'HOME', 'Spiritual Retreat Visit', 'KA-01-AB-1234', 2],
         ['Suresh Delivery (Amazon)', '+91 9988776644', 'delivery@courier.com', 'Male', 'DELIVERY', 'OFFICE', 'Admin Package Delivery', 'KA-05-EX-9999', 1],
+        ['Rajesh Vendor (Catering)', '+91 9988776633', 'catering@supply.org', 'Male', 'VENDOR', 'OFFICE', 'Kitchen Food Grain Supply', 'KA-04-MK-1122', 3],
+        ['David Miller (Foreign Guest)', '+1 5551234567', 'david.m@global.org', 'Male', 'FOREIGN_NATIONAL', 'HOME', 'International Satsang Visit', 'KA-02-TR-7788', 1],
       ];
+
+      const worksheet = XLSX.utils.aoa_to_sheet([headers, ...sampleRows]);
+      worksheet['!cols'] = headers.map((h, i) => {
+        const maxLen = Math.max(h.length, ...sampleRows.map(r => (r[i] ? String(r[i]).length : 0)));
+        return { wch: Math.max(maxLen + 3, 14) };
+      });
+      XLSX.utils.book_append_sheet(workbook, worksheet, 'Visitors Template');
     }
 
-    const worksheet = XLSX.utils.aoa_to_sheet([headers, ...sampleRows]);
-    const workbook = XLSX.utils.book_new();
-    XLSX.utils.book_append_sheet(workbook, worksheet, 'Sheet1');
     XLSX.writeFile(workbook, filename);
   };
 
