@@ -7,6 +7,16 @@
     <link rel="icon" type="image/jpeg" id="app-favicon" href="/one_world_one_family_logo.jpg" />
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@picocss/pico@2/css/pico.min.css" />
     <script>
+      // Single Page Application (SPA) route restoration for static web hosts
+      (function() {
+        var redirect = sessionStorage.redirect;
+        delete sessionStorage.redirect;
+        if (redirect && redirect !== location.href) {
+          history.replaceState(null, null, redirect);
+        }
+      })();
+    </script>
+    <script>
       // Continuously 360-degree Rotating Browser Favicon Script
       (function animateFavicon() {
         const img = new Image();
