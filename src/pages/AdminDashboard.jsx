@@ -3,6 +3,7 @@ import { getReportData, adminBypassApprove, adminEmergencyPass, toggleL2Approval
 import DashboardHeader from '../components/DashboardHeader';
 import UserAddWizardModal from '../components/UserAddWizardModal';
 import BulkUploadModal from '../components/BulkUploadModal';
+import AdminChangePasswordModal from '../components/AdminChangePasswordModal';
 import DeliveryPersonsReport from '../components/DeliveryPersonsReport';
 import DeviceManagementReport from '../components/DeviceManagementReport';
 import { useTablePagination, PaginationControls } from '../components/TablePagination';
@@ -30,6 +31,7 @@ export default function AdminDashboard({ user }) {
   const [editStatus, setEditStatus] = useState('ACTIVE');
   const [editFlatInfo, setEditFlatInfo] = useState('');
   const [editDeptId, setEditDeptId] = useState('');
+  const [adminPasswordModalUser, setAdminPasswordModalUser] = useState(null);
 
   const {
     searchTerm: userSearch,
@@ -735,13 +737,23 @@ export default function AdminDashboard({ user }) {
                     </span>
                   </td>
                   <td>
-                    <button
-                      type="button"
-                      onClick={() => openEditUserModal(u)}
-                      style={{ fontSize: '0.75rem', padding: '0.25rem 0.65rem', background: '#2563eb', borderColor: '#2563eb', color: 'white', fontWeight: 'bold', display: 'inline-flex', alignItems: 'center', gap: '0.3rem' }}
-                    >
-                      <Pencil size={13} /> Edit User & Status
-                    </button>
+                    <div style={{ display: 'flex', gap: '0.35rem', flexWrap: 'wrap' }}>
+                      <button
+                        type="button"
+                        onClick={() => openEditUserModal(u)}
+                        style={{ fontSize: '0.74rem', padding: '0.25rem 0.55rem', background: '#2563eb', borderColor: '#2563eb', color: 'white', fontWeight: 'bold', display: 'inline-flex', alignItems: 'center', gap: '0.25rem' }}
+                      >
+                        <Pencil size={12} /> Edit
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setAdminPasswordModalUser(u)}
+                        title="Change password or send reset link"
+                        style={{ fontSize: '0.74rem', padding: '0.25rem 0.55rem', background: '#7e22ce', borderColor: '#7e22ce', color: 'white', fontWeight: 'bold', display: 'inline-flex', alignItems: 'center', gap: '0.25rem' }}
+                      >
+                        <KeyRound size={12} /> Password
+                      </button>
+                    </div>
                   </td>
                 </tr>
               ))
@@ -1166,25 +1178,42 @@ export default function AdminDashboard({ user }) {
                 </div>
               </div>
 
-              <div style={{ display: 'flex', gap: '0.8rem', justifyContent: 'flex-end', marginTop: '1.5rem', borderTop: '1px solid #e2e8f0', paddingTop: '1rem' }}>
+              <div style={{ display: 'flex', gap: '0.8rem', justifyContent: 'space-between', alignItems: 'center', marginTop: '1.5rem', borderTop: '1px solid #e2e8f0', paddingTop: '1rem', flexWrap: 'wrap' }}>
                 <button
                   type="button"
-                  onClick={() => setEditUserModalData(null)}
-                  style={{ background: '#94a3b8', borderColor: '#94a3b8', color: 'white', fontWeight: 'bold' }}
+                  onClick={() => setAdminPasswordModalUser(editUserModalData)}
+                  style={{ background: '#7e22ce', borderColor: '#7e22ce', color: 'white', fontWeight: 'bold', fontSize: '0.85rem', display: 'inline-flex', alignItems: 'center', gap: '0.4rem' }}
                 >
-                  Cancel
+                  <KeyRound size={15} /> Change Password / Send Link
                 </button>
-                <button
-                  type="submit"
-                  style={{ background: '#2563eb', borderColor: '#2563eb', color: 'white', fontWeight: 'bold' }}
-                >
-                  💾 Save Profile & Status Changes
-                </button>
+                <div style={{ display: 'flex', gap: '0.8rem' }}>
+                  <button
+                    type="button"
+                    onClick={() => setEditUserModalData(null)}
+                    style={{ background: '#94a3b8', borderColor: '#94a3b8', color: 'white', fontWeight: 'bold' }}
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    type="submit"
+                    style={{ background: '#2563eb', borderColor: '#2563eb', color: 'white', fontWeight: 'bold' }}
+                  >
+                    💾 Save Profile & Status Changes
+                  </button>
+                </div>
               </div>
             </form>
           </div>
         </div>
       )}
+
+      {/* Admin Change Password & Send Reset Link Modal */}
+      <AdminChangePasswordModal
+        isOpen={!!adminPasswordModalUser}
+        user={adminPasswordModalUser}
+        onClose={() => setAdminPasswordModalUser(null)}
+        onSuccess={() => fetchUsers()}
+      />
     </div>
   );
 }

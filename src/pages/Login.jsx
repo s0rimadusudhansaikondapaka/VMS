@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
-import { loginUser, sendOtp as sendOtpApi, verifyOtp as verifyOtpApi, registerUser } from '../services/api';
-import { Phone, Mail, UserPlus, KeyRound, Shield, Building, Home, Star, Users, CheckCircle, Info, ChevronDown, ChevronUp } from 'lucide-react';
+import { loginUser, sendOtp as sendOtpApi, verifyOtp as verifyOtpApi, registerUser, forgotPassword as forgotPasswordApi } from '../services/api';
+import { Phone, Mail, UserPlus, KeyRound, Shield, Building, Home, Star, Users, CheckCircle, Info, ChevronDown, ChevronUp, Send, ArrowLeft, Copy, Check } from 'lucide-react';
 import OneWorldOneFamilyLogo from '../components/OneWorldOneFamilyLogo';
 
 export default function Login({ onLoginSuccess }) {
@@ -9,6 +9,11 @@ export default function Login({ onLoginSuccess }) {
   // Email login state
   const [email, setEmail] = useState('resident1@ashram.org');
   const [password, setPassword] = useState('password123');
+
+  // Forgot password state
+  const [forgotIdentifier, setForgotIdentifier] = useState('');
+  const [forgotSentUrl, setForgotSentUrl] = useState('');
+  const [copiedForgotUrl, setCopiedForgotUrl] = useState(false);
   
   // Phone/OTP login state
   const [phone, setPhone] = useState('');
@@ -104,6 +109,34 @@ export default function Login({ onLoginSuccess }) {
     }
   };
 
+  const handleForgotPassword = async (e) => {
+    e.preventDefault();
+    setError(''); setMsg('');
+    setForgotSentUrl('');
+
+    if (!forgotIdentifier.trim()) {
+      setError('Please provide your registered email, username, or phone.');
+      return;
+    }
+
+    setLoading(true);
+    try {
+      const data = await forgotPasswordApi(forgotIdentifier.trim());
+      if (data.success) {
+        setMsg(data.message || 'Password reset link sent! Please check your email.');
+        if (data.reset_url) {
+          setForgotSentUrl(data.reset_url);
+        }
+      } else {
+        setError(data.message || 'Failed to process password reset.');
+      }
+    } catch (err) {
+      setError(err.response?.data?.message || 'Server error processing password reset.');
+    } finally {
+      setLoading(false);
+    }
+  };
+
   const selectQuickPersona = (userEmail) => {
     setEmail(userEmail);
     setPassword('password123');
@@ -181,6 +214,15 @@ export default function Login({ onLoginSuccess }) {
                   Password
                   <input type="password" value={password} onChange={(e) => setPassword(e.target.value)} required style={{ fontSize: '0.9rem', padding: '0.45rem 0.75rem' }} />
                 </label>
+                <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: '0.35rem', marginBottom: '0.5rem' }}>
+                  <button
+                    type="button"
+                    onClick={() => { setActiveTab('forgot_password'); setError(''); setMsg(''); setForgotSentUrl(''); }}
+                    style={{ background: 'none', border: 'none', color: '#b45309', fontSize: '0.78rem', fontWeight: 'bold', cursor: 'pointer', padding: 0 }}
+                  >
+                    Forgot Password?
+                  </button>
+                </div>
                 <button type="submit" disabled={loading}
                   style={{ width: '100%', marginTop: '1rem', background: 'linear-gradient(135deg, #d97706 0%, #b45309 100%)', borderColor: '#d97706', fontWeight: '700', fontSize: '0.95rem', padding: '0.55rem', boxShadow: '0 4px 10px rgba(217, 119, 6, 0.3)' }}>
                   {loading ? 'Signing In...' : 'Sign In to Portal'}
@@ -303,6 +345,99 @@ export default function Login({ onLoginSuccess }) {
                 </form>
               )}
             </>
+          )}
+
+          {/* Forgot Password View */}
+          {activeTab === 'forgot_password' && (
+            <div style={{ padding: '0.5rem 0' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '1rem' }}>
+                <button
+                  type="button"
+                  onClick={() => { setActiveTab('email'); setError(''); setMsg(''); }}
+                  style={{ background: 'none', border: 'none', padding: '0.2rem', cursor: 'pointer', color: '#475569' }}
+                >
+                  <ArrowLeft size={18} />
+                </button>
+                <h3 style={{ margin: 0, fontSize: '1.1rem', color: '#1e293b', fontWeight: '800' }}>
+                  Forgot Password
+                </h3>
+              </div>
+
+              <p style={{ fontSize: '0.82rem', color: '#64748b', marginBottom: '1.2rem', lineHeight: 1.4 }}>
+                Enter your registered Email address, Phone number, or Username. We will send you a secure link to create a new password.
+              </p>
+
+              <form onSubmit={handleForgotPassword}>
+                <label style={{ fontWeight: '600', color: '#334155', fontSize: '0.85rem' }}>
+                  Email, Phone, or Username *
+                  <input
+                    type="text"
+                    value={forgotIdentifier}
+                    onChange={(e) => setForgotIdentifier(e.target.value)}
+                    required
+                    placeholder="e.g. resident1@ashram.org or +91 9876543210"
+                    style={{ fontSize: '0.9rem', padding: '0.45rem 0.75rem', marginTop: '0.3rem' }}
+                  />
+                </label>
+
+                <button
+                  type="submit"
+                  disabled={loading}
+                  style={{
+                    width: '100%',
+                    marginTop: '1.2rem',
+                    background: 'linear-gradient(135deg, #d97706 0%, #b45309 100%)',
+                    borderColor: '#d97706',
+                    fontWeight: '700',
+                    fontSize: '0.95rem',
+                    padding: '0.6rem',
+                    boxShadow: '0 4px 10px rgba(217, 119, 6, 0.3)',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    gap: '0.5rem'
+                  }}
+                >
+                  <Send size={16} />
+                  {loading ? 'Sending Reset Link...' : 'Send Password Reset Link'}
+                </button>
+              </form>
+
+              {forgotSentUrl && (
+                <div style={{ marginTop: '1.2rem', background: '#fffbeb', border: '1px solid #fde68a', borderRadius: '8px', padding: '0.8rem' }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.3rem' }}>
+                    <span style={{ fontSize: '0.78rem', fontWeight: 'bold', color: '#92400e' }}>Generated Reset Link:</span>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        navigator.clipboard.writeText(forgotSentUrl);
+                        setCopiedForgotUrl(true);
+                        setTimeout(() => setCopiedForgotUrl(false), 2000);
+                      }}
+                      style={{ background: copiedForgotUrl ? '#166534' : '#2563eb', color: '#ffffff', border: 'none', padding: '0.2rem 0.5rem', borderRadius: '4px', fontSize: '0.72rem', cursor: 'pointer' }}
+                    >
+                      {copiedForgotUrl ? 'Copied!' : 'Copy Link'}
+                    </button>
+                  </div>
+                  <a
+                    href={forgotSentUrl}
+                    style={{ fontSize: '0.76rem', color: '#b45309', wordBreak: 'break-all', display: 'block', textDecoration: 'underline' }}
+                  >
+                    Click to Open Reset Page Directly
+                  </a>
+                </div>
+              )}
+
+              <div style={{ textAlign: 'center', marginTop: '1.4rem', borderTop: '1px solid #e2e8f0', paddingTop: '0.9rem' }}>
+                <button
+                  type="button"
+                  onClick={() => { setActiveTab('email'); setError(''); setMsg(''); }}
+                  style={{ background: 'none', border: 'none', color: '#64748b', fontSize: '0.8rem', cursor: 'pointer' }}
+                >
+                  ← Back to Email Sign In
+                </button>
+              </div>
+            </div>
           )}
         </article>
 

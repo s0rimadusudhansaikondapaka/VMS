@@ -332,4 +332,40 @@ export const resolveIncident = async (id, resolution_notes) => {
   return res.data;
 };
 
+// Password Management APIs
+export const forgotPassword = async (identifier) => {
+  const res = await api.post('/auth/forgot-password', {
+    identifier,
+    app_url: window.location.origin,
+  });
+  return res.data;
+};
+
+export const verifyResetToken = async (token) => {
+  const res = await api.get('/auth/verify-reset-token', { params: { token } });
+  return res.data;
+};
+
+export const resetPassword = async (token, newPassword) => {
+  const res = await api.post('/auth/reset-password', { token, newPassword });
+  return res.data;
+};
+
+export const changePassword = async (currentPassword, newPassword) => {
+  const res = await api.post('/auth/change-password', { currentPassword, newPassword });
+  return res.data;
+};
+
+export const adminChangePassword = async (userId, newPassword) => {
+  const res = await api.post(`/admin/users/${userId}/change-password`, { newPassword });
+  return res.data;
+};
+
+export const adminSendResetLink = async (userId) => {
+  const res = await api.post(`/admin/users/${userId}/send-reset-link`, {
+    app_url: window.location.origin,
+  });
+  return res.data;
+};
+
 export default api;

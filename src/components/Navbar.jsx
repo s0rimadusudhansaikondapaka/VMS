@@ -1,10 +1,10 @@
 import React from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { Shield, LogOut, User } from 'lucide-react';
+import { Shield, LogOut, User, KeyRound } from 'lucide-react';
 import NotificationBell from './NotificationBell';
 import OneWorldOneFamilyLogo from './OneWorldOneFamilyLogo';
 
-export default function Navbar({ user, onLogout }) {
+export default function Navbar({ user, onLogout, onChangePassword }) {
   const navigate = useNavigate();
 
   return (
@@ -33,6 +33,19 @@ export default function Navbar({ user, onLogout }) {
               <User size={16} color="#38bdf8" /> <strong>{user.name}</strong> <span style={{ opacity: 0.7 }}>({user.role})</span>
             </span>
           </li>
+          {onChangePassword && (
+            <li>
+              <button
+                type="button"
+                onClick={onChangePassword}
+                className="secondary outline"
+                title="Change Account Password"
+                style={{ fontSize: '0.8rem', padding: '0.35rem 0.75rem', cursor: 'pointer', borderColor: '#fcb900', color: '#fcb900', display: 'flex', alignItems: 'center', gap: '0.35rem' }}
+              >
+                <KeyRound size={14} /> Password
+              </button>
+            </li>
+          )}
           <li>
             <button
               onClick={() => {
