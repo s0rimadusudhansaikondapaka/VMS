@@ -39,6 +39,18 @@ export default function GuestInviteForm() {
 
   // Visit Window (Operating hours 5:00 AM to 10:00 PM)
   const getDefaultFrom = () => {
+        if (!/^[a-zA-Z\s.-]{3,50}$/.test(fullName.trim())) {
+      setError('Visitor Name must contain only alphabets and spaces (no numbers or special characters).');
+      setSubmitting(false);
+      return;
+    }
+    const cleanDigits = phone.replace(/[^0-9]/g, '');
+    if (cleanDigits.length < 10 || cleanDigits.length > 15 || !/^\+?[0-9]{10,15}$/.test(phone.trim())) {
+      setError('Mobile number must contain only digits and optional + prefix (10 to 15 digits).');
+      setSubmitting(false);
+      return;
+    }
+
     const now = new Date();
     if (now.getHours() < 5) {
       now.setHours(5, 0, 0, 0);
@@ -552,7 +564,10 @@ export default function GuestInviteForm() {
                 type="text"
                 required
                 value={fullName}
-                onChange={(e) => setFullName(e.target.value)}
+                onChange={(e) => {
+                  const filtered = e.target.value.replace(/[^a-zA-Z\s.-]/g, '');
+                  setFullName(filtered);
+                }}
                 onFocus={() => setActiveField('fullName')}
                 className={activeField === 'fullName' ? 'field-highlighted' : ''}
                 placeholder="Full Name"
@@ -564,7 +579,13 @@ export default function GuestInviteForm() {
                 type="tel"
                 required
                 value={phone}
-                onChange={(e) => setPhone(e.target.value)}
+                onChange={(e) => {
+                  let filtered = e.target.value.replace(/[^0-9+]/g, '');
+                  if (filtered.indexOf('+') > 0) {
+                    filtered = filtered[0] === '+' ? '+' + filtered.slice(1).replace(/\+/g, '') : filtered.replace(/\+/g, '');
+                  }
+                  setPhone(filtered);
+                }}
                 onFocus={() => setActiveField('phone')}
                 className={activeField === 'phone' ? 'field-highlighted' : ''}
                 placeholder="+91 9876543210"
