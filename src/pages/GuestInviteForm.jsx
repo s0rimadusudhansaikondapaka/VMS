@@ -104,8 +104,49 @@ export default function GuestInviteForm() {
   const [validUntil, setValidUntil] = useState(getDefaultUntil());
 
   const handleArrivalChange = (val) => {
-    setValidFrom(val);
-    setValidUntil(computeSameDayDeparture(val));
+    if (!val) {
+      setValidFrom('');
+      return;
+    }
+    const [datePart, timePart] = val.split('T');
+    let [h, m] = (timePart || '05:00').split(':').map(Number);
+    if (h < 5) {
+      h = 5; m = 0;
+      setError('Timings before 5:00 AM are restricted. Visiting hours: 5:00 AM – 10:00 PM.');
+    } else if (h > 22 || (h === 22 && m > 0)) {
+      h = 22; m = 0;
+      setError('Timings after 10:00 PM are restricted. Visiting hours: 5:00 AM – 10:00 PM.');
+    }
+    const pad = (n) => String(n).padStart(2, '0');
+    const clampedSAT = `${datePart}T${pad(h)}:${pad(m)}`;
+    setValidFrom(clampedSAT);
+    setValidUntil(computeSameDayDeparture(clampedSAT));
+  };
+
+  const handleDepartureChange = (val) => {
+    if (!val) {
+      setValidUntil('');
+      return;
+    }
+    const [datePart, timePart] = val.split('T');
+    let [h, m] = (timePart || '22:00').split(':').map(Number);
+    if (h < 5) {
+      h = 5; m = 30;
+      setError('Timings before 5:00 AM are restricted. Visiting hours: 5:00 AM – 10:00 PM.');
+    } else if (h > 22 || (h === 22 && m > 0)) {
+      h = 22; m = 0;
+      setError('Timings after 10:00 PM are restricted. Visiting hours: 5:00 AM – 10:00 PM.');
+    }
+    const pad = (n) => String(n).padStart(2, '0');
+    const clampedSDT = `${datePart}T${pad(h)}:${pad(m)}`;
+    setValidUntil(clampedSDT);
+
+    if (!validFrom || validFrom.split('T')[0] !== datePart || new Date(validFrom) >= new Date(clampedSDT)) {
+      let arrD = new Date(new Date(clampedSDT).getTime() - 2 * 60 * 60 * 1000);
+      const minD = new Date(`${datePart}T05:00:00`);
+      if (arrD < minD) arrD = minD;
+      setValidFrom(`${datePart}T${pad(arrD.getHours())}:${pad(arrD.getMinutes())}`);
+    }
   };
 
   const [adultMen, setAdultMen] = useState(1);
@@ -752,6 +793,7 @@ export default function GuestInviteForm() {
                 type="datetime-local" 
                 required 
                 min={getMinDateTime()} 
+                max={validUntil ? validUntil : (validFrom ? `${validFrom.split('T')[0]}T22:00` : undefined)} 
                 value={validFrom} 
                 onChange={(e) => handleArrivalChange(e.target.value)} 
               />
@@ -764,7 +806,7 @@ export default function GuestInviteForm() {
                 min={validFrom}
                 max={validFrom ? `${validFrom.split('T')[0]}T22:00` : undefined}
                 value={validUntil} 
-                onChange={(e) => setValidUntil(e.target.value)} 
+                onChange={(e) => handleDepartureChange(e.target.value)} 
               />
             </label>
           </div>
