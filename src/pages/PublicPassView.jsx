@@ -83,9 +83,17 @@ export default function PublicPassView({ passCode }) {
         </div>
 
         <div style={{ background: '#f8fafc', borderRadius: '10px', border: '1px solid #e2e8f0', padding: '1.2rem', margin: '1rem 0' }}>
-          {(passData.is_expired || passData.status === 'EXPIRED') ? (
+          {passData.status === 'REJECTED' ? (
+            <span style={{ background: '#fee2e2', color: '#991b1b', border: '1px solid #f87171', padding: '0.25rem 0.75rem', borderRadius: '9999px', fontSize: '0.75rem', fontWeight: '800', display: 'inline-block', marginBottom: '0.8rem' }}>
+              ❌ PASS REQUEST REJECTED
+            </span>
+          ) : (passData.is_expired || passData.status === 'EXPIRED') ? (
             <span style={{ background: '#fee2e2', color: '#991b1b', border: '1px solid #f87171', padding: '0.25rem 0.75rem', borderRadius: '9999px', fontSize: '0.75rem', fontWeight: '800', display: 'inline-block', marginBottom: '0.8rem' }}>
               ⛔ EXPIRED GATE PASS (SDT PASSED)
+            </span>
+          ) : (passData.status === 'PENDING_L1' || passData.status === 'PENDING_L2' || passData.status === 'PENDING_SUPERVISOR') ? (
+            <span style={{ background: '#fef3c7', color: '#92400e', border: '1px solid #fcd34d', padding: '0.25rem 0.75rem', borderRadius: '9999px', fontSize: '0.75rem', fontWeight: '800', display: 'inline-block', marginBottom: '0.8rem' }}>
+              ⏳ AWAITING HOST CONFIRMATION
             </span>
           ) : (
             <span style={{ background: '#def7ec', color: '#03543f', padding: '0.25rem 0.75rem', borderRadius: '9999px', fontSize: '0.75rem', fontWeight: '800', display: 'inline-block', marginBottom: '0.8rem' }}>
@@ -104,28 +112,51 @@ export default function PublicPassView({ passCode }) {
           <h3 style={{ margin: '0.2rem 0', color: '#0f172a', fontSize: '1.25rem' }}>{passData.visitor_name}</h3>
           <span style={{ fontSize: '0.82rem', color: '#64748b' }}>Referrer / Host: <strong>{passData.host_name || 'Ashram Resident'}</strong></span>
 
-          <div style={{ margin: '1.2rem 0 0.8rem 0' }}>
-            {passData.qr_code_url ? (
-              <div
-                onClick={() => setIsExpanded(true)}
-                title="Click to expand QR Code for easy gate scanning"
-                style={{ cursor: 'pointer', display: 'inline-block', background: '#faf5ff', padding: '0.6rem', borderRadius: '14px', border: '2px solid #7c3aed', boxShadow: '0 4px 12px rgba(124, 58, 237, 0.15)', transition: 'transform 0.2s ease' }}
-                onMouseEnter={(e) => e.currentTarget.style.transform = 'scale(1.03)'}
-                onMouseLeave={(e) => e.currentTarget.style.transform = 'scale(1)'}
-              >
-                <img
-                  src={passData.qr_code_url}
-                  alt="Authorized QR Code"
-                  style={{ width: '200px', height: '200px', margin: '0 auto', display: 'block', borderRadius: '8px', border: '1px solid #7c3aed', background: 'white' }}
-                />
-                <span style={{ fontSize: '0.72rem', color: '#7c3aed', fontWeight: '800', display: 'block', marginTop: '0.4rem' }}>
-                  🔍 Click to Expand for Scanning
-                </span>
+          {passData.status === 'REJECTED' ? (
+            <div style={{ margin: '1.2rem 0', padding: '1rem', background: '#fef2f2', border: '1.5px solid #fecaca', borderRadius: '10px', textAlign: 'left', color: '#991b1b' }}>
+              <div style={{ fontWeight: '800', fontSize: '0.92rem', marginBottom: '0.4rem' }}>
+                Your visit request was declined by the host.
               </div>
-            ) : (
-              <div style={{ width: '180px', height: '180px', background: '#e2e8f0', margin: '0 auto', display: 'flex', alignItems: 'center', justifyContent: 'center', borderRadius: '8px' }}>QR Code</div>
-            )}
-          </div>
+              <div style={{ fontSize: '0.84rem', color: '#7f1d1d', background: '#ffffff', padding: '0.6rem', borderRadius: '6px', border: '1px solid #fca5a5' }}>
+                <strong>Rejection Reason:</strong> {passData.rejection_reason || passData.remarks || 'No remarks provided.'}
+              </div>
+              <div style={{ fontSize: '0.75rem', color: '#b91c1c', marginTop: '0.5rem' }}>
+                This pass is inactive and cannot be used for Ashram gate entry.
+              </div>
+            </div>
+          ) : (passData.status === 'PENDING_L1' || passData.status === 'PENDING_L2' || passData.status === 'PENDING_SUPERVISOR') ? (
+            <div style={{ margin: '1.2rem 0', padding: '1rem', background: '#fffbeb', border: '1.5px solid #fde68a', borderRadius: '10px', textAlign: 'left', color: '#92400e' }}>
+              <div style={{ fontWeight: '800', fontSize: '0.92rem', marginBottom: '0.4rem' }}>
+                Invite Submitted — Pending Host Confirmation
+              </div>
+              <div style={{ fontSize: '0.82rem', color: '#78350f' }}>
+                Your registration has been submitted to host <strong>{passData.host_name || 'Ashram Host'}</strong>. Once the host confirms your visit, your official QR code gate pass will be generated here automatically.
+              </div>
+            </div>
+          ) : (
+            <div style={{ margin: '1.2rem 0 0.8rem 0' }}>
+              {passData.qr_code_url ? (
+                <div
+                  onClick={() => setIsExpanded(true)}
+                  title="Click to expand QR Code for easy gate scanning"
+                  style={{ cursor: 'pointer', display: 'inline-block', background: '#faf5ff', padding: '0.6rem', borderRadius: '14px', border: '2px solid #7c3aed', boxShadow: '0 4px 12px rgba(124, 58, 237, 0.15)', transition: 'transform 0.2s ease' }}
+                  onMouseEnter={(e) => e.currentTarget.style.transform = 'scale(1.03)'}
+                  onMouseLeave={(e) => e.currentTarget.style.transform = 'scale(1)'}
+                >
+                  <img
+                    src={passData.qr_code_url}
+                    alt="Authorized QR Code"
+                    style={{ width: '200px', height: '200px', margin: '0 auto', display: 'block', borderRadius: '8px', border: '1px solid #7c3aed', background: 'white' }}
+                  />
+                  <span style={{ fontSize: '0.72rem', color: '#7c3aed', fontWeight: '800', display: 'block', marginTop: '0.4rem' }}>
+                    🔍 Click to Expand for Scanning
+                  </span>
+                </div>
+              ) : (
+                <div style={{ width: '180px', height: '180px', background: '#e2e8f0', margin: '0 auto', display: 'flex', alignItems: 'center', justifyContent: 'center', borderRadius: '8px' }}>QR Code</div>
+              )}
+            </div>
+          )}
 
           <span style={{ fontSize: '0.75rem', color: '#64748b', fontWeight: 'bold' }}>AUTHORIZED GATE PASSCODE</span>
           <h1 style={{ fontSize: '2.2rem', color: '#7c3aed', margin: '0.1rem 0 0.4rem 0', fontWeight: '800', letterSpacing: '0.05em' }}>
@@ -145,13 +176,15 @@ export default function PublicPassView({ passCode }) {
           </div>
         </div>
 
-        <button
-          type="button"
-          onClick={handleDownloadQr}
-          style={{ width: '100%', background: '#7c3aed', borderColor: '#7c3aed', color: 'white', fontWeight: 'bold', fontSize: '0.92rem', padding: '0.7rem', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.5rem' }}
-        >
-          <Download size={18} /> Download QR Pass Image
-        </button>
+        {passData.status !== 'REJECTED' && (
+          <button
+            type="button"
+            onClick={handleDownloadQr}
+            style={{ width: '100%', background: '#7c3aed', borderColor: '#7c3aed', color: 'white', fontWeight: 'bold', fontSize: '0.92rem', padding: '0.7rem', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.5rem' }}
+          >
+            <Download size={18} /> Download QR Pass Image
+          </button>
+        )}
       </div>
 
       {/* Expanded Lightbox Modal for Scanning */}
