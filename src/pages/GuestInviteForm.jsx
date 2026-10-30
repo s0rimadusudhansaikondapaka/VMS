@@ -51,6 +51,23 @@ export default function GuestInviteForm() {
       return;
     }
 
+        // Issue #43: Photo and ID proof mandatory for guest self-registration
+    if (!photoUrl) {
+      setError('Visitor face photo is mandatory. Please capture or upload your photo before submitting.');
+      setSubmitting(false);
+      return;
+    }
+    if (!idCardNumber || !idCardNumber.trim()) {
+      setError('ID Document Number is mandatory. Please enter your valid ID card number.');
+      setSubmitting(false);
+      return;
+    }
+    if (!idCardImageUrl) {
+      setError('ID Proof Document/Photo is mandatory. Please upload or capture your ID document proof.');
+      setSubmitting(false);
+      return;
+    }
+
     const now = new Date();
     if (now.getHours() < 5) {
       now.setHours(5, 0, 0, 0);
@@ -701,8 +718,9 @@ export default function GuestInviteForm() {
               </select>
             </label>
             <label>
-              ID Number
+              ID Document Number * (Mandatory)
               <input
+                required
                 type="text"
                 value={idCardNumber}
                 onChange={(e) => setIdCardNumber(e.target.value)}
@@ -723,7 +741,7 @@ export default function GuestInviteForm() {
           {/* Simplified Visitor Photo Attachment Control */}
           <div style={{ marginTop: '0.8rem', background: '#f8fafc', padding: '0.75rem', borderRadius: '8px', border: '1px solid #cbd5e1' }}>
             <label style={{ fontWeight: 'bold', fontSize: '0.85rem', color: '#334155', display: 'block', marginBottom: '0.4rem' }}>
-              📷 Visitor Photo Attachment
+              📷 Visitor Face Photo * (Mandatory)
             </label>
             <div style={{ display: 'flex', gap: '0.6rem', alignItems: 'center', flexWrap: 'wrap' }}>
               <label className="button" style={{ margin: 0, padding: '0.45rem 1rem', fontSize: '0.82rem', background: '#2563eb', borderColor: '#2563eb', color: 'white', cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: '0.4rem', fontWeight: 'bold' }}>
@@ -753,7 +771,7 @@ export default function GuestInviteForm() {
           <h4 style={{ fontSize: '0.9rem', color: '#2563eb', marginTop: '1rem' }}>2. Identity & Document Proof Attachment</h4>
           <div style={{ marginTop: '0.5rem', background: '#f8fafc', padding: '0.75rem', borderRadius: '8px', border: '1px solid #cbd5e1' }}>
             <label style={{ fontWeight: 'bold', fontSize: '0.85rem', color: '#334155', display: 'block', marginBottom: '0.4rem' }}>
-              📄 Upload Document or Snap Photo
+              📄 Upload ID Proof Document or Snap Photo * (Mandatory)
             </label>
             <div style={{ display: 'flex', gap: '0.6rem', alignItems: 'center', flexWrap: 'wrap' }}>
               <label className="button" style={{ margin: 0, padding: '0.45rem 1rem', fontSize: '0.82rem', background: '#2563eb', borderColor: '#2563eb', color: 'white', cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: '0.4rem', fontWeight: 'bold' }}>
