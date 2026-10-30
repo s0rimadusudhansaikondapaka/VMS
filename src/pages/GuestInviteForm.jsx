@@ -295,6 +295,7 @@ export default function GuestInviteForm() {
         boys_count: computedBoys,
         girls_count: computedGirls,
         children_count: computedBoys + computedGirls,
+        person_count: isSingle ? 1 : (computedMen + computedWomen + computedBoys + computedGirls),
         vehicles: vehicles.filter(v => v.plate_number.trim() !== '').slice(0, 5),
       });
 
