@@ -471,3 +471,50 @@ input[type="radio"]:focus-visible {
   }
 }
 
+/* Guest Invite Form Mobile Responsive Layout (Issue #59) */
+.guest-invite-container {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 300px;
+  gap: 1.5rem;
+  align-items: start;
+}
+
+.guest-form-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0.8rem;
+}
+
+.guest-form-row-4 {
+  display: grid;
+  grid-template-columns: 1fr 1fr 1fr 1fr;
+  gap: 0.8rem;
+}
+
+@media (max-width: 860px) {
+  .guest-invite-container {
+    grid-template-columns: 100% !important;
+    gap: 1rem !important;
+  }
+  .guest-form-row {
+    grid-template-columns: 100% !important;
+    gap: 0.6rem !important;
+  }
+  .guest-form-row-4 {
+    grid-template-columns: 1fr 1fr !important;
+    gap: 0.6rem !important;
+  }
+  .guest-guide-sidebar {
+    order: 2;
+    margin-top: 1rem;
+    width: 100% !important;
+  }
+  .guest-invite-container label,
+  .guest-invite-container input,
+  .guest-invite-container select {
+    width: 100% !important;
+    box-sizing: border-box !important;
+  }
+}
+
+

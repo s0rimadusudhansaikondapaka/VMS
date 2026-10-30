@@ -426,7 +426,7 @@ export default function GuestInviteForm() {
 
         {error && <div style={{ background: '#fee2e2', color: '#991b1b', padding: '0.75rem', borderRadius: '6px', marginBottom: '1rem' }}>{error}</div>}
 
-        <div style={{ display: 'grid', gridTemplateColumns: 'minmax(0, 1fr) 300px', gap: '1.5rem', alignItems: 'start' }}>
+        <div className="guest-invite-container">
           <form onSubmit={handleSubmit}>
           {/* Registration Mode Selection: Single Visitor vs Group Visit */}
           <div style={{ background: '#f8fafc', padding: '0.85rem 1.1rem', borderRadius: '10px', border: '1.5px solid #cbd5e1', marginBottom: '1.2rem', display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '0.75rem' }}>
@@ -544,7 +544,7 @@ export default function GuestInviteForm() {
 
           {/* Section 1: Demographics */}
           <h4 style={{ fontSize: '0.9rem', color: '#2563eb', marginTop: '0.5rem' }}>1. Visitor Demographics & Identity</h4>
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.8rem' }}>
+          <div className="guest-form-row">
             <label>
               Full Name *
               <input
@@ -723,7 +723,7 @@ export default function GuestInviteForm() {
 
           {/* Section 3: Visit Window & Accompanying Breakdown */}
           <h4 style={{ fontSize: '0.9rem', color: '#2563eb', marginTop: '1rem' }}>3. Scheduled Visit Window & Accompanying Breakdown</h4>
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.8rem' }}>
+          <div className="guest-form-row">
             <label>
               Scheduled Arrival Date/Time (SAT)
               <input 
@@ -753,7 +753,7 @@ export default function GuestInviteForm() {
           {registrationMode === 'Group' || registrationMode === 'group' ? (
             <div style={{ background: '#f8fafc', padding: '0.75rem', borderRadius: '6px', border: '1px solid #cbd5e1', marginTop: '0.5rem' }}>
               <strong style={{ fontSize: '0.85rem', color: '#334155' }}>Group Accompanying Breakdown:</strong>
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr 1fr', gap: '0.8rem', marginTop: '0.4rem' }}>
+              <div className="guest-form-row-4" style={{ marginTop: '0.4rem' }}>
                 <label>
                   Adult Men (👨)
                   <input type="number" min="0" value={adultMen} onChange={(e) => setAdultMen(e.target.value)} />
@@ -851,7 +851,9 @@ export default function GuestInviteForm() {
         </form>
 
         {/* Right-side Interactive Field Guide */}
-        <FormFieldGuide activeField={activeField} />
+        <div className="guest-guide-sidebar">
+          <FormFieldGuide activeField={activeField} />
+        </div>
       </div>
       </div>
     </main>
