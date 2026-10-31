@@ -276,13 +276,9 @@ export default function GuestInviteForm() {
       return;
     }
 
-    // Issue #43: Photo and ID proof mandatory for guest self-registration
+    // Issue #43: Photo and ID proof document attachment mandatory for guest self-registration
     if (!photoUrl) {
       setError('Visitor face photo is mandatory. Please capture or upload your photo before submitting.');
-      return;
-    }
-    if (!idCardNumber || !idCardNumber.trim()) {
-      setError('ID Document Number is mandatory. Please enter your valid ID card number.');
       return;
     }
     if (!idCardImageUrl) {
@@ -671,30 +667,6 @@ export default function GuestInviteForm() {
                 <option value="Female">Female</option>
                 <option value="Other">Other</option>
               </select>
-            </label>
-            <label>
-              ID Document Type
-              <select
-                value={idType}
-                onChange={(e) => setIdType(e.target.value)}
-              >
-                <option value="Aadhaar">Aadhaar Card</option>
-                <option value="PAN">PAN Card</option>
-                <option value="Driving License">Driving License</option>
-                <option value="Voter ID">Voter ID</option>
-                <option value="Passport">Passport</option>
-                <option value="Other">Other Official ID</option>
-              </select>
-            </label>
-            <label>
-              ID Document Number * (Mandatory)
-              <input
-                required
-                type="text"
-                value={idCardNumber}
-                onChange={(e) => setIdCardNumber(e.target.value)}
-                placeholder="Enter ID card number"
-              />
             </label>
           </div>
 
