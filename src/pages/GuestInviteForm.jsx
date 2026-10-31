@@ -672,40 +672,6 @@ export default function GuestInviteForm() {
                 <option value="Other">Other</option>
               </select>
             </label>
-            {!isVipHost && (
-              <>
-                <label>
-                  Visitor Category *
-                  <select
-                    value={category}
-                    onChange={(e) => setCategory(e.target.value)}
-                    onFocus={() => setActiveField('category')}
-                    className={activeField === 'category' ? 'field-highlighted' : ''}
-                  >
-                    <option value="GENERAL">General Guest</option>
-                    <option value="DEVOTEE">Devotee / Frequent Visitor</option>
-                    <option value="FAMILY_MEMBER">Family Member</option>
-                    <option value="VIP">VIP Guest</option>
-                  </select>
-                </label>
-                <label>
-                  Visit Type *
-                  <select
-                    value={visitType}
-                    onChange={(e) => setVisitType(e.target.value)}
-                    onFocus={() => setActiveField('visitType')}
-                    className={activeField === 'visitType' ? 'field-highlighted' : ''}
-                  >
-                    <option value="ASHRAM">Ashram Visit</option>
-                    <option value="HOME">Home / Residence Visit</option>
-                    <option value="OFFICE">Office / Administrative</option>
-                    <option value="BHAJAN">Bhajan / Darshan</option>
-                    <option value="EVENT">Event / Festival</option>
-                    <option value="TOUR">Ashram Tour</option>
-                  </select>
-                </label>
-              </>
-            )}
             <label>
               ID Document Type
               <select
@@ -730,17 +696,6 @@ export default function GuestInviteForm() {
                 placeholder="Enter ID card number"
               />
             </label>
-            {!isVipHost && (
-              <label style={{ gridColumn: 'span 2' }}>
-                Purpose of Visit (Optional)
-                <input
-                  type="text"
-                  value={purpose}
-                  onChange={(e) => setPurpose(e.target.value)}
-                  placeholder="e.g. Darshan, Family meeting, Work..."
-                />
-              </label>
-            )}
           </div>
 
           {/* Simplified Visitor Photo Attachment Control */}
