@@ -39,35 +39,6 @@ export default function GuestInviteForm() {
 
   // Visit Window (Operating hours 5:00 AM to 10:00 PM)
   const getDefaultFrom = () => {
-        if (!/^[a-zA-Z\s.-]{3,50}$/.test(fullName.trim())) {
-      setError('Visitor Name must contain only alphabets and spaces (no numbers or special characters).');
-      setSubmitting(false);
-      return;
-    }
-    const cleanDigits = phone.replace(/[^0-9]/g, '');
-    if (cleanDigits.length < 10 || cleanDigits.length > 15 || !/^\+?[0-9]{10,15}$/.test(phone.trim())) {
-      setError('Mobile number must contain only digits and optional + prefix (10 to 15 digits).');
-      setSubmitting(false);
-      return;
-    }
-
-        // Issue #43: Photo and ID proof mandatory for guest self-registration
-    if (!photoUrl) {
-      setError('Visitor face photo is mandatory. Please capture or upload your photo before submitting.');
-      setSubmitting(false);
-      return;
-    }
-    if (!idCardNumber || !idCardNumber.trim()) {
-      setError('ID Document Number is mandatory. Please enter your valid ID card number.');
-      setSubmitting(false);
-      return;
-    }
-    if (!idCardImageUrl) {
-      setError('ID Proof Document/Photo is mandatory. Please upload or capture your ID document proof.');
-      setSubmitting(false);
-      return;
-    }
-
     const now = new Date();
     if (now.getHours() < 5) {
       now.setHours(5, 0, 0, 0);
@@ -291,6 +262,31 @@ export default function GuestInviteForm() {
   const handleSubmit = async (e) => {
     e.preventDefault();
     setError('');
+
+    if (!/^[a-zA-Z\s.-]{3,50}$/.test(fullName.trim())) {
+      setError('Visitor Name must contain only alphabets and spaces (3 to 50 characters, no numbers or special characters).');
+      return;
+    }
+    const cleanDigits = phone.replace(/[^0-9]/g, '');
+    if (cleanDigits.length < 10 || cleanDigits.length > 15 || !/^\+?[0-9]{10,15}$/.test(phone.trim())) {
+      setError('Mobile number must contain only digits and optional + prefix (10 to 15 digits).');
+      return;
+    }
+
+    // Issue #43: Photo and ID proof mandatory for guest self-registration
+    if (!photoUrl) {
+      setError('Visitor face photo is mandatory. Please capture or upload your photo before submitting.');
+      return;
+    }
+    if (!idCardNumber || !idCardNumber.trim()) {
+      setError('ID Document Number is mandatory. Please enter your valid ID card number.');
+      return;
+    }
+    if (!idCardImageUrl) {
+      setError('ID Proof Document/Photo is mandatory. Please upload or capture your ID document proof.');
+      return;
+    }
+
     setSubmitting(true);
 
     const now = new Date();
