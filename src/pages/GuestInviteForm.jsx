@@ -210,7 +210,6 @@ export default function GuestInviteForm() {
         setHostInfo(res.host);
         if (res.host?.user_type === 'VIP_HOST' || res.host?.role === 'VIP_HOST') {
           setCategory('VIP');
-          setVisitType('VIP');
         }
         if (res.is_used) {
           setIsLinkUsed(true);
@@ -351,7 +350,7 @@ export default function GuestInviteForm() {
         id_card_image_url: idCardImageUrl,
         registration_mode: registrationMode,
         visitor_category: isVipHost ? 'VIP' : category,
-        visit_type: isVipHost ? 'VIP' : visitType,
+        visit_type: (visitType && ['HOME', 'OFFICE', 'TOUR', 'BHAJAN', 'EVENT', 'ASHRAM'].includes(visitType.toUpperCase())) ? visitType.toUpperCase() : 'HOME',
         purpose: isVipHost ? (purpose.trim() || 'Ashram VIP Visit') : (purpose.trim() || 'Visitor Ashram Visit'),
         valid_from: new Date(validFrom).toISOString(),
         valid_until: new Date(validUntil).toISOString(),
