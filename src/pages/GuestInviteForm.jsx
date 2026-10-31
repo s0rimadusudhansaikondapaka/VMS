@@ -37,6 +37,8 @@ export default function GuestInviteForm() {
   const [visitType, setVisitType] = useState('HOME');
   const [purpose, setPurpose] = useState('');
 
+  const isVipHost = hostInfo?.user_type === 'VIP_HOST' || hostInfo?.role === 'VIP_HOST' || category === 'VIP';
+
   // Visit Window (Operating hours 5:00 AM to 10:00 PM)
   const getDefaultFrom = () => {
     const now = new Date();
@@ -208,6 +210,7 @@ export default function GuestInviteForm() {
         setHostInfo(res.host);
         if (res.host?.user_type === 'VIP_HOST' || res.host?.role === 'VIP_HOST') {
           setCategory('VIP');
+          setVisitType('VIP');
         }
         if (res.is_used) {
           setIsLinkUsed(true);
@@ -351,9 +354,9 @@ export default function GuestInviteForm() {
         id_card_number: idCardNumber,
         id_card_image_url: idCardImageUrl,
         registration_mode: registrationMode,
-        visitor_category: category,
-        visit_type: visitType,
-        purpose: purpose.trim() || 'Visitor Ashram Visit',
+        visitor_category: isVipHost ? 'VIP' : category,
+        visit_type: isVipHost ? 'VIP' : visitType,
+        purpose: isVipHost ? (purpose.trim() || 'Ashram VIP Visit') : (purpose.trim() || 'Visitor Ashram Visit'),
         valid_from: new Date(validFrom).toISOString(),
         valid_until: new Date(validUntil).toISOString(),
         adult_men_count: computedMen,
@@ -669,36 +672,40 @@ export default function GuestInviteForm() {
                 <option value="Other">Other</option>
               </select>
             </label>
-            <label>
-              Visitor Category *
-              <select
-                value={category}
-                onChange={(e) => setCategory(e.target.value)}
-                onFocus={() => setActiveField('category')}
-                className={activeField === 'category' ? 'field-highlighted' : ''}
-              >
-                <option value="GENERAL">General Guest</option>
-                <option value="DEVOTEE">Devotee / Frequent Visitor</option>
-                <option value="FAMILY_MEMBER">Family Member</option>
-                <option value="VIP">VIP Guest</option>
-              </select>
-            </label>
-            <label>
-              Visit Type *
-              <select
-                value={visitType}
-                onChange={(e) => setVisitType(e.target.value)}
-                onFocus={() => setActiveField('visitType')}
-                className={activeField === 'visitType' ? 'field-highlighted' : ''}
-              >
-                <option value="ASHRAM">Ashram Visit</option>
-                <option value="HOME">Home / Residence Visit</option>
-                <option value="OFFICE">Office / Administrative</option>
-                <option value="BHAJAN">Bhajan / Darshan</option>
-                <option value="EVENT">Event / Festival</option>
-                <option value="TOUR">Ashram Tour</option>
-              </select>
-            </label>
+            {!isVipHost && (
+              <>
+                <label>
+                  Visitor Category *
+                  <select
+                    value={category}
+                    onChange={(e) => setCategory(e.target.value)}
+                    onFocus={() => setActiveField('category')}
+                    className={activeField === 'category' ? 'field-highlighted' : ''}
+                  >
+                    <option value="GENERAL">General Guest</option>
+                    <option value="DEVOTEE">Devotee / Frequent Visitor</option>
+                    <option value="FAMILY_MEMBER">Family Member</option>
+                    <option value="VIP">VIP Guest</option>
+                  </select>
+                </label>
+                <label>
+                  Visit Type *
+                  <select
+                    value={visitType}
+                    onChange={(e) => setVisitType(e.target.value)}
+                    onFocus={() => setActiveField('visitType')}
+                    className={activeField === 'visitType' ? 'field-highlighted' : ''}
+                  >
+                    <option value="ASHRAM">Ashram Visit</option>
+                    <option value="HOME">Home / Residence Visit</option>
+                    <option value="OFFICE">Office / Administrative</option>
+                    <option value="BHAJAN">Bhajan / Darshan</option>
+                    <option value="EVENT">Event / Festival</option>
+                    <option value="TOUR">Ashram Tour</option>
+                  </select>
+                </label>
+              </>
+            )}
             <label>
               ID Document Type
               <select
@@ -723,15 +730,17 @@ export default function GuestInviteForm() {
                 placeholder="Enter ID card number"
               />
             </label>
-            <label style={{ gridColumn: 'span 2' }}>
-              Purpose of Visit (Optional)
-              <input
-                type="text"
-                value={purpose}
-                onChange={(e) => setPurpose(e.target.value)}
-                placeholder="e.g. Darshan, Family meeting, Work..."
-              />
-            </label>
+            {!isVipHost && (
+              <label style={{ gridColumn: 'span 2' }}>
+                Purpose of Visit (Optional)
+                <input
+                  type="text"
+                  value={purpose}
+                  onChange={(e) => setPurpose(e.target.value)}
+                  placeholder="e.g. Darshan, Family meeting, Work..."
+                />
+              </label>
+            )}
           </div>
 
           {/* Simplified Visitor Photo Attachment Control */}
@@ -913,10 +922,7 @@ export default function GuestInviteForm() {
             ))}
           </div>
 
-          <label style={{ marginTop: '1rem' }}>
-            Purpose of Visit *
-            <textarea rows="2" required value={purpose} onChange={(e) => setPurpose(e.target.value)} placeholder="e.g. Meeting Resident, Personal Visit, Darshan"></textarea>
-          </label>
+
 
           <button
             type="submit"
