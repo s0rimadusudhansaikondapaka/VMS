@@ -110,20 +110,16 @@ export default function HostDashboard({ user }) {
   } = useTablePagination(visitHistory, ['visitor_name', 'pass_code', 'visitor_category'], 10);
 
   const handleOpenShareModal = async () => {
+    setActiveShareToken('');
+    setShowShareModal(true);
     try {
       const res = await generateInviteToken();
       if (res.success && res.token) {
         setActiveShareToken(res.token);
-      } else {
-        const fallback = `inv_${Math.random().toString(36).substring(2, 11)}_${Date.now()}`;
-        setActiveShareToken(fallback);
       }
     } catch (e) {
       console.error('Failed to generate invite token:', e);
-      const fallback = `inv_${Math.random().toString(36).substring(2, 11)}_${Date.now()}`;
-      setActiveShareToken(fallback);
     }
-    setShowShareModal(true);
   };
 
   const handleGenerateQr = async (reg) => {
@@ -2160,14 +2156,16 @@ export default function HostDashboard({ user }) {
                 <input 
                   type="text" 
                   readOnly 
-                  value={`${window.location.origin}/?invite=true&token=${activeShareToken || `inv_${user?.id || 1}_${Date.now()}`}`}
-                  style={{ margin: 0, fontSize: '0.82rem', background: '#ffffff', flex: 1 }} 
+                  value={activeShareToken ? `${window.location.origin}/?invite=true&token=${activeShareToken}` : 'Generating fresh single-use link...'}
+                  style={{ margin: 0, fontSize: '0.82rem', background: '#ffffff', flex: 1, fontStyle: activeShareToken ? 'normal' : 'italic' }} 
                   onClick={(e) => e.target.select()}
                 />
                 <button 
                   type="button" 
+                  disabled={!activeShareToken}
                   onClick={() => {
-                    const link = `${window.location.origin}/?invite=true&token=${activeShareToken || `inv_${user?.id || 1}_${Date.now()}`}`;
+                    if (!activeShareToken) return;
+                    const link = `${window.location.origin}/?invite=true&token=${activeShareToken}`;
                     navigator.clipboard.writeText(link);
                     setCopiedLink(true);
                     setTimeout(() => setCopiedLink(false), 2000);
@@ -2180,7 +2178,8 @@ export default function HostDashboard({ user }) {
                     color: 'white',
                     fontWeight: 'bold',
                     fontSize: '0.82rem',
-                    padding: '0.55rem 0.85rem'
+                    padding: '0.55rem 0.85rem',
+                    opacity: activeShareToken ? 1 : 0.6
                   }}
                 >
                   {copiedLink ? '✓ Copied!' : '📋 Copy Link'}
@@ -2190,26 +2189,26 @@ export default function HostDashboard({ user }) {
 
             <div style={{ display: 'flex', gap: '0.6rem', flexWrap: 'wrap' }}>
               <a
-                href={`https://wa.me/?text=${encodeURIComponent(`Jay Sai Ram! Please fill out your visitor pre-approval registration form for Sathya Sai Grama using this single-use link: ${window.location.origin}/?invite=true&token=${activeShareToken || `inv_${user?.id || 1}_${Date.now()}`}`)}`}
-                target="_blank"
+                href={activeShareToken ? `https://wa.me/?text=${encodeURIComponent(`Jay Sai Ram! Please fill out your visitor pre-approval registration form for Sathya Sai Grama using this single-use link: ${window.location.origin}/?invite=true&token=${activeShareToken}`)}` : '#'}
+                target={activeShareToken ? '_blank' : undefined}
                 rel="noreferrer"
-                style={{ flex: 1, textDecoration: 'none', minWidth: '150px' }}
+                style={{ flex: 1, textDecoration: 'none', minWidth: '150px', pointerEvents: activeShareToken ? 'auto' : 'none' }}
               >
-                <button type="button" style={{ width: '100%', background: '#25d366', borderColor: '#25d366', color: 'white', fontWeight: 'bold', fontSize: '0.85rem', padding: '0.65rem' }}>
+                <button type="button" disabled={!activeShareToken} style={{ width: '100%', background: '#25d366', borderColor: '#25d366', color: 'white', fontWeight: 'bold', fontSize: '0.85rem', padding: '0.65rem', opacity: activeShareToken ? 1 : 0.6 }}>
                   📲 Share via WhatsApp
                 </button>
               </a>
 
               <a
-                href={`mailto:?subject=${encodeURIComponent('Sathya Sai Grama - Guest Visitor Pre-Approval Link')}&body=${encodeURIComponent(`Jay Sai Ram!\n\nPlease fill out your visitor pre-approval registration form for Sathya Sai Grama using the following single-use link prior to your arrival:\n\n${window.location.origin}/?invite=true&token=${activeShareToken || `inv_${user?.id || 1}_${Date.now()}`}\n\nNote: This link is valid for a single registration submission.\n\nThank you!`)}`}
-                style={{ flex: 1, textDecoration: 'none', minWidth: '150px' }}
+                href={activeShareToken ? `mailto:?subject=${encodeURIComponent('Sathya Sai Grama - Guest Visitor Pre-Approval Link')}&body=${encodeURIComponent(`Jay Sai Ram!\n\nPlease fill out your visitor pre-approval registration form for Sathya Sai Grama using the following single-use link prior to your arrival:\n\n${window.location.origin}/?invite=true&token=${activeShareToken}\n\nNote: This link is valid for a single registration submission.\n\nThank you!`)}` : '#'}
+                style={{ flex: 1, textDecoration: 'none', minWidth: '150px', pointerEvents: activeShareToken ? 'auto' : 'none' }}
               >
-                <button type="button" style={{ width: '100%', background: '#2563eb', borderColor: '#2563eb', color: 'white', fontWeight: 'bold', fontSize: '0.85rem', padding: '0.65rem' }}>
+                <button type="button" disabled={!activeShareToken} style={{ width: '100%', background: '#2563eb', borderColor: '#2563eb', color: 'white', fontWeight: 'bold', fontSize: '0.85rem', padding: '0.65rem', opacity: activeShareToken ? 1 : 0.6 }}>
                   ✉️ Share via Email
                 </button>
               </a>
 
-              <button type="button" className="secondary outline" onClick={() => setShowShareModal(false)} style={{ fontSize: '0.85rem', padding: '0.65rem 1rem' }}>
+              <button type="button" className="secondary outline" onClick={() => { setShowShareModal(false); setActiveShareToken(''); }} style={{ fontSize: '0.85rem', padding: '0.65rem 1rem' }}>
                 Close
               </button>
             </div>

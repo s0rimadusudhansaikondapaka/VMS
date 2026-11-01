@@ -222,14 +222,27 @@ export default function GuestInviteForm() {
       } else {
         if (res?.is_used) {
           setIsLinkUsed(true);
+          if (res.host) setHostInfo(res.host);
         } else {
           setIsLinkInvalid(true);
           setInvalidMsg(res?.message || 'Invalid or un-generated invitation link.');
         }
       }
     } catch (err) {
-      setIsLinkInvalid(true);
-      setInvalidMsg(err.response?.data?.message || 'Invalid or Expired Invitation Link.');
+      if (err.response?.data?.is_used) {
+        setIsLinkUsed(true);
+        if (err.response.data.host) {
+          setHostInfo(err.response.data.host);
+        }
+        if (inviteKey) {
+          try {
+            localStorage.setItem(`vms_invite_submitted_${inviteKey}`, 'true');
+          } catch (e) {}
+        }
+      } else {
+        setIsLinkInvalid(true);
+        setInvalidMsg(err.response?.data?.message || 'Invalid or Expired Invitation Link.');
+      }
     } finally {
       setLoadingHost(false);
     }
