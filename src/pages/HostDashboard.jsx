@@ -565,6 +565,12 @@ export default function HostDashboard({ user }) {
         return;
       }
 
+      const invalidVehicle = vehicles.find(v => v.plate_number && v.plate_number.trim() !== '' && (!v.vehicle_type || v.vehicle_type === 'Select'));
+      if (invalidVehicle) {
+        setError('Vehicle Type is mandatory if a Plate Number is provided.');
+        return;
+      }
+
       const isSingle = registrationMode === 'Single';
       const computedMen = isSingle ? (gender === 'Female' ? 0 : 1) : (parseInt(adultMen) || 0);
       const computedWomen = isSingle ? (gender === 'Female' ? 1 : 0) : (parseInt(adultWomen) || 0);
@@ -1167,7 +1173,17 @@ export default function HostDashboard({ user }) {
                 Gender Selection *
                 <select
                   value={gender}
-                  onChange={(e) => setGender(e.target.value)}
+                  onChange={(e) => {
+                    const val = e.target.value;
+                    setGender(val);
+                    if (val === 'Female') {
+                      setAdultMen(0);
+                      setAdultWomen(1);
+                    } else if (val === 'Male') {
+                      setAdultMen(1);
+                      setAdultWomen(0);
+                    }
+                  }}
                   onFocus={() => setActiveField('gender')}
                   className={activeField === 'gender' ? 'field-highlighted' : ''}
                 >
@@ -1690,7 +1706,7 @@ export default function HostDashboard({ user }) {
                     Until: {new Date(reg.valid_until).toLocaleString()}
                   </td>
                   <td style={{ fontSize: '0.8rem' }}>
-                    👨 {reg.adult_men_count || 1} | 👩 {reg.adult_women_count || 0} | 👦 {reg.boys_count || 0} | 👧 {reg.girls_count || 0}
+                    👨 {reg.adult_men_count !== undefined && reg.adult_men_count !== null ? reg.adult_men_count : 0} | 👩 {reg.adult_women_count !== undefined && reg.adult_women_count !== null ? reg.adult_women_count : 0} | 👦 {reg.boys_count || 0} | 👧 {reg.girls_count || 0}
                   </td>
                   <td style={{ fontSize: '0.75rem' }}>
                     {reg.vehicles && reg.vehicles.length > 0 ? (

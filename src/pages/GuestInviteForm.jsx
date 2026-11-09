@@ -29,6 +29,17 @@ export default function GuestInviteForm() {
   const [phone, setPhone] = useState('');
   const [email, setEmail] = useState('');
   const [gender, setGender] = useState('Male');
+
+  const handleGenderChange = (val) => {
+    setGender(val);
+    if (val === 'Female') {
+      setAdultMen(0);
+      setAdultWomen(1);
+    } else if (val === 'Male') {
+      setAdultMen(1);
+      setAdultWomen(0);
+    }
+  };
   const [photoUrl, setPhotoUrl] = useState('');
   const [idType, setIdType] = useState('Aadhaar');
   const [idCardNumber, setIdCardNumber] = useState('');
@@ -340,6 +351,18 @@ export default function GuestInviteForm() {
       setError('Scheduled Departure Time (SDT) must be between 5:00 AM and 10:00 PM.');
       setSubmitting(false);
       return;
+    }
+
+    // Issues #71 & #72: Vehicle Type is strictly mandatory if plate number is entered
+    for (let i = 0; i < vehicles.length; i++) {
+      const v = vehicles[i];
+      if (v.plate_number && v.plate_number.trim() !== '') {
+        if (!v.vehicle_type || v.vehicle_type === 'Select') {
+          setError(`Please select a Vehicle Type for Vehicle #${i + 1} (${v.plate_number.trim()}).`);
+          setSubmitting(false);
+          return;
+        }
+      }
     }
 
     const isSingle = registrationMode === 'Single';
@@ -671,7 +694,7 @@ export default function GuestInviteForm() {
               Gender *
               <select
                 value={gender}
-                onChange={(e) => setGender(e.target.value)}
+                onChange={(e) => handleGenderChange(e.target.value)}
                 onFocus={() => setActiveField('gender')}
                 className={activeField === 'gender' ? 'field-highlighted' : ''}
               >
@@ -755,7 +778,6 @@ export default function GuestInviteForm() {
                 type="datetime-local" 
                 required 
                 min={getMinDateTime()} 
-                max={validUntil ? validUntil : (validFrom ? `${validFrom.split('T')[0]}T22:00` : undefined)} 
                 value={validFrom} 
                 onChange={(e) => handleArrivalChange(e.target.value)} 
               />
@@ -832,10 +854,13 @@ export default function GuestInviteForm() {
                 <select
                   value={v.vehicle_type || 'Select'}
                   onChange={(e) => handleVehicleChange(idx, 'vehicle_type', e.target.value)}
-                  style={{ margin: 0 }}
+                  style={{
+                    margin: 0,
+                    borderColor: v.plate_number && v.plate_number.trim() !== '' && (!v.vehicle_type || v.vehicle_type === 'Select') ? '#dc2626' : undefined,
+                  }}
                 >
                   {VEHICLE_TYPE_OPTIONS.map((vt) => (
-                    <option key={vt} value={vt}>{vt}</option>
+                    <option key={vt} value={vt}>{vt === 'Select' && v.plate_number && v.plate_number.trim() !== '' ? 'Select Vehicle Type *' : vt}</option>
                   ))}
                 </select>
                 <input
