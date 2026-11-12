@@ -82,12 +82,14 @@ export default function HostDashboard({ user }) {
   const filteredRegistrations = React.useMemo(() => {
     if (statusFilter === 'ALL') return registrations;
     if (statusFilter === 'PENDING') return registrations.filter((r) => r.status === 'PENDING_L1');
+    if (statusFilter === 'INSIDE_CAMPUS') return registrations.filter((r) => r.status === 'INSIDE_CAMPUS' || r.presence_status === 'currently_inside');
+    if (statusFilter === 'APPROVED') return registrations.filter((r) => (r.status === 'APPROVED' || r.status === 'INSIDE_CAMPUS') && r.presence_status !== 'currently_inside');
     return registrations.filter((r) => r.status === statusFilter);
   }, [registrations, statusFilter]);
 
   const pendingApprovalCount = registrations.filter((r) => r.status === 'PENDING_L1').length;
-  const approvedCount = registrations.filter((r) => r.status === 'APPROVED').length;
-  const insideCount = registrations.filter((r) => r.status === 'INSIDE_CAMPUS').length;
+  const insideCount = registrations.filter((r) => r.status === 'INSIDE_CAMPUS' || r.presence_status === 'currently_inside').length;
+  const approvedCount = registrations.filter((r) => (r.status === 'APPROVED' || r.status === 'INSIDE_CAMPUS') && r.presence_status !== 'currently_inside').length;
 
   const {
     searchTerm: regSearch,
@@ -389,7 +391,14 @@ export default function HostDashboard({ user }) {
     };
 
     window.addEventListener('vms_realtime_sync', handleRealtimeSync);
-    return () => window.removeEventListener('vms_realtime_sync', handleRealtimeSync);
+    const pollTimer = setInterval(() => {
+      fetchRegistrations();
+    }, 15000);
+
+    return () => {
+      clearInterval(pollTimer);
+      window.removeEventListener('vms_realtime_sync', handleRealtimeSync);
+    };
   }, []);
 
   const fetchFamilyMembers = async () => {
@@ -1597,7 +1606,10 @@ export default function HostDashboard({ user }) {
           <button
             type="button"
             className={statusFilter === 'APPROVED' ? '' : 'outline secondary'}
-            onClick={() => setStatusFilter('APPROVED')}
+            onClick={() => {
+              setStatusFilter('APPROVED');
+              fetchRegistrations();
+            }}
             style={{ fontSize: '0.8rem', padding: '0.35rem 0.75rem', borderRadius: '20px' }}
           >
             ✅ Approved ({approvedCount})
@@ -1605,7 +1617,10 @@ export default function HostDashboard({ user }) {
           <button
             type="button"
             className={statusFilter === 'INSIDE_CAMPUS' ? '' : 'outline secondary'}
-            onClick={() => setStatusFilter('INSIDE_CAMPUS')}
+            onClick={() => {
+              setStatusFilter('INSIDE_CAMPUS');
+              fetchRegistrations();
+            }}
             style={{ fontSize: '0.8rem', padding: '0.35rem 0.75rem', borderRadius: '20px' }}
           >
             🚪 Inside Campus ({insideCount})
